@@ -247,6 +247,12 @@ Copyright 2016 gRPC authors.
 https://github.com/grpc/grpc-go/tree/v1.18.0  
 Apache 2 license (https://github.com/grpc/grpc-go/tree/v1.18.0/LICENSE )
 
+AWS SDK for Go   
+Copyright 2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.     
+Copyright 2014-2015 Stripe, Inc.  
+https://github.com/aws/aws-sdk-go/tree/v1.16.22  
+Apache 2 license (https://github.com/aws/aws-sdk-go/blob/v1.16.22/LICENSE.txt )  
+
 ## Golang license
 
 ```

@@ -1,6 +1,6 @@
-# Cluster Machine Interface - Drivers
+# machine-controller-manager-provider-aws
 This project contains the external/out-of-tree driver implementation of machine-controller-manager for AWS. This implementation adheres to the machine-interface defined at following project: 
-- https://github.com/hardikdr/machine-spec
+- https://github.com/gardener/machine-spec
 
 ## Fundamental Design Principles:
 Following are the basic principles kept in mind while developing the external driver.
