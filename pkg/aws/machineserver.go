@@ -69,7 +69,19 @@ func (ms *machineServer) CreateMachine(ctx context.Context, req *cmi.CreateMachi
 	Secrets.UserData = string(UserData)
 
 	Resp := &cmi.CreateMachineResponse{}
+
 	// Core logic for MachineCreation - CP specific
+
+	//Validate the Spec and Secrets
+	ValidationErr := validateAWSProviderSpec(&ProviderSpec, &Secrets)
+	if ValidationErr != nil {
+		Resp = &cmi.CreateMachineResponse{
+			Name:  req.Name,
+			Error: ValidationErrToString(ValidationErr),
+		}
+		fmt.Println("Error while validating ProviderSpec", ValidationErr)
+		return Resp, fmt.Errorf(Resp.Error)
+	}
 
 	svc := createSVC(ProviderSpec, Secrets)
 	UserDataEnc := base64.StdEncoding.EncodeToString(UserData)
@@ -178,10 +190,9 @@ func (ms *machineServer) DeleteMachine(ctx context.Context, req *cmi.DeleteMachi
 	UserData, UserDataExists := req.Secrets["userData"]
 	if !KeyIDExists || !KeyExists || !UserDataExists {
 		glog.Errorf("Invalid Secret Map")
-		return &cmi.DeleteMachineResponse{}, nil //fmt.Errorf("Invalid Secret Map", req.Secrets)
+		return &cmi.DeleteMachineResponse{}, nil
 	}
 
-	//TODO: Make validation better to make sure if all the fields under secret are covered.
 	var Secrets api.Secrets
 	Secrets.ProviderAccessKeyId = string(ProviderAccessKeyId)
 	Secrets.ProviderSecretAccessKey = string(ProviderAccessKey)
@@ -196,6 +207,16 @@ func (ms *machineServer) DeleteMachine(ctx context.Context, req *cmi.DeleteMachi
 	Resp := &cmi.DeleteMachineResponse{}
 
 	// Core Logic for Machine-deletion - CP Specific
+
+	//Validate the Spec and Secrets
+	ValidationErr := validateAWSProviderSpec(&ProviderSpec, &Secrets)
+	if ValidationErr != nil {
+		Resp = &cmi.DeleteMachineResponse{
+			Error: ValidationErrToString(ValidationErr),
+		}
+		fmt.Println("Error while validating ProviderSpec", ValidationErr)
+		return Resp, fmt.Errorf(Resp.Error)
+	}
 
 	result, err := ms.ListMachines(ctx, ListMachinesRequest)
 	if err != nil {
@@ -287,6 +308,16 @@ func (ms *machineServer) ListMachines(ctx context.Context, req *cmi.ListMachines
 	}
 
 	// Core Logic for Listing the Machines - Provider Specific
+
+	//Validate the Spec and Secrets
+	ValidationErr := validateAWSProviderSpec(&ProviderSpec, &Secrets)
+	if ValidationErr != nil {
+		Resp = &cmi.ListMachinesResponse{
+			Error: ValidationErrToString(ValidationErr),
+		}
+		fmt.Println("Error while validating ProviderSpec", ValidationErr)
+		return Resp, fmt.Errorf(Resp.Error)
+	}
 
 	clusterName := ""
 	nodeRole := ""

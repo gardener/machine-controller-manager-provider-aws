@@ -1,0 +1,151 @@
+/*
+Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+// Package aws - validation is used to validate cloud specific ProviderSpec
+package aws
+
+import (
+	"fmt"
+	"regexp"
+	"strconv"
+	"strings"
+
+	api "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
+)
+
+const nameFmt string = `[-a-z0-9]+`
+const nameMaxLength int = 63
+
+var nameRegexp = regexp.MustCompile("^" + nameFmt + "$")
+
+func validateAWSProviderSpec(spec *api.AWSProviderSpec, Secrets *api.Secrets) []error {
+	var allErrs []error
+
+	if "" == spec.AMI {
+		allErrs = append(allErrs, fmt.Errorf("SpecValidationError: AMI is required field"))
+	}
+	if "" == spec.Region {
+		allErrs = append(allErrs, fmt.Errorf("SpecValidationError: Region is required field"))
+	}
+	if "" == spec.MachineType {
+		allErrs = append(allErrs, fmt.Errorf("SpecValidationError: MachineType is required field"))
+	}
+	if "" == spec.IAM.Name {
+		allErrs = append(allErrs, fmt.Errorf("SpecValidationError: IAM Name is required field"))
+	}
+	if "" == spec.KeyName {
+		allErrs = append(allErrs, fmt.Errorf("SpecValidationError: KeyName is required field"))
+	}
+
+	allErrs = append(allErrs, validateBlockDevices(spec.BlockDevices)...)
+	allErrs = append(allErrs, validateNetworkInterfaces(spec.NetworkInterfaces)...)
+	allErrs = append(allErrs, validateSecrets(Secrets)...)
+	allErrs = append(allErrs, validateSpecTags(spec.Tags)...)
+
+	return allErrs
+}
+
+func validateSpecTags(tags map[string]string) []error {
+	var allErrs []error
+	clusterName := ""
+	nodeRole := ""
+
+	for key := range tags {
+		if strings.Contains(key, "kubernetes.io/cluster/") {
+			clusterName = key
+		} else if strings.Contains(key, "kubernetes.io/role/") {
+			nodeRole = key
+		}
+	}
+
+	if clusterName == "" {
+		allErrs = append(allErrs, fmt.Errorf("Tag is required of the form kubernetes.io/cluster/****"))
+	}
+	if nodeRole == "" {
+		allErrs = append(allErrs, fmt.Errorf("Tag is required of the form kubernetes.io/role/****"))
+	}
+	return allErrs
+}
+
+func validateBlockDevices(blockDevices []api.AWSBlockDeviceMappingSpec) []error {
+
+	var allErrs []error
+
+	if len(blockDevices) > 1 {
+		allErrs = append(allErrs, fmt.Errorf("Can only specify one (root) block device"))
+	} else if len(blockDevices) == 1 {
+		if blockDevices[0].Ebs.VolumeSize <= 0 {
+			allErrs = append(allErrs, fmt.Errorf("Please mention a valid ebs volume size"))
+		}
+		if blockDevices[0].Ebs.VolumeType == "" {
+			allErrs = append(allErrs, fmt.Errorf("Please mention a valid ebs volume type"))
+		} else if blockDevices[0].Ebs.VolumeType == "io1" && blockDevices[0].Ebs.Iops <= 0 {
+			allErrs = append(allErrs, fmt.Errorf("Please mention a valid ebs volume iops"))
+		}
+	}
+	return allErrs
+}
+
+func validateNetworkInterfaces(networkInterfaces []api.AWSNetworkInterfaceSpec) []error {
+	var allErrs []error
+	if len(networkInterfaces) == 0 {
+		allErrs = append(allErrs, fmt.Errorf("Mention at least one NetworkInterface"))
+	} else {
+		for i := range networkInterfaces {
+			if "" == networkInterfaces[i].SubnetID {
+				allErrs = append(allErrs, fmt.Errorf("SubnetID is required"))
+			}
+
+			if 0 == len(networkInterfaces[i].SecurityGroupIDs) {
+				allErrs = append(allErrs, fmt.Errorf("Mention at least one securityGroupID"))
+			} else {
+				for j := range networkInterfaces[i].SecurityGroupIDs {
+					if "" == networkInterfaces[i].SecurityGroupIDs[j] {
+						output := strings.Join([]string{"securityGroupIDs cannot be blank for networkInterface:", strconv.Itoa(i), " securityGroupID:", strconv.Itoa(j)}, "")
+
+						allErrs = append(allErrs, fmt.Errorf(output))
+
+					}
+				}
+			}
+		}
+	}
+	return allErrs
+}
+
+func validateSecrets(reference *api.Secrets) []error {
+	var allErrs []error
+	if "" == reference.ProviderAccessKeyId {
+		allErrs = append(allErrs, fmt.Errorf("Secret ProviderAccessKeyId is required field"))
+	}
+	if "" == reference.ProviderSecretAccessKey {
+		allErrs = append(allErrs, fmt.Errorf("Secret ProviderSecretAccessKey is required field"))
+	}
+
+	if "" == reference.UserData {
+		allErrs = append(allErrs, fmt.Errorf("Secret UserData is required field"))
+	}
+	return nil
+}
+
+//ValidationErrToString converts the array of error into string
+func ValidationErrToString(validationErr []error) string {
+	var errString []string
+	for _, e := range validationErr {
+		errString = append(errString, e.Error())
+	}
+	return strings.Join(errString, ",")
+}
