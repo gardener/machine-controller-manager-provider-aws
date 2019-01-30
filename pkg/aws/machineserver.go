@@ -41,11 +41,13 @@ import (
 	cmicommon "github.com/gardener/machine-controller-manager-provider-aws/pkg/cmi-common"
 )
 
-type machineServer struct {
+// MachineServer is the server expected to implement the gRPC services.
+type MachineServer struct {
 	*cmicommon.DefaultMachineServer
 }
 
-func (ms *machineServer) CreateMachine(ctx context.Context, req *cmi.CreateMachineRequest) (*cmi.CreateMachineResponse, error) {
+// CreateMachine creates the machine from cloud-provider.
+func (ms *MachineServer) CreateMachine(ctx context.Context, req *cmi.CreateMachineRequest) (*cmi.CreateMachineResponse, error) {
 	fmt.Println("TestLogs: Machine Created ", req.Name)
 
 	var ProviderSpec api.AWSProviderSpec
@@ -54,7 +56,7 @@ func (ms *machineServer) CreateMachine(ctx context.Context, req *cmi.CreateMachi
 		glog.Errorf("Could not parse ProviderSpec into AWSProviderSpec", err)
 	}
 
-	ProviderAccessKeyId, KeyIDExists := req.Secrets["providerAccessKeyId"]
+	ProviderAccessKeyID, KeyIDExists := req.Secrets["providerAccessKeyId"]
 	ProviderAccessKey, KeyExists := req.Secrets["providerSecretAccessKey"]
 	UserData, UserDataExists := req.Secrets["userData"]
 	if !KeyIDExists || !KeyExists || !UserDataExists {
@@ -64,7 +66,7 @@ func (ms *machineServer) CreateMachine(ctx context.Context, req *cmi.CreateMachi
 
 	//TODO: Make validation better to make sure if all the fields under secret are covered.
 	var Secrets api.Secrets
-	Secrets.ProviderAccessKeyId = string(ProviderAccessKeyId)
+	Secrets.ProviderAccessKeyID = string(ProviderAccessKeyID)
 	Secrets.ProviderSecretAccessKey = string(ProviderAccessKey)
 	Secrets.UserData = string(UserData)
 
@@ -175,7 +177,8 @@ func (ms *machineServer) CreateMachine(ctx context.Context, req *cmi.CreateMachi
 	return Resp, nil
 }
 
-func (ms *machineServer) DeleteMachine(ctx context.Context, req *cmi.DeleteMachineRequest) (*cmi.DeleteMachineResponse, error) {
+// DeleteMachine deletes the machine from cloud-provider.
+func (ms *MachineServer) DeleteMachine(ctx context.Context, req *cmi.DeleteMachineRequest) (*cmi.DeleteMachineResponse, error) {
 	fmt.Println("TestLogs: Machine Deleted ...", req.MachineID)
 
 	var ProviderSpec api.AWSProviderSpec
@@ -185,7 +188,7 @@ func (ms *machineServer) DeleteMachine(ctx context.Context, req *cmi.DeleteMachi
 	}
 
 	//Validate if map contains necessary values.
-	ProviderAccessKeyId, KeyIDExists := req.Secrets["providerAccessKeyId"]
+	ProviderAccessKeyID, KeyIDExists := req.Secrets["providerAccessKeyId"]
 	ProviderAccessKey, KeyExists := req.Secrets["providerSecretAccessKey"]
 	UserData, UserDataExists := req.Secrets["userData"]
 	if !KeyIDExists || !KeyExists || !UserDataExists {
@@ -194,7 +197,7 @@ func (ms *machineServer) DeleteMachine(ctx context.Context, req *cmi.DeleteMachi
 	}
 
 	var Secrets api.Secrets
-	Secrets.ProviderAccessKeyId = string(ProviderAccessKeyId)
+	Secrets.ProviderAccessKeyID = string(ProviderAccessKeyID)
 	Secrets.ProviderSecretAccessKey = string(ProviderAccessKey)
 	Secrets.UserData = string(UserData)
 
@@ -278,7 +281,7 @@ func (ms *machineServer) DeleteMachine(ctx context.Context, req *cmi.DeleteMachi
 // ListMachines returns a VM matching the machineID
 // If machineID is an empty string then it returns all matching instances in terms of
 // map[string]string
-func (ms *machineServer) ListMachines(ctx context.Context, req *cmi.ListMachinesRequest) (*cmi.ListMachinesResponse, error) {
+func (ms *MachineServer) ListMachines(ctx context.Context, req *cmi.ListMachinesRequest) (*cmi.ListMachinesResponse, error) {
 	fmt.Println("TestLogs: List of Machine - Request-parameter MachineID:", req.MachineID)
 
 	var ProviderSpec api.AWSProviderSpec
@@ -287,7 +290,7 @@ func (ms *machineServer) ListMachines(ctx context.Context, req *cmi.ListMachines
 		glog.Errorf("Could not parse ProviderSpec into AWSProviderSpec", err)
 	}
 
-	ProviderAccessKeyId, KeyIDExists := req.Secrets["providerAccessKeyId"]
+	ProviderAccessKeyID, KeyIDExists := req.Secrets["providerAccessKeyId"]
 	ProviderAccessKey, KeyExists := req.Secrets["providerSecretAccessKey"]
 	UserData, UserDataExists := req.Secrets["userData"]
 	if !KeyIDExists || !KeyExists || !UserDataExists {
@@ -297,7 +300,7 @@ func (ms *machineServer) ListMachines(ctx context.Context, req *cmi.ListMachines
 
 	//TODO: Make validation better to make sure if all the fields under secret are covered.
 	var Secrets api.Secrets
-	Secrets.ProviderAccessKeyId = string(ProviderAccessKeyId)
+	Secrets.ProviderAccessKeyID = string(ProviderAccessKeyID)
 	Secrets.ProviderSecretAccessKey = string(ProviderAccessKey)
 	Secrets.UserData = string(UserData)
 
@@ -404,7 +407,7 @@ func (ms *machineServer) ListMachines(ctx context.Context, req *cmi.ListMachines
 // Helper function to create SVC
 func createSVC(ProviderSpec api.AWSProviderSpec, Secrets api.Secrets) *ec2.EC2 {
 
-	accessKeyID := strings.TrimSpace(Secrets.ProviderAccessKeyId)
+	accessKeyID := strings.TrimSpace(Secrets.ProviderAccessKeyID)
 	secretAccessKey := strings.TrimSpace(Secrets.ProviderSecretAccessKey)
 
 	if accessKeyID != "" && secretAccessKey != "" {

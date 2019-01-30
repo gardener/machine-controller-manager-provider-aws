@@ -35,19 +35,19 @@ func validateAWSProviderSpec(spec *api.AWSProviderSpec, Secrets *api.Secrets) []
 	var allErrs []error
 
 	if "" == spec.AMI {
-		allErrs = append(allErrs, fmt.Errorf("SpecValidationError: AMI is required field"))
+		allErrs = append(allErrs, fmt.Errorf("AMI is required field"))
 	}
 	if "" == spec.Region {
-		allErrs = append(allErrs, fmt.Errorf("SpecValidationError: Region is required field"))
+		allErrs = append(allErrs, fmt.Errorf("Region is required field"))
 	}
 	if "" == spec.MachineType {
-		allErrs = append(allErrs, fmt.Errorf("SpecValidationError: MachineType is required field"))
+		allErrs = append(allErrs, fmt.Errorf("MachineType is required field"))
 	}
 	if "" == spec.IAM.Name {
-		allErrs = append(allErrs, fmt.Errorf("SpecValidationError: IAM Name is required field"))
+		allErrs = append(allErrs, fmt.Errorf("IAM Name is required field"))
 	}
 	if "" == spec.KeyName {
-		allErrs = append(allErrs, fmt.Errorf("SpecValidationError: KeyName is required field"))
+		allErrs = append(allErrs, fmt.Errorf("KeyName is required field"))
 	}
 
 	allErrs = append(allErrs, validateBlockDevices(spec.BlockDevices)...)
@@ -128,8 +128,8 @@ func validateNetworkInterfaces(networkInterfaces []api.AWSNetworkInterfaceSpec) 
 
 func validateSecrets(reference *api.Secrets) []error {
 	var allErrs []error
-	if "" == reference.ProviderAccessKeyId {
-		allErrs = append(allErrs, fmt.Errorf("Secret ProviderAccessKeyId is required field"))
+	if "" == reference.ProviderAccessKeyID {
+		allErrs = append(allErrs, fmt.Errorf("Secret ProviderAccessKeyID is required field"))
 	}
 	if "" == reference.ProviderSecretAccessKey {
 		allErrs = append(allErrs, fmt.Errorf("Secret ProviderSecretAccessKey is required field"))

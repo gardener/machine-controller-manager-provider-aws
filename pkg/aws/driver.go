@@ -27,12 +27,13 @@ import (
 	cmicommon "github.com/gardener/machine-controller-manager-provider-aws/pkg/cmi-common"
 )
 
-type driver struct {
+// Driver is struct for the driver.
+type Driver struct {
 	cmiDriver *cmicommon.CMIDriver
 	endpoint  string
 
 	ids *cmicommon.DefaultIdentityServer
-	ms  *machineServer
+	ms  *MachineServer
 }
 
 const (
@@ -40,32 +41,30 @@ const (
 )
 
 var (
-	version = "1.0.0"
+	version = "0.1.0" //TODO- remove or figure out to sync with project-version
 )
 
-func NewDriver(endpoint string) *driver {
+// NewDriver returns the new driver object.
+func NewDriver(endpoint string) *Driver {
 	glog.Infof("Driver: %v version: %v", driverName, version)
 
-	d := &driver{}
-
+	d := &Driver{}
 	d.endpoint = endpoint
-
 	cmiDriver := cmicommon.NewCMIDriver(driverName, version)
-	// TODO MachineService Capabilities
-	// cmiDriver.AddControllerServiceCapabilities([]cmi.ControllerServiceCapability_RPC_Type{cmi.ControllerServiceCapability_RPC_UNKNOWN})
-
 	d.cmiDriver = cmiDriver
 
 	return d
 }
 
-func NewMachineServer(d *driver) *machineServer {
-	return &machineServer{
+// NewMachineServer returns the new MachineServer object.
+func NewMachineServer(d *Driver) *MachineServer {
+	return &MachineServer{
 		DefaultMachineServer: cmicommon.NewDefaultMachineServer(d.cmiDriver),
 	}
 }
 
-func (d *driver) Run() {
+// Run runs forever, it initiates all the gRPC services.
+func (d *Driver) Run() {
 	s := cmicommon.NewNonBlockingGRPCServer()
 	s.Start(d.endpoint,
 		nil,

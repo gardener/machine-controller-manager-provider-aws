@@ -143,7 +143,7 @@ type Secrets struct {
 	// AWS cloud config file (base64 encoded)
 	UserData string `json:"userData,omitempty"`
 	// AWS access key id (base64 encoded)
-	ProviderAccessKeyId string `json:"providerAccessKeyId,omitempty"`
+	ProviderAccessKeyID string `json:"providerAccessKeyId,omitempty"`
 	// AWS secret access key (base64 encoded)
 	ProviderSecretAccessKey string `json:"providerSecretAccessKey,omitempty"`
 }
