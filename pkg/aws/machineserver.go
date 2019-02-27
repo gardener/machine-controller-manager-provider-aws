@@ -56,20 +56,21 @@ import (
 //                                          This could be different from req.Name as well
 //
 func (ms *MachineServer) CreateMachine(ctx context.Context, req *cmi.CreateMachineRequest) (*cmi.CreateMachineResponse, error) {
-	fmt.Println("TestLogs: Machine Created ", req.Name)
+	// Log messages to track request
+	glog.V(2).Infof("Machine creation request has been recieved for %q", req.Name)
 
 	var ProviderSpec api.AWSProviderSpec
 	err := json.Unmarshal(req.ProviderSpec, &ProviderSpec)
 	if err != nil {
-		glog.Errorf("Could not parse ProviderSpec into AWSProviderSpec, Error: %s", err)
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	ProviderAccessKeyID, KeyIDExists := req.Secrets["providerAccessKeyId"]
 	ProviderAccessKey, KeyExists := req.Secrets["providerSecretAccessKey"]
 	UserData, UserDataExists := req.Secrets["userData"]
 	if !KeyIDExists || !KeyExists || !UserDataExists {
-		glog.Errorf("Invalidate Secret Map")
-		return nil, fmt.Errorf("Invalidate Secret Map")
+		err := fmt.Errorf("Invalidate Secret Map")
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	//TODO: Make validation better to make sure if all the fields under secret are covered.
@@ -102,7 +103,7 @@ func (ms *MachineServer) CreateMachine(ctx context.Context, req *cmi.CreateMachi
 	}
 	output, err := svc.DescribeImages(&describeImagesRequest)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	var blkDeviceMappings []*ec2.BlockDeviceMapping
@@ -165,16 +166,15 @@ func (ms *MachineServer) CreateMachine(ctx context.Context, req *cmi.CreateMachi
 
 	runResult, err := svc.RunInstances(&inputConfig)
 	if err != nil {
-		return Resp, err
+		return Resp, status.Error(codes.Internal, err.Error())
 	}
 
-	// End of Core Logic MachineCreation - CP Specific
-	// TODO Move from fmt to glog - generic-way at all places.
-	fmt.Println("TestLogs: Printing ProviderSpec : ", ProviderSpec)
 	Resp = &cmi.CreateMachineResponse{
 		MachineID: encodeMachineID(ProviderSpec.Region, *runResult.Instances[0].InstanceId),
 		NodeName:  *runResult.Instances[0].PrivateDnsName,
 	}
+
+	glog.V(2).Infof("Machine creation request has been processed successfully for %q", req.Name)
 	return Resp, nil
 }
 
@@ -186,14 +186,15 @@ func (ms *MachineServer) CreateMachine(ctx context.Context, req *cmi.CreateMachi
 // Secrets          map<string,bytes>   (Optional) Contains a map from string to string contains any cloud specific secrets that can be used by the provider
 //
 func (ms *MachineServer) DeleteMachine(ctx context.Context, req *cmi.DeleteMachineRequest) (*cmi.DeleteMachineResponse, error) {
-	fmt.Println("TestLogs: Machine Deleted ...", req.MachineID)
+	// Log messages to track delete request
+	glog.V(2).Infof("Machine deletion request has been recieved for %q", req.MachineID)
 
 	//Validate if map contains necessary values.
 	ProviderAccessKeyID, KeyIDExists := req.Secrets["providerAccessKeyId"]
 	ProviderAccessKey, KeyExists := req.Secrets["providerSecretAccessKey"]
 	if !KeyIDExists || !KeyExists {
-		glog.Errorf("Invalid Secret Map")
-		return &cmi.DeleteMachineResponse{}, nil
+		err := fmt.Errorf("Invalidate Secret Map")
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	var Secrets api.Secrets
@@ -216,7 +217,7 @@ func (ms *MachineServer) DeleteMachine(ctx context.Context, req *cmi.DeleteMachi
 		output, err := svc.TerminateInstances(input)
 		if err != nil {
 			glog.Errorf("Could not terminate machine: %s", err.Error())
-			return nil, err
+			return nil, status.Error(codes.Internal, err.Error())
 		}
 
 		vmState := output.TerminatingInstances[0]
@@ -227,11 +228,12 @@ func (ms *MachineServer) DeleteMachine(ctx context.Context, req *cmi.DeleteMachi
 			return nil, nil
 		}
 
-		err = errors.New("Machine already terminated")
+		glog.V(2).Infof("Machine %q already terminated", req.MachineID)
 	}
 
-	glog.Errorf("Could not terminate machine: %s", err.Error())
-	return nil, err
+	// End of core logic for Machine-deletion - CP Specific
+	glog.V(2).Infof("Machine deletion request has been processed successfully for %q", req.MachineID)
+	return &cmi.DeleteMachineResponse{}, nil
 }
 
 // GetMachine handles a machine details fetching request
@@ -245,13 +247,14 @@ func (ms *MachineServer) DeleteMachine(ctx context.Context, req *cmi.DeleteMachi
 // Status           enum                Contains the status of the machine on the cloud provider mapped to the enum values - {Unknown, Stopped, Running}
 //
 func (ms *MachineServer) GetMachine(ctx context.Context, req *cmi.GetMachineRequest) (*cmi.GetMachineResponse, error) {
-	fmt.Println("TestLogs: Get Machine")
+	// Log messages to track start and end of request
+	glog.V(2).Infof("Get request has been recieved for %q", req.MachineID)
 
 	ProviderAccessKeyID, KeyIDExists := req.Secrets["providerAccessKeyId"]
 	ProviderAccessKey, KeyExists := req.Secrets["providerSecretAccessKey"]
 	if !KeyIDExists || !KeyExists {
-		glog.Errorf("Invalidate Secret Map")
-		return nil, fmt.Errorf("Invalidate Secret Map")
+		err := fmt.Errorf("Invalidate Secret Map")
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	//TODO: Make validation better to make sure if all the fields under secret are covered.
@@ -275,7 +278,7 @@ func (ms *MachineServer) GetMachine(ctx context.Context, req *cmi.GetMachineRequ
 	runResult, err := svc.DescribeInstances(&input)
 	if err != nil {
 		glog.Errorf("AWS driver is returning error while describe instances request is sent: %s", err)
-		return nil, err
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	count := 0
@@ -292,6 +295,7 @@ func (ms *MachineServer) GetMachine(ctx context.Context, req *cmi.GetMachineRequ
 		return &response, nil
 	}
 
+	glog.V(2).Infof("Machine get request has been processed successfully for %q", req.MachineID)
 	response := cmi.GetMachineResponse{
 		Exists: false,
 	}
@@ -311,20 +315,21 @@ func (ms *MachineServer) GetMachine(ctx context.Context, req *cmi.GetMachineRequ
 //                                      for all machine's who where possibilly created by this ProviderSpec
 //
 func (ms *MachineServer) ListMachines(ctx context.Context, req *cmi.ListMachinesRequest) (*cmi.ListMachinesResponse, error) {
-	fmt.Println("TestLogs: List of Machine ")
+	// Log messages to track start and end of request
+	glog.V(2).Infof("List machines request has been recieved for %q", req.ProviderSpec)
 
 	var ProviderSpec api.AWSProviderSpec
 	err := json.Unmarshal(req.ProviderSpec, &ProviderSpec)
 	if err != nil {
-		glog.Errorf("Could not parse ProviderSpec into AWSProviderSpec, Error: %s", err)
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	ProviderAccessKeyID, KeyIDExists := req.Secrets["providerAccessKeyId"]
 	ProviderAccessKey, KeyExists := req.Secrets["providerSecretAccessKey"]
 	UserData, UserDataExists := req.Secrets["userData"]
 	if !KeyIDExists || !KeyExists || !UserDataExists {
-		glog.Errorf("Invalidate Secret Map")
-		return nil, fmt.Errorf("Invalidate Secret Map")
+		err := fmt.Errorf("Invalidate Secret Map")
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	//TODO: Make validation better to make sure if all the fields under secret are covered.
@@ -391,7 +396,7 @@ func (ms *MachineServer) ListMachines(ctx context.Context, req *cmi.ListMachines
 	runResult, err := svc.DescribeInstances(&input)
 	if err != nil {
 		glog.Errorf("AWS driver is returning error while describe instances request is sent: %s", err)
-		return nil, err
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	listOfVMs := make(map[string]string)
@@ -409,6 +414,7 @@ func (ms *MachineServer) ListMachines(ctx context.Context, req *cmi.ListMachines
 		}
 	}
 
+	glog.V(2).Infof("List machines request has been processed successfully")
 	// Core logic ends here.
 	Resp := &cmi.ListMachinesResponse{
 		MachineList: listOfVMs,
@@ -426,5 +432,7 @@ func (ms *MachineServer) ListMachines(ctx context.Context, req *cmi.ListMachines
 func (ms *MachineServer) ShutDownMachine(ctx context.Context, req *cmi.ShutDownMachineRequest) (*cmi.ShutDownMachineResponse, error) {
 	// Log messages to track start of request
 	glog.V(2).Infof("ShutDown machine request has been recieved for %q", req.MachineID)
+
+	glog.V(2).Infof("Machine shutdown request has been processed successfully for %q", req.MachineID)
 	return nil, status.Error(codes.Unimplemented, "")
 }

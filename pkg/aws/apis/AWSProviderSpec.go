@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2017 SAP SE or an SAP affiliate company. All rights reserved.
+Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -11,7 +11,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-//TODO: Version this package.
 package api
 
 //AWSProviderSpec is the spec to be used while parsing the gRPC calls.
@@ -30,6 +29,7 @@ type AWSProviderSpec struct {
 	Tags              map[string]string           `json:"tags,omitempty"`
 }
 
+// AWSBlockDeviceMappingSpec stores info about AWS block device mappings
 type AWSBlockDeviceMappingSpec struct {
 
 	// The device name exposed to the machine (for example, /dev/sdh or xvdh).
@@ -56,7 +56,7 @@ type AWSBlockDeviceMappingSpec struct {
 	VirtualName string `json:"virtualName,omitempty"`
 }
 
-// Describes a block device for an EBS volume.
+// AWSEbsBlockDeviceSpec describes a block device for an EBS volume.
 // Please also see https://docs.aws.amazon.com/goto/WebAPI/ec2-2016-11-15/EbsBlockDevice
 type AWSEbsBlockDeviceSpec struct {
 
@@ -100,7 +100,7 @@ type AWSEbsBlockDeviceSpec struct {
 	VolumeType string `json:"volumeType,omitempty"`
 }
 
-// Describes an IAM machine profile.
+// AWSIAMProfileSpec describes an IAM machine profile.
 type AWSIAMProfileSpec struct {
 	// The Amazon Resource Name (ARN) of the machine profile.
 	ARN string `json:"arn,omitempty"`
@@ -109,7 +109,7 @@ type AWSIAMProfileSpec struct {
 	Name string `json:"name,omitempty"`
 }
 
-// Describes a network interface.
+// AWSNetworkInterfaceSpec describes a network interface.
 // Please also see https://docs.aws.amazon.com/goto/WebAPI/ec2-2016-11-15/MachineAWSNetworkInterfaceSpecification
 type AWSNetworkInterfaceSpec struct {
 
