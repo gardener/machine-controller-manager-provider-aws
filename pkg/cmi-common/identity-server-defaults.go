@@ -29,10 +29,12 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// DefaultIdentityServer contains the server identity
 type DefaultIdentityServer struct {
 	Driver *CMIDriver
 }
 
+// GetPluginInfo returns the Server details
 func (ids *DefaultIdentityServer) GetPluginInfo(ctx context.Context, req *csi.GetPluginInfoRequest) (*csi.GetPluginInfoResponse, error) {
 	glog.V(5).Infof("Using default GetPluginInfo")
 
@@ -50,10 +52,12 @@ func (ids *DefaultIdentityServer) GetPluginInfo(ctx context.Context, req *csi.Ge
 	}, nil
 }
 
+// Probe tries to probe the server and returns a response
 func (ids *DefaultIdentityServer) Probe(ctx context.Context, req *csi.ProbeRequest) (*csi.ProbeResponse, error) {
 	return &csi.ProbeResponse{}, nil
 }
 
+// GetPluginCapabilities gets capabilities of the plugin
 func (ids *DefaultIdentityServer) GetPluginCapabilities(ctx context.Context, req *csi.GetPluginCapabilitiesRequest) (*csi.GetPluginCapabilitiesResponse, error) {
 	glog.V(5).Infof("Using default capabilities")
 	return &csi.GetPluginCapabilitiesResponse{
