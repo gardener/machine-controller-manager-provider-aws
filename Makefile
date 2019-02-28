@@ -36,7 +36,7 @@ rename-project:
 
 .PHONY: start
 start:
-	go run app/aws/main.go --endpoint=tcp://127.0.0.1:8080
+	go run app/aws/cmi-server.go --endpoint=tcp://127.0.0.1:8080
 
 #########################################
 # Rules for re-vendoring

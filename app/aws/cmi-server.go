@@ -36,7 +36,7 @@ var (
 
 func init() {
 	flag.Set("logtostderr", "true")
-	flag.Set("verbose", "5")
+	flag.Set("v", "3")
 }
 
 func main() {
@@ -44,8 +44,8 @@ func main() {
 	flag.CommandLine.Parse([]string{})
 
 	cmd := &cobra.Command{
-		Use:   "aws-driver",
-		Short: "gRPC based AWS Driver",
+		Use:   "grpc-driver",
+		Short: "gRPC driver for machine-controller-manager",
 		Run: func(cmd *cobra.Command, args []string) {
 			handle()
 		},

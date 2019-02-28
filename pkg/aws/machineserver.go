@@ -38,6 +38,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	api "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
+	validation "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis/validation"
 )
 
 // CreateMachine handles a machine creation request
@@ -79,17 +80,12 @@ func (ms *MachineServer) CreateMachine(ctx context.Context, req *cmi.CreateMachi
 	Secrets.ProviderSecretAccessKey = string(ProviderAccessKey)
 	Secrets.UserData = string(UserData)
 
-	Resp := &cmi.CreateMachineResponse{}
-
-	// Core logic for MachineCreation - CP specific
-
 	//Validate the Spec and Secrets
-	/*
-		alidationErr := validateAWSProviderSpec(&ProviderSpec, &Secrets)
-		if validationerr.ToAggregate() != nil && len(validationerr.ToAggregate().Errors()) > 0 {
-			glog.Errorf("Validation of Machine failed %s", validationerr.ToAggregate().Error())
-			return nil
-		}*/
+	ValidationErr := validation.ValidateAWSProviderSpec(&ProviderSpec, &Secrets)
+	if ValidationErr != nil {
+		err = fmt.Errorf("Error while validating ProviderSpec %v", ValidationErr)
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 
 	svc := createSVC(Secrets, ProviderSpec.Region)
 	UserDataEnc := base64.StdEncoding.EncodeToString(UserData)
@@ -166,10 +162,10 @@ func (ms *MachineServer) CreateMachine(ctx context.Context, req *cmi.CreateMachi
 
 	runResult, err := svc.RunInstances(&inputConfig)
 	if err != nil {
-		return Resp, status.Error(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	Resp = &cmi.CreateMachineResponse{
+	Resp := &cmi.CreateMachineResponse{
 		MachineID: encodeMachineID(ProviderSpec.Region, *runResult.Instances[0].InstanceId),
 		NodeName:  *runResult.Instances[0].PrivateDnsName,
 	}
@@ -201,7 +197,10 @@ func (ms *MachineServer) DeleteMachine(ctx context.Context, req *cmi.DeleteMachi
 	Secrets.ProviderAccessKeyID = string(ProviderAccessKeyID)
 	Secrets.ProviderSecretAccessKey = string(ProviderAccessKey)
 
-	region, machineID := decodeRegionAndMachineID(req.MachineID)
+	region, machineID, err := decodeRegionAndMachineID(req.MachineID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 
 	svc := createSVC(Secrets, region)
 	input := &ec2.TerminateInstancesInput{
@@ -210,7 +209,7 @@ func (ms *MachineServer) DeleteMachine(ctx context.Context, req *cmi.DeleteMachi
 		},
 		DryRun: aws.Bool(true),
 	}
-	_, err := svc.TerminateInstances(input)
+	_, err = svc.TerminateInstances(input)
 	awsErr, ok := err.(awserr.Error)
 	if ok && awsErr.Code() == "DryRunOperation" {
 		input.DryRun = aws.Bool(false)
@@ -225,7 +224,7 @@ func (ms *MachineServer) DeleteMachine(ctx context.Context, req *cmi.DeleteMachi
 
 		if *vmState.CurrentState.Name == "shutting-down" ||
 			*vmState.CurrentState.Name == "terminated" {
-			return nil, nil
+			return &cmi.DeleteMachineResponse{}, nil
 		}
 
 		glog.V(2).Infof("Machine %q already terminated", req.MachineID)
@@ -261,7 +260,10 @@ func (ms *MachineServer) GetMachine(ctx context.Context, req *cmi.GetMachineRequ
 	var Secrets api.Secrets
 	Secrets.ProviderAccessKeyID = string(ProviderAccessKeyID)
 	Secrets.ProviderSecretAccessKey = string(ProviderAccessKey)
-	region, machineID := decodeRegionAndMachineID(req.MachineID)
+	region, machineID, err := decodeRegionAndMachineID(req.MachineID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 
 	svc := createSVC(Secrets, region)
 	input := ec2.DescribeInstancesInput{
@@ -338,18 +340,12 @@ func (ms *MachineServer) ListMachines(ctx context.Context, req *cmi.ListMachines
 	Secrets.ProviderSecretAccessKey = string(ProviderAccessKey)
 	Secrets.UserData = string(UserData)
 
-	// Core Logic for Listing the Machines - Provider Specific
-
-	/*
-		//Validate the Spec and Secrets
-		ValidationErr := validateAWSProviderSpec(&ProviderSpec, &Secrets)
-		if ValidationErr != nil {
-			Resp = &cmi.ListMachinesResponse{
-				Error: ValidationErrToString(ValidationErr),
-			}
-			fmt.Println("Error while validating ProviderSpec", ValidationErr)
-			return Resp, fmt.Errorf(Resp.Error)
-		}*/
+	//Validate the Spec and Secrets
+	ValidationErr := validation.ValidateAWSProviderSpec(&ProviderSpec, &Secrets)
+	if ValidationErr != nil {
+		err = fmt.Errorf("Error while validating ProviderSpec %v", ValidationErr)
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 
 	clusterName := ""
 	nodeRole := ""
@@ -432,7 +428,51 @@ func (ms *MachineServer) ListMachines(ctx context.Context, req *cmi.ListMachines
 func (ms *MachineServer) ShutDownMachine(ctx context.Context, req *cmi.ShutDownMachineRequest) (*cmi.ShutDownMachineResponse, error) {
 	// Log messages to track start of request
 	glog.V(2).Infof("ShutDown machine request has been recieved for %q", req.MachineID)
+	defer glog.V(2).Infof("Machine shutdown request has been processed successfully for %q", req.MachineID)
 
-	glog.V(2).Infof("Machine shutdown request has been processed successfully for %q", req.MachineID)
-	return nil, status.Error(codes.Unimplemented, "")
+	//Validate if map contains necessary values.
+	ProviderAccessKeyID, KeyIDExists := req.Secrets["providerAccessKeyId"]
+	ProviderAccessKey, KeyExists := req.Secrets["providerSecretAccessKey"]
+	if !KeyIDExists || !KeyExists {
+		err := fmt.Errorf("Invalidate Secret Map")
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	var Secrets api.Secrets
+	Secrets.ProviderAccessKeyID = string(ProviderAccessKeyID)
+	Secrets.ProviderSecretAccessKey = string(ProviderAccessKey)
+
+	region, machineID, err := decodeRegionAndMachineID(req.MachineID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	svc := createSVC(Secrets, region)
+	input := &ec2.StopInstancesInput{
+		InstanceIds: []*string{
+			aws.String(machineID),
+		},
+		DryRun: aws.Bool(true),
+	}
+	_, err = svc.StopInstances(input)
+	awsErr, ok := err.(awserr.Error)
+	if ok && awsErr.Code() == "DryRunOperation" {
+		input.DryRun = aws.Bool(false)
+		output, err := svc.StopInstances(input)
+		if err != nil {
+			glog.Errorf("Could not stop machine: %s", err.Error())
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		vmState := output.StoppingInstances[0]
+		//glog.Info(vmState.PreviousState, vmState.CurrentState)
+
+		if *vmState.CurrentState.Name == "shutting-down" ||
+			*vmState.CurrentState.Name == "terminated" {
+			return &cmi.ShutDownMachineResponse{}, nil
+		}
+
+		glog.V(2).Infof("Machine %q already terminated", req.MachineID)
+	}
+	return &cmi.ShutDownMachineResponse{}, nil
 }

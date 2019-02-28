@@ -49,7 +49,11 @@ func encodeMachineID(region, machineID string) string {
 	return fmt.Sprintf("aws:///%s/%s", region, machineID)
 }
 
-func decodeRegionAndMachineID(id string) (string, string) {
+func decodeRegionAndMachineID(id string) (string, string, error) {
 	splitProviderID := strings.Split(id, "/")
-	return splitProviderID[len(splitProviderID)-2], splitProviderID[len(splitProviderID)-1]
+	if len(splitProviderID) < 2 {
+		err := fmt.Errorf("Unable to decode provider-ID")
+		return "", "", err
+	}
+	return splitProviderID[len(splitProviderID)-2], splitProviderID[len(splitProviderID)-1], nil
 }
