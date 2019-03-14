@@ -25,13 +25,17 @@ import (
 	"github.com/golang/glog"
 )
 
-// CMIDriver is the struct for the driver.
+// CMIDriver object is used to store the driver details
 type CMIDriver struct {
 	name    string
 	version string
+	/*
+		TODO Add controller service capability handler
+		cap     []*cmi.ControllerServiceCapability
+	*/
 }
 
-// NewCMIDriver return new CMI Driver object.
+// NewCMIDriver creates a new CMIDriver object and returns the same
 func NewCMIDriver(name string, v string) *CMIDriver {
 	if name == "" {
 		glog.Errorf("Driver name missing")

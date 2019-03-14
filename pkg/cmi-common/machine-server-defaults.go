@@ -29,19 +29,25 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// DefaultMachineServer contains the machine server info
 type DefaultMachineServer struct {
 	Driver *CMIDriver
 }
 
+// CreateMachine is the default method used to create a machine
 func (cs *DefaultMachineServer) CreateMachine(ctx context.Context, req *cmi.CreateMachineRequest) (*cmi.CreateMachineResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "")
 }
 
-func (cs *DefaultMachineServer) DeleteMachine(ctx context.Context, req *cmi.DeleteMachineRequest) (*cmi.DeleteMachineResponse, error) {
+// ListMachines is the default method used to list machines
+// Returns a VM matching the machineID, but when the machineID is an empty string
+// then it returns all matching instances in terms of map[string]string
+func (cs *DefaultMachineServer) ListMachines(ctx context.Context, req *cmi.ListMachinesRequest) (*cmi.ListMachinesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "")
 }
 
-func (cs *DefaultMachineServer) ListMachines(ctx context.Context, req *cmi.ListMachinesRequest) (*cmi.ListMachinesResponse, error) {
+// DeleteMachine is the default method used to delete a machine
+func (cs *DefaultMachineServer) DeleteMachine(ctx context.Context, req *cmi.DeleteMachineRequest) (*cmi.DeleteMachineResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "")
 }
 

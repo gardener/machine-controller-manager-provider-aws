@@ -30,6 +30,7 @@ import (
 	"google.golang.org/grpc"
 )
 
+// ParseEndpoint parses the given endpoint string into the protocol and address
 func ParseEndpoint(ep string) (string, string, error) {
 	if strings.HasPrefix(strings.ToLower(ep), "unix://") || strings.HasPrefix(strings.ToLower(ep), "tcp://") {
 		s := strings.SplitN(ep, "://", 2)
@@ -40,24 +41,27 @@ func ParseEndpoint(ep string) (string, string, error) {
 	return "", "", fmt.Errorf("Invalid endpoint: %v", ep)
 }
 
+// NewDefaultIdentityServer returns the default Identity server object
 func NewDefaultIdentityServer(d *CMIDriver) *DefaultIdentityServer {
 	return &DefaultIdentityServer{
 		Driver: d,
 	}
 }
 
+// NewDefaultMachineServer returns a default machine server object
 func NewDefaultMachineServer(d *CMIDriver) *DefaultMachineServer {
 	return &DefaultMachineServer{
 		Driver: d,
 	}
 }
 
+// logGRPC logs various GRPC requests and response
 func logGRPC(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	glog.V(3).Infof("GRPC call: %s", info.FullMethod)
 	glog.V(5).Infof("GRPC request: %+v", req)
 	resp, err := handler(ctx, req)
 	if err != nil {
-		glog.Errorf("GRPC error: %v", err)
+		glog.Errorf("GRPC call: %s, Error: %v", info.FullMethod, err)
 	} else {
 		glog.V(5).Infof("GRPC response: %+v", resp)
 	}

@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package aws - validation is used to validate cloud specific ProviderSpec
-package aws
+// Package validation - validation is used to validate cloud specific ProviderSpec for AWS
+package validation
 
 import (
 	"fmt"
@@ -31,7 +31,8 @@ const nameMaxLength int = 63
 
 var nameRegexp = regexp.MustCompile("^" + nameFmt + "$")
 
-func validateAWSProviderSpec(spec *api.AWSProviderSpec, Secrets *api.Secrets) []error {
+// ValidateAWSProviderSpec validates AWS provider spec
+func ValidateAWSProviderSpec(spec *api.AWSProviderSpec, Secrets *api.Secrets) []error {
 	var allErrs []error
 
 	if "" == spec.AMI {

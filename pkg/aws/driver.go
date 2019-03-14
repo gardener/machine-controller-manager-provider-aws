@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 This file was copied and modified from the kubernetes-csi/drivers project
-https://github.com/kubernetes-csi/drivers/blob/release-1.0/pkg/sampleprovider/driver.go
+https://github.com/kubernetes-csi/drivers/blob/release-1.0/pkg/nfs/driver.go
 
 Modifications Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved.
 */
@@ -22,18 +22,25 @@ Modifications Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights 
 package aws
 
 import (
-	"github.com/golang/glog"
-
 	cmicommon "github.com/gardener/machine-controller-manager-provider-aws/pkg/cmi-common"
+	"github.com/golang/glog"
 )
 
-// Driver is struct for the driver.
-type Driver struct {
-	cmiDriver *cmicommon.CMIDriver
-	endpoint  string
+// MachineServer contains the machine server info
+type MachineServer struct {
+	*cmicommon.DefaultMachineServer
+}
 
+// Driver returns the new provider details
+type Driver struct {
+	// CMIDriver contains details about the CMIDriver object
+	CMIDriver *cmicommon.CMIDriver
+	// Contains the endpoint details on which the driver is open for connections
+	endpoint string
+	// Identity server attached to the driver
 	ids *cmicommon.DefaultIdentityServer
-	ms  *MachineServer
+	// Machine Server attached to the driver
+	ms *MachineServer
 }
 
 const (
@@ -41,29 +48,33 @@ const (
 )
 
 var (
-	version = "0.1.0" //TODO- remove or figure out to sync with project-version
+	version = "0.1.0"
 )
 
-// NewDriver returns the new driver object.
+// NewDriver returns a newly created driver object
 func NewDriver(endpoint string) *Driver {
-	glog.Infof("Driver: %v version: %v", driverName, version)
+	glog.V(1).Infof("Driver: %v version: %v", driverName, version)
 
 	d := &Driver{}
+
 	d.endpoint = endpoint
-	cmiDriver := cmicommon.NewCMIDriver(driverName, version)
-	d.cmiDriver = cmiDriver
+
+	CMIDriver := cmicommon.NewCMIDriver(driverName, version)
+	// TODO MachineService Capabilities
+	// cmiDriver.AddControllerServiceCapabilities([]cmi.ControllerServiceCapability_RPC_Type{cmi.ControllerServiceCapability_RPC_UNKNOWN})
+	d.CMIDriver = CMIDriver
 
 	return d
 }
 
-// NewMachineServer returns the new MachineServer object.
+// NewMachineServer returns a new machineserver
 func NewMachineServer(d *Driver) *MachineServer {
 	return &MachineServer{
-		DefaultMachineServer: cmicommon.NewDefaultMachineServer(d.cmiDriver),
+		DefaultMachineServer: cmicommon.NewDefaultMachineServer(d.CMIDriver),
 	}
 }
 
-// Run runs forever, it initiates all the gRPC services.
+// Run starts a new gRPC server to start the driver
 func (d *Driver) Run() {
 	s := cmicommon.NewNonBlockingGRPCServer()
 	s.Start(d.endpoint,
