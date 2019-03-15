@@ -75,16 +75,26 @@ func (ms *MockEC2Client) DescribeInstances(input *ec2.DescribeInstancesInput) (*
 	found := false
 	instanceList := make([]*ec2.Instance, 0)
 
-	for _, instanceID := range input.InstanceIds {
-		for _, instance := range *ms.FakeInstances {
-			if *instance.InstanceId == *instanceID {
-				found = true
-				instanceList = append(instanceList, &instance)
+	if len(input.InstanceIds) > 0 {
+		// Target Specific instances
+		for _, instanceID := range input.InstanceIds {
+			for _, instance := range *ms.FakeInstances {
+				if *instance.InstanceId == *instanceID {
+					found = true
+					instanceToCopy := instance
+					instanceList = append(instanceList, &instanceToCopy)
+				}
 			}
 		}
-	}
-	if !found {
-		return nil, fmt.Errorf("Couldn't find any instance matching requirement")
+		if !found {
+			return nil, fmt.Errorf("Couldn't find any instance matching requirement")
+		}
+	} else {
+		// Target all instances
+		for _, instance := range *ms.FakeInstances {
+			instanceToCopy := instance
+			instanceList = append(instanceList, &instanceToCopy)
+		}
 	}
 
 	return &ec2.DescribeInstancesOutput{
