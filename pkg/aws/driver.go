@@ -22,13 +22,25 @@ Modifications Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights 
 package aws
 
 import (
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	api "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
 	cmicommon "github.com/gardener/machine-controller-manager-provider-aws/pkg/cmi-common"
 	"github.com/golang/glog"
 )
 
 // MachineServer contains the machine server info
+// It implements the cmi.MachineClient interface
+// It also implements the driverSPI interface
 type MachineServer struct {
 	*cmicommon.DefaultMachineServer
+	SPI DriverSPI
+}
+
+// DriverSPI provides an interface to deal with cloud provider session
+type DriverSPI interface {
+	NewSession(api.Secrets, string) (*session.Session, error)
+	NewEC2API(*session.Session) ec2iface.EC2API
 }
 
 // Driver returns the new provider details
@@ -68,9 +80,10 @@ func NewDriver(endpoint string) *Driver {
 }
 
 // NewMachineServer returns a new machineserver
-func NewMachineServer(d *Driver) *MachineServer {
+func NewMachineServer(d *Driver, spi DriverSPI) *MachineServer {
 	return &MachineServer{
 		DefaultMachineServer: cmicommon.NewDefaultMachineServer(d.CMIDriver),
+		SPI:                  spi,
 	}
 }
 
@@ -79,6 +92,6 @@ func (d *Driver) Run() {
 	s := cmicommon.NewNonBlockingGRPCServer()
 	s.Start(d.endpoint,
 		nil,
-		NewMachineServer(d))
+		NewMachineServer(d, &driverSPIImpl{}))
 	s.Wait()
 }

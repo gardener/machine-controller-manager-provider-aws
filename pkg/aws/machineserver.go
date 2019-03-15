@@ -87,7 +87,7 @@ func (ms *MachineServer) CreateMachine(ctx context.Context, req *cmi.CreateMachi
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	svc := createSVC(Secrets, ProviderSpec.Region)
+	svc := ms.createSVC(Secrets, ProviderSpec.Region)
 	UserDataEnc := base64.StdEncoding.EncodeToString(UserData)
 
 	var imageIds []*string
@@ -202,7 +202,7 @@ func (ms *MachineServer) DeleteMachine(ctx context.Context, req *cmi.DeleteMachi
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	svc := createSVC(Secrets, region)
+	svc := ms.createSVC(Secrets, region)
 	input := &ec2.TerminateInstancesInput{
 		InstanceIds: []*string{
 			aws.String(machineID),
@@ -265,16 +265,9 @@ func (ms *MachineServer) GetMachine(ctx context.Context, req *cmi.GetMachineRequ
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	svc := createSVC(Secrets, region)
+	svc := ms.createSVC(Secrets, region)
 	input := ec2.DescribeInstancesInput{
-		Filters: []*ec2.Filter{
-			&ec2.Filter{
-				Name: aws.String("instance-id"),
-				Values: []*string{
-					&machineID,
-				},
-			},
-		},
+		InstanceIds: []*string{&machineID},
 	}
 
 	runResult, err := svc.DescribeInstances(&input)
@@ -285,12 +278,10 @@ func (ms *MachineServer) GetMachine(ctx context.Context, req *cmi.GetMachineRequ
 
 	count := 0
 	for _, reservation := range runResult.Reservations {
-		for range reservation.Instances {
-			count++
-		}
+		count += len(reservation.Instances)
 	}
 
-	if count > 1 {
+	if count > 0 {
 		response := cmi.GetMachineResponse{
 			Exists: true,
 		}
@@ -362,7 +353,7 @@ func (ms *MachineServer) ListMachines(ctx context.Context, req *cmi.ListMachines
 		return nil, errors.New("Couldn't map machine class to a cluster")
 	}
 
-	svc := createSVC(Secrets, ProviderSpec.Region)
+	svc := ms.createSVC(Secrets, ProviderSpec.Region)
 	input := ec2.DescribeInstancesInput{
 		Filters: []*ec2.Filter{
 			&ec2.Filter{
@@ -447,7 +438,7 @@ func (ms *MachineServer) ShutDownMachine(ctx context.Context, req *cmi.ShutDownM
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	svc := createSVC(Secrets, region)
+	svc := ms.createSVC(Secrets, region)
 	input := &ec2.StopInstancesInput{
 		InstanceIds: []*string{
 			aws.String(machineID),
