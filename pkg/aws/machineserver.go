@@ -78,7 +78,6 @@ func (ms *MachineServer) CreateMachine(ctx context.Context, req *cmi.CreateMachi
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	//TODO: Make validation better to make sure if all the fields under secret are covered.
 	var Secrets api.Secrets
 	Secrets.ProviderAccessKeyID = string(ProviderAccessKeyID)
 	Secrets.ProviderSecretAccessKey = string(ProviderSecretAccessKey)

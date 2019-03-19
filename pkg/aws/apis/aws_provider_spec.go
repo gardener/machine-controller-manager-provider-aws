@@ -18,7 +18,6 @@ type AWSProviderSpec struct {
 	//TODO: figure out a better way to present objectmeta and typemeta without importing k8s.io
 	APIVersion        string                      `json:"apiVersion,omitempty"`
 	AMI               string                      `json:"ami,omitempty"`
-	Region            string                      `json:"region,omitempty"`
 	BlockDevices      []AWSBlockDeviceMappingSpec `json:"blockDevices,omitempty"`
 	EbsOptimized      bool                        `json:"ebsOptimized,omitempty"`
 	IAM               AWSIAMProfileSpec           `json:"iam,omitempty"`
@@ -26,6 +25,7 @@ type AWSProviderSpec struct {
 	KeyName           string                      `json:"keyName,omitempty"`
 	Monitoring        bool                        `json:"monitoring,omitempty"`
 	NetworkInterfaces []AWSNetworkInterfaceSpec   `json:"networkInterfaces,omitempty"`
+	Region            string                      `json:"region,omitempty"`
 	Tags              map[string]string           `json:"tags,omitempty"`
 }
 
@@ -140,10 +140,10 @@ type AWSNetworkInterfaceSpec struct {
 
 // Secrets stores the cloud-provider specific sensitive-information.
 type Secrets struct {
-	// AWS cloud config file (base64 encoded)
-	UserData string `json:"userData,omitempty"`
 	// AWS access key id (base64 encoded)
 	ProviderAccessKeyID string `json:"providerAccessKeyId,omitempty"`
 	// AWS secret access key (base64 encoded)
 	ProviderSecretAccessKey string `json:"providerSecretAccessKey,omitempty"`
+	// AWS cloud config file (base64 encoded)
+	UserData string `json:"userData,omitempty"`
 }
