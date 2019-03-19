@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	awssession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -35,7 +36,12 @@ type MockEC2Client struct {
 }
 
 // DescribeImages implements a mock describe image method
-func (ms *MockEC2Client) DescribeImages(*ec2.DescribeImagesInput) (*ec2.DescribeImagesOutput, error) {
+func (ms *MockEC2Client) DescribeImages(input *ec2.DescribeImagesInput) (*ec2.DescribeImagesOutput, error) {
+
+	if *input.ImageIds[0] == "fail-query-at-DescribeImages" {
+		return nil, fmt.Errorf("Couldn't find image with given ID")
+	}
+
 	rootDeviceName := "test-root-disk"
 
 	return &ec2.DescribeImagesOutput{
@@ -50,6 +56,11 @@ func (ms *MockEC2Client) DescribeImages(*ec2.DescribeImagesInput) (*ec2.Describe
 // RunInstances implements a mock run instance method
 // The name of the newly created instances depends on the number of instances in cache starts from 0
 func (ms *MockEC2Client) RunInstances(input *ec2.RunInstancesInput) (*ec2.Reservation, error) {
+
+	if *input.ImageId == "fail-query-at-RunInstances" {
+		return nil, fmt.Errorf("Couldn't run instance with given ID")
+	}
+
 	instanceID := fmt.Sprintf("i-0123456789-%d", len(*ms.FakeInstances))
 	privateDNSName := fmt.Sprintf("ip-%d", len(*ms.FakeInstances))
 
@@ -60,6 +71,7 @@ func (ms *MockEC2Client) RunInstances(input *ec2.RunInstancesInput) (*ec2.Reserv
 			Code: aws.Int64(16),
 			Name: aws.String("running"),
 		},
+		Tags: input.TagSpecifications[0].Tags,
 	}
 	*ms.FakeInstances = append(*ms.FakeInstances, newInstance)
 
@@ -76,6 +88,16 @@ func (ms *MockEC2Client) DescribeInstances(input *ec2.DescribeInstancesInput) (*
 	instanceList := make([]*ec2.Instance, 0)
 
 	if len(input.InstanceIds) > 0 {
+		if *input.InstanceIds[0] == "return-empty-list-at-DescribeInstances" {
+			return &ec2.DescribeInstancesOutput{
+				Reservations: []*ec2.Reservation{
+					&ec2.Reservation{
+						Instances: instanceList,
+					},
+				},
+			}, nil
+		}
+
 		// Target Specific instances
 		for _, instanceID := range input.InstanceIds {
 			for _, instance := range *ms.FakeInstances {
@@ -90,6 +112,11 @@ func (ms *MockEC2Client) DescribeInstances(input *ec2.DescribeInstancesInput) (*
 			return nil, fmt.Errorf("Couldn't find any instance matching requirement")
 		}
 	} else {
+
+		if *input.Filters[0].Values[0] == "kubernetes.io/cluster/return-error-at-DescribeInstances" {
+			return nil, fmt.Errorf("Cloud provider returned error")
+		}
+
 		// Target all instances
 		for _, instance := range *ms.FakeInstances {
 			instanceToCopy := instance
@@ -108,6 +135,25 @@ func (ms *MockEC2Client) DescribeInstances(input *ec2.DescribeInstancesInput) (*
 
 // TerminateInstances implements a mock terminate instance method
 func (ms *MockEC2Client) TerminateInstances(input *ec2.TerminateInstancesInput) (*ec2.TerminateInstancesOutput, error) {
+
+	if *input.InstanceIds[0] == "i-terminate-error" {
+		return nil, fmt.Errorf("Termination of instance errored out")
+	} else if *input.InstanceIds[0] == "i-instance-doesnt-exist" {
+		// If instance with instance ID doesn't exist
+		return nil, awserr.New(
+			ec2.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceIdMalformed,
+			"Instance with instance-ID doesn't exist",
+			fmt.Errorf("Instance with instance-ID doesn't exist"),
+		)
+	} else if *input.DryRun {
+		// If it is a dry run
+		return nil, awserr.New(
+			"DryRunOperation",
+			"This is a dryRun call",
+			fmt.Errorf("This is a dry run call"),
+		)
+	}
+
 	var desiredInstance ec2.Instance
 	found := false
 	newInstanceList := make([]ec2.Instance, 0)
@@ -126,7 +172,7 @@ func (ms *MockEC2Client) TerminateInstances(input *ec2.TerminateInstancesInput) 
 	ms.FakeInstances = &newInstanceList
 
 	if !found {
-		return nil, fmt.Errorf("Couldn't find any instance matching requirement")
+		return nil, fmt.Errorf("Couldn't find instance with given instance-ID %s", *input.InstanceIds[0])
 	}
 
 	return &ec2.TerminateInstancesOutput{
@@ -145,6 +191,25 @@ func (ms *MockEC2Client) TerminateInstances(input *ec2.TerminateInstancesInput) 
 
 // StopInstances implements a mock stop instance method
 func (ms *MockEC2Client) StopInstances(input *ec2.StopInstancesInput) (*ec2.StopInstancesOutput, error) {
+
+	if *input.InstanceIds[0] == "i-stop-error" {
+		return nil, fmt.Errorf("Stopping of instance errored out")
+	} else if *input.InstanceIds[0] == "i-instance-doesnt-exist" {
+		// If instance with instance ID doesn't exist
+		return nil, awserr.New(
+			ec2.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceIdMalformed,
+			"Instance with instance-ID doesn't exist",
+			fmt.Errorf("Instance with instance-ID doesn't exist"),
+		)
+	} else if *input.DryRun {
+		// If it is a dry run
+		return nil, awserr.New(
+			"DryRunOperation",
+			"This is a dryRun call",
+			fmt.Errorf("This is a dry run call"),
+		)
+	}
+
 	var desiredInstance ec2.Instance
 	found := false
 
