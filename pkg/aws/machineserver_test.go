@@ -161,6 +161,19 @@ var _ = Describe("MachineServer", func() {
 					errMessage:        "rpc error: code = Internal desc = Error while validating ProviderSpec [AMI is required field Region is required field]",
 				},
 			}),
+			Entry("Invalid region that doesn't exist", &data{
+				action: action{
+					machineRequest: &cmipb.CreateMachineRequest{
+						Name:         "test",
+						ProviderSpec: []byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"fail-at-region\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}"),
+						Secrets:      providerSecret,
+					},
+				},
+				expect: expect{
+					errToHaveOccurred: true,
+					errMessage:        "rpc error: code = Internal desc = Region doesn't exist while trying to create session",
+				},
+			}),
 			Entry("Invalid image ID that doesn't exist", &data{
 				action: action{
 					machineRequest: &cmipb.CreateMachineRequest{
@@ -319,6 +332,25 @@ var _ = Describe("MachineServer", func() {
 				expect: expect{
 					errToHaveOccurred: true,
 					errMessage:        "rpc error: code = Internal desc = Unable to decode provider-ID",
+				},
+			}),
+			Entry("Region doesn't exist", &data{
+				setup: setup{
+					createMachineRequest: &cmipb.CreateMachineRequest{
+						Name:         "test",
+						ProviderSpec: providerSpec,
+						Secrets:      providerSecret,
+					},
+				},
+				action: action{
+					deleteMachineRequest: &cmipb.DeleteMachineRequest{
+						MachineID: "aws:///fail-at-region/i-0123456789-0",
+						Secrets:   providerSecret,
+					},
+				},
+				expect: expect{
+					errToHaveOccurred: true,
+					errMessage:        "rpc error: code = Internal desc = Region doesn't exist while trying to create session",
 				},
 			}),
 			Entry("Termination of non-existant call fails", &data{
@@ -498,6 +530,25 @@ var _ = Describe("MachineServer", func() {
 					errMessage:        "rpc error: code = Internal desc = Unable to decode provider-ID",
 				},
 			}),
+			Entry("Region doesn't exist", &data{
+				setup: setup{
+					createMachineRequest: &cmipb.CreateMachineRequest{
+						Name:         "test",
+						ProviderSpec: providerSpec,
+						Secrets:      providerSecret,
+					},
+				},
+				action: action{
+					getMachineRequest: &cmipb.GetMachineRequest{
+						MachineID: "aws:///fail-at-region/i-0123456789-0",
+						Secrets:   providerSecret,
+					},
+				},
+				expect: expect{
+					errToHaveOccurred: true,
+					errMessage:        "rpc error: code = Internal desc = Region doesn't exist while trying to create session",
+				},
+			}),
 			Entry("Get machine of non-existant instance fails", &data{
 				setup: setup{
 					createMachineRequest: &cmipb.CreateMachineRequest{
@@ -636,6 +687,25 @@ var _ = Describe("MachineServer", func() {
 					errMessage:        "rpc error: code = Internal desc = Unable to decode provider-ID",
 				},
 			}),
+			Entry("Region doesn't exist", &data{
+				setup: setup{
+					createMachineRequest: &cmipb.CreateMachineRequest{
+						Name:         "test",
+						ProviderSpec: providerSpec,
+						Secrets:      providerSecret,
+					},
+				},
+				action: action{
+					shutDownMachineRequest: &cmipb.ShutDownMachineRequest{
+						MachineID: "aws:///fail-at-region/i-0123456789-0",
+						Secrets:   providerSecret,
+					},
+				},
+				expect: expect{
+					errToHaveOccurred: true,
+					errMessage:        "rpc error: code = Internal desc = Region doesn't exist while trying to create session",
+				},
+			}),
 			Entry("Couldn't find instance with given ID, but fails", &data{
 				setup: setup{
 					createMachineRequest: &cmipb.CreateMachineRequest{
@@ -771,7 +841,7 @@ var _ = Describe("MachineServer", func() {
 					},
 				},
 			}),
-			Entry("Unexpected end of JSON inpu", &data{
+			Entry("Unexpected end of JSON input", &data{
 				setup: setup{},
 				action: action{
 					listMachineRequest: &cmipb.ListMachinesRequest{
@@ -842,6 +912,19 @@ var _ = Describe("MachineServer", func() {
 				expect: expect{
 					errToHaveOccurred: true,
 					errMessage:        "rpc error: code = Internal desc = Error while validating ProviderSpec [AMI is required field Region is required field]",
+				},
+			}),
+			Entry("Region doesn't exist", &data{
+				setup: setup{},
+				action: action{
+					listMachineRequest: &cmipb.ListMachinesRequest{
+						ProviderSpec: []byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"fail-at-region\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}"),
+						Secrets:      providerSecret,
+					},
+				},
+				expect: expect{
+					errToHaveOccurred: true,
+					errMessage:        "rpc error: code = Internal desc = Region doesn't exist while trying to create session",
 				},
 			}),
 			Entry("Cluster details missing in machine class", &data{

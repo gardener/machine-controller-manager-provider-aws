@@ -43,13 +43,13 @@ func decodeRegionAndMachineID(id string) (string, string, error) {
 }
 
 // Helper function to create SVC
-func (ms *MachineServer) createSVC(secrets api.Secrets, region string) ec2iface.EC2API {
+func (ms *MachineServer) createSVC(secrets api.Secrets, region string) (ec2iface.EC2API, error) {
 	session, err := ms.SPI.NewSession(secrets, region)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	svc := ms.SPI.NewEC2API(session)
-	return svc
+	return svc, nil
 }
 
 //driverSPIImpl is the real implementation of DriverSPI interface that makes the calls to the AWS SDK.

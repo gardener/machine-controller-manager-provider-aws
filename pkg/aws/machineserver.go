@@ -90,7 +90,11 @@ func (ms *MachineServer) CreateMachine(ctx context.Context, req *cmi.CreateMachi
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	svc := ms.createSVC(Secrets, ProviderSpec.Region)
+	svc, err := ms.createSVC(Secrets, ProviderSpec.Region)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
 	UserDataEnc := base64.StdEncoding.EncodeToString(UserData)
 
 	var imageIds []*string
@@ -211,7 +215,11 @@ func (ms *MachineServer) DeleteMachine(ctx context.Context, req *cmi.DeleteMachi
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	svc := ms.createSVC(Secrets, region)
+	svc, err := ms.createSVC(Secrets, region)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
 	input := &ec2.TerminateInstancesInput{
 		InstanceIds: []*string{
 			aws.String(machineID),
@@ -276,7 +284,11 @@ func (ms *MachineServer) GetMachine(ctx context.Context, req *cmi.GetMachineRequ
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	svc := ms.createSVC(Secrets, region)
+	svc, err := ms.createSVC(Secrets, region)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
 	input := ec2.DescribeInstancesInput{
 		InstanceIds: []*string{
 			aws.String(machineID),
@@ -340,7 +352,11 @@ func (ms *MachineServer) ShutDownMachine(ctx context.Context, req *cmi.ShutDownM
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	svc := ms.createSVC(Secrets, region)
+	svc, err := ms.createSVC(Secrets, region)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
 	input := &ec2.StopInstancesInput{
 		InstanceIds: []*string{
 			aws.String(machineID),
@@ -430,7 +446,11 @@ func (ms *MachineServer) ListMachines(ctx context.Context, req *cmi.ListMachines
 		}
 	}
 
-	svc := ms.createSVC(Secrets, ProviderSpec.Region)
+	svc, err := ms.createSVC(Secrets, ProviderSpec.Region)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
 	input := ec2.DescribeInstancesInput{
 		Filters: []*ec2.Filter{
 			&ec2.Filter{

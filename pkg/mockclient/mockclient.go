@@ -19,6 +19,9 @@ type MockDriverSPIImpl struct {
 
 // NewSession starts a new AWS session
 func (ms *MockDriverSPIImpl) NewSession(Secrets api.Secrets, region string) (*awssession.Session, error) {
+	if region == "fail-at-region" {
+		return nil, fmt.Errorf("Region doesn't exist while trying to create session")
+	}
 	return &awssession.Session{}, nil
 }
 
