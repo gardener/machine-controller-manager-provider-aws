@@ -24,7 +24,6 @@ package aws
 import (
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -67,17 +66,21 @@ func (ms *MachineServer) CreateMachine(ctx context.Context, req *cmi.CreateMachi
 	}
 
 	ProviderAccessKeyID, KeyIDExists := req.Secrets["providerAccessKeyId"]
-	ProviderAccessKey, KeyExists := req.Secrets["providerSecretAccessKey"]
+	ProviderSecretAccessKey, AccessKeyExists := req.Secrets["providerSecretAccessKey"]
 	UserData, UserDataExists := req.Secrets["userData"]
-	if !KeyIDExists || !KeyExists || !UserDataExists {
-		err := fmt.Errorf("Invalidate Secret Map")
+	if !KeyIDExists || !AccessKeyExists || !UserDataExists {
+		err := fmt.Errorf(
+			"Invalidate Secret Map. Map variables present \nProviderAccessKeyID: %t, \nProviderSecretAccessKey: %t, \nUserData: %t",
+			KeyIDExists,
+			AccessKeyExists,
+			UserDataExists,
+		)
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	//TODO: Make validation better to make sure if all the fields under secret are covered.
 	var Secrets api.Secrets
 	Secrets.ProviderAccessKeyID = string(ProviderAccessKeyID)
-	Secrets.ProviderSecretAccessKey = string(ProviderAccessKey)
+	Secrets.ProviderSecretAccessKey = string(ProviderSecretAccessKey)
 	Secrets.UserData = string(UserData)
 
 	//Validate the Spec and Secrets
@@ -87,7 +90,11 @@ func (ms *MachineServer) CreateMachine(ctx context.Context, req *cmi.CreateMachi
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	svc := createSVC(Secrets, ProviderSpec.Region)
+	svc, err := ms.createSVC(Secrets, ProviderSpec.Region)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
 	UserDataEnc := base64.StdEncoding.EncodeToString(UserData)
 
 	var imageIds []*string
@@ -123,6 +130,7 @@ func (ms *MachineServer) CreateMachine(ctx context.Context, req *cmi.CreateMachi
 	for idx, element := range ProviderSpec.Tags {
 		if idx == "Name" {
 			// Name tag cannot be set, as its used to identify backing machine object
+			glog.Warning("Name tag cannot be set on AWS instance, as its used to identify backing machine object")
 			continue
 		}
 		newTag := ec2.Tag{
@@ -184,12 +192,17 @@ func (ms *MachineServer) CreateMachine(ctx context.Context, req *cmi.CreateMachi
 func (ms *MachineServer) DeleteMachine(ctx context.Context, req *cmi.DeleteMachineRequest) (*cmi.DeleteMachineResponse, error) {
 	// Log messages to track delete request
 	glog.V(2).Infof("Machine deletion request has been recieved for %q", req.MachineID)
+	defer glog.V(2).Infof("Machine deletion request has been processed successfully for %q", req.MachineID)
 
 	//Validate if map contains necessary values.
 	ProviderAccessKeyID, KeyIDExists := req.Secrets["providerAccessKeyId"]
-	ProviderAccessKey, KeyExists := req.Secrets["providerSecretAccessKey"]
-	if !KeyIDExists || !KeyExists {
-		err := fmt.Errorf("Invalidate Secret Map")
+	ProviderAccessKey, AccessKeyExists := req.Secrets["providerSecretAccessKey"]
+	if !KeyIDExists || !AccessKeyExists {
+		err := fmt.Errorf(
+			"Invalidate Secret Map. Map variables present \nProviderAccessKeyID: %t, \nProviderSecretAccessKey: %t",
+			KeyIDExists,
+			AccessKeyExists,
+		)
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -202,7 +215,11 @@ func (ms *MachineServer) DeleteMachine(ctx context.Context, req *cmi.DeleteMachi
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	svc := createSVC(Secrets, region)
+	svc, err := ms.createSVC(Secrets, region)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
 	input := &ec2.TerminateInstancesInput{
 		InstanceIds: []*string{
 			aws.String(machineID),
@@ -213,26 +230,24 @@ func (ms *MachineServer) DeleteMachine(ctx context.Context, req *cmi.DeleteMachi
 	awsErr, ok := err.(awserr.Error)
 	if ok && awsErr.Code() == "DryRunOperation" {
 		input.DryRun = aws.Bool(false)
-		output, err := svc.TerminateInstances(input)
+		_, err := svc.TerminateInstances(input)
 		if err != nil {
 			glog.Errorf("Could not terminate machine: %s", err.Error())
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		vmState := output.TerminatingInstances[0]
-		//glog.Info(vmState.PreviousState, vmState.CurrentState)
+		glog.V(2).Infof("Machine %q deleted successfully", req.MachineID)
+		return &cmi.DeleteMachineResponse{}, nil
 
-		if *vmState.CurrentState.Name == "shutting-down" ||
-			*vmState.CurrentState.Name == "terminated" {
-			return &cmi.DeleteMachineResponse{}, nil
-		}
+	} else if ok &&
+		(awsErr.Code() == ec2.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceIdMalformed ||
+			awsErr.Code() == ec2.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceIdNotFound) {
 
-		glog.V(2).Infof("Machine %q already terminated", req.MachineID)
+		glog.V(2).Infof("Machine %q does not exist", req.MachineID)
+		return &cmi.DeleteMachineResponse{}, nil
 	}
 
-	// End of core logic for Machine-deletion - CP Specific
-	glog.V(2).Infof("Machine deletion request has been processed successfully for %q", req.MachineID)
-	return &cmi.DeleteMachineResponse{}, nil
+	return nil, status.Error(codes.Internal, err.Error())
 }
 
 // GetMachine handles a machine details fetching request
@@ -250,9 +265,13 @@ func (ms *MachineServer) GetMachine(ctx context.Context, req *cmi.GetMachineRequ
 	glog.V(2).Infof("Get request has been recieved for %q", req.MachineID)
 
 	ProviderAccessKeyID, KeyIDExists := req.Secrets["providerAccessKeyId"]
-	ProviderAccessKey, KeyExists := req.Secrets["providerSecretAccessKey"]
-	if !KeyIDExists || !KeyExists {
-		err := fmt.Errorf("Invalidate Secret Map")
+	ProviderAccessKey, AccessKeyExists := req.Secrets["providerSecretAccessKey"]
+	if !KeyIDExists || !AccessKeyExists {
+		err := fmt.Errorf(
+			"Invalidate Secret Map. Map variables present \nProviderAccessKeyID: %t, \nProviderSecretAccessKey: %t",
+			KeyIDExists,
+			AccessKeyExists,
+		)
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -265,15 +284,14 @@ func (ms *MachineServer) GetMachine(ctx context.Context, req *cmi.GetMachineRequ
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	svc := createSVC(Secrets, region)
+	svc, err := ms.createSVC(Secrets, region)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
 	input := ec2.DescribeInstancesInput{
-		Filters: []*ec2.Filter{
-			&ec2.Filter{
-				Name: aws.String("instance-id"),
-				Values: []*string{
-					&machineID,
-				},
-			},
+		InstanceIds: []*string{
+			aws.String(machineID),
 		},
 	}
 
@@ -285,12 +303,10 @@ func (ms *MachineServer) GetMachine(ctx context.Context, req *cmi.GetMachineRequ
 
 	count := 0
 	for _, reservation := range runResult.Reservations {
-		for range reservation.Instances {
-			count++
-		}
+		count += len(reservation.Instances)
 	}
 
-	if count > 1 {
+	if count > 0 {
 		response := cmi.GetMachineResponse{
 			Exists: true,
 		}
@@ -302,6 +318,73 @@ func (ms *MachineServer) GetMachine(ctx context.Context, req *cmi.GetMachineRequ
 		Exists: false,
 	}
 	return &response, nil
+}
+
+// ShutDownMachine handles a machine shutdown/power-off/stop request
+// OPTIONAL METHOD
+//
+// REQUEST PARAMETERS (cmi.ShutDownMachineRequest)
+// MachineID        string              Contains the unique identification of the VM at the cloud provider
+// Secrets          map<string,bytes>   (Optional) Contains a map from string to string contains any cloud specific secrets that can be used by the provider
+//
+func (ms *MachineServer) ShutDownMachine(ctx context.Context, req *cmi.ShutDownMachineRequest) (*cmi.ShutDownMachineResponse, error) {
+	// Log messages to track start of request
+	glog.V(2).Infof("ShutDown machine request has been recieved for %q", req.MachineID)
+	defer glog.V(2).Infof("Machine shutdown request has been processed successfully for %q", req.MachineID)
+
+	ProviderAccessKeyID, KeyIDExists := req.Secrets["providerAccessKeyId"]
+	ProviderAccessKey, AccessKeyExists := req.Secrets["providerSecretAccessKey"]
+	if !KeyIDExists || !AccessKeyExists {
+		err := fmt.Errorf(
+			"Invalidate Secret Map. Map variables present \nProviderAccessKeyID: %t, \nProviderSecretAccessKey: %t",
+			KeyIDExists,
+			AccessKeyExists,
+		)
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	var Secrets api.Secrets
+	Secrets.ProviderAccessKeyID = string(ProviderAccessKeyID)
+	Secrets.ProviderSecretAccessKey = string(ProviderAccessKey)
+
+	region, machineID, err := decodeRegionAndMachineID(req.MachineID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	svc, err := ms.createSVC(Secrets, region)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	input := &ec2.StopInstancesInput{
+		InstanceIds: []*string{
+			aws.String(machineID),
+		},
+		DryRun: aws.Bool(true),
+	}
+	_, err = svc.StopInstances(input)
+	awsErr, ok := err.(awserr.Error)
+	if ok && awsErr.Code() == "DryRunOperation" {
+		input.DryRun = aws.Bool(false)
+		_, err := svc.StopInstances(input)
+		if err != nil {
+			glog.Errorf("Could not stop machine: %s", err.Error())
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		glog.V(2).Infof("Machine %q stopped successfully", req.MachineID)
+		return &cmi.ShutDownMachineResponse{}, nil
+
+	} else if ok &&
+		(awsErr.Code() == ec2.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceIdMalformed ||
+			awsErr.Code() == ec2.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceIdNotFound) {
+
+		glog.V(2).Infof("Machine %q does not exist", req.MachineID)
+		return &cmi.ShutDownMachineResponse{}, nil
+	}
+
+	return nil, status.Error(codes.Internal, err.Error())
 }
 
 // ListMachines lists all the machines possibilly created by a providerSpec
@@ -327,17 +410,22 @@ func (ms *MachineServer) ListMachines(ctx context.Context, req *cmi.ListMachines
 	}
 
 	ProviderAccessKeyID, KeyIDExists := req.Secrets["providerAccessKeyId"]
-	ProviderAccessKey, KeyExists := req.Secrets["providerSecretAccessKey"]
+	ProviderSecretAccessKey, AccessKeyExists := req.Secrets["providerSecretAccessKey"]
 	UserData, UserDataExists := req.Secrets["userData"]
-	if !KeyIDExists || !KeyExists || !UserDataExists {
-		err := fmt.Errorf("Invalidate Secret Map")
+	if !KeyIDExists || !AccessKeyExists || !UserDataExists {
+		err := fmt.Errorf(
+			"Invalidate Secret Map. Map variables present \nProviderAccessKeyID: %t, \nProviderSecretAccessKey: %t, \nUserData: %t",
+			KeyIDExists,
+			AccessKeyExists,
+			UserDataExists,
+		)
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	//TODO: Make validation better to make sure if all the fields under secret are covered.
 	var Secrets api.Secrets
 	Secrets.ProviderAccessKeyID = string(ProviderAccessKeyID)
-	Secrets.ProviderSecretAccessKey = string(ProviderAccessKey)
+	Secrets.ProviderSecretAccessKey = string(ProviderSecretAccessKey)
 	Secrets.UserData = string(UserData)
 
 	//Validate the Spec and Secrets
@@ -358,11 +446,11 @@ func (ms *MachineServer) ListMachines(ctx context.Context, req *cmi.ListMachines
 		}
 	}
 
-	if clusterName == "" || nodeRole == "" {
-		return nil, errors.New("Couldn't map machine class to a cluster")
+	svc, err := ms.createSVC(Secrets, ProviderSpec.Region)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	svc := createSVC(Secrets, ProviderSpec.Region)
 	input := ec2.DescribeInstancesInput{
 		Filters: []*ec2.Filter{
 			&ec2.Filter{
@@ -416,63 +504,4 @@ func (ms *MachineServer) ListMachines(ctx context.Context, req *cmi.ListMachines
 		MachineList: listOfVMs,
 	}
 	return Resp, nil
-}
-
-// ShutDownMachine handles a machine shutdown/power-off/stop request
-// OPTIONAL METHOD
-//
-// REQUEST PARAMETERS (cmi.ShutDownMachineRequest)
-// MachineID        string              Contains the unique identification of the VM at the cloud provider
-// Secrets          map<string,bytes>   (Optional) Contains a map from string to string contains any cloud specific secrets that can be used by the provider
-//
-func (ms *MachineServer) ShutDownMachine(ctx context.Context, req *cmi.ShutDownMachineRequest) (*cmi.ShutDownMachineResponse, error) {
-	// Log messages to track start of request
-	glog.V(2).Infof("ShutDown machine request has been recieved for %q", req.MachineID)
-	defer glog.V(2).Infof("Machine shutdown request has been processed successfully for %q", req.MachineID)
-
-	//Validate if map contains necessary values.
-	ProviderAccessKeyID, KeyIDExists := req.Secrets["providerAccessKeyId"]
-	ProviderAccessKey, KeyExists := req.Secrets["providerSecretAccessKey"]
-	if !KeyIDExists || !KeyExists {
-		err := fmt.Errorf("Invalidate Secret Map")
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	var Secrets api.Secrets
-	Secrets.ProviderAccessKeyID = string(ProviderAccessKeyID)
-	Secrets.ProviderSecretAccessKey = string(ProviderAccessKey)
-
-	region, machineID, err := decodeRegionAndMachineID(req.MachineID)
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	svc := createSVC(Secrets, region)
-	input := &ec2.StopInstancesInput{
-		InstanceIds: []*string{
-			aws.String(machineID),
-		},
-		DryRun: aws.Bool(true),
-	}
-	_, err = svc.StopInstances(input)
-	awsErr, ok := err.(awserr.Error)
-	if ok && awsErr.Code() == "DryRunOperation" {
-		input.DryRun = aws.Bool(false)
-		output, err := svc.StopInstances(input)
-		if err != nil {
-			glog.Errorf("Could not stop machine: %s", err.Error())
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-
-		vmState := output.StoppingInstances[0]
-		//glog.Info(vmState.PreviousState, vmState.CurrentState)
-
-		if *vmState.CurrentState.Name == "shutting-down" ||
-			*vmState.CurrentState.Name == "terminated" {
-			return &cmi.ShutDownMachineResponse{}, nil
-		}
-
-		glog.V(2).Infof("Machine %q already terminated", req.MachineID)
-	}
-	return &cmi.ShutDownMachineResponse{}, nil
 }

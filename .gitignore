@@ -1,3 +1,5 @@
 .note
 main
 seqdiagram.diag
+cmi-server
+*coverprofile.out*

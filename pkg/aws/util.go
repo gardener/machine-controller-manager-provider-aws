@@ -17,38 +17,22 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	api "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
+	awssession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	api "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
 )
 
-// Helper function to create SVC
-func createSVC(Secrets api.Secrets, region string) *ec2.EC2 {
-
-	accessKeyID := strings.TrimSpace(Secrets.ProviderAccessKeyID)
-	secretAccessKey := strings.TrimSpace(Secrets.ProviderSecretAccessKey)
-
-	if accessKeyID != "" && secretAccessKey != "" {
-		return ec2.New(session.New(&aws.Config{
-			Region: aws.String(region),
-			Credentials: credentials.NewStaticCredentialsFromCreds(credentials.Value{
-				AccessKeyID:     accessKeyID,
-				SecretAccessKey: secretAccessKey,
-			}),
-		}))
-	}
-
-	return ec2.New(session.New(&aws.Config{
-		Region: aws.String(region),
-	}))
-}
-
+// encodeMachineID encodes a given machine-ID as per it's provider ID
 func encodeMachineID(region, machineID string) string {
 	return fmt.Sprintf("aws:///%s/%s", region, machineID)
 }
 
+// decodeRegionAndMachineID extracts region and machine ID
 func decodeRegionAndMachineID(id string) (string, string, error) {
 	splitProviderID := strings.Split(id, "/")
 	if len(splitProviderID) < 2 {
@@ -56,4 +40,52 @@ func decodeRegionAndMachineID(id string) (string, string, error) {
 		return "", "", err
 	}
 	return splitProviderID[len(splitProviderID)-2], splitProviderID[len(splitProviderID)-1], nil
+}
+
+// Helper function to create SVC
+func (ms *MachineServer) createSVC(secrets api.Secrets, region string) (ec2iface.EC2API, error) {
+	session, err := ms.SPI.NewSession(secrets, region)
+	if err != nil {
+		return nil, err
+	}
+	svc := ms.SPI.NewEC2API(session)
+	return svc, nil
+}
+
+//driverSPIImpl is the real implementation of DriverSPI interface that makes the calls to the AWS SDK.
+type driverSPIImpl struct{}
+
+// NewSession starts a new AWS session
+func (ms *driverSPIImpl) NewSession(Secrets api.Secrets, region string) (*awssession.Session, error) {
+	var (
+		err     error
+		session *awssession.Session
+		config  *aws.Config
+	)
+
+	accessKeyID := strings.TrimSpace(Secrets.ProviderAccessKeyID)
+	secretAccessKey := strings.TrimSpace(Secrets.ProviderSecretAccessKey)
+
+	if accessKeyID != "" && secretAccessKey != "" {
+		config = &aws.Config{
+			Region: aws.String(region),
+			Credentials: credentials.NewStaticCredentialsFromCreds(credentials.Value{
+				AccessKeyID:     accessKeyID,
+				SecretAccessKey: secretAccessKey,
+			},
+			)}
+
+	} else {
+		config = &aws.Config{
+			Region: aws.String(region),
+		}
+	}
+	session, err = awssession.NewSession(config)
+	return session, err
+}
+
+// NewEC2API Returns a EC2API object
+func (ms *driverSPIImpl) NewEC2API(session *session.Session) ec2iface.EC2API {
+	service := ec2.New(session)
+	return service
 }

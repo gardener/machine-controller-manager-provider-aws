@@ -32,7 +32,7 @@ const nameMaxLength int = 63
 var nameRegexp = regexp.MustCompile("^" + nameFmt + "$")
 
 // ValidateAWSProviderSpec validates AWS provider spec
-func ValidateAWSProviderSpec(spec *api.AWSProviderSpec, Secrets *api.Secrets) []error {
+func ValidateAWSProviderSpec(spec *api.AWSProviderSpec, secrets *api.Secrets) []error {
 	var allErrs []error
 
 	if "" == spec.AMI {
@@ -53,7 +53,7 @@ func ValidateAWSProviderSpec(spec *api.AWSProviderSpec, Secrets *api.Secrets) []
 
 	allErrs = append(allErrs, validateBlockDevices(spec.BlockDevices)...)
 	allErrs = append(allErrs, validateNetworkInterfaces(spec.NetworkInterfaces)...)
-	allErrs = append(allErrs, validateSecrets(Secrets)...)
+	allErrs = append(allErrs, validateSecrets(secrets)...)
 	allErrs = append(allErrs, validateSpecTags(spec.Tags)...)
 
 	return allErrs
@@ -139,14 +139,5 @@ func validateSecrets(reference *api.Secrets) []error {
 	if "" == reference.UserData {
 		allErrs = append(allErrs, fmt.Errorf("Secret UserData is required field"))
 	}
-	return nil
-}
-
-//ValidationErrToString converts the array of error into string
-func ValidationErrToString(validationErr []error) string {
-	var errString []string
-	for _, e := range validationErr {
-		errString = append(errString, e.Error())
-	}
-	return strings.Join(errString, ",")
+	return allErrs
 }
