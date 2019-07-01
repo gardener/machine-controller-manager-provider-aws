@@ -1,6 +1,6 @@
 # Gopkg.toml example
 #
-# Refer to https://github.com/golang/dep/blob/master/docs/Gopkg.toml.md
+# Refer to https://golang.github.io/dep/docs/Gopkg.toml.html
 # for detailed Gopkg.toml documentation.
 #
 # required = ["github.com/user/thing/cmd/thing"]
@@ -27,23 +27,31 @@
 
 [[constraint]]
   name = "github.com/aws/aws-sdk-go"
-  version = "1.16.22"
+  version = "1.20.12"
 
 [[constraint]]
   name = "github.com/container-storage-interface/spec"
   version = "0.3.0"
 
 [[constraint]]
-  branch = "master"
   name = "github.com/gardener/machine-spec"
+  version = "0.1.0"
 
 [[constraint]]
   branch = "master"
   name = "github.com/golang/glog"
 
 [[constraint]]
+  name = "github.com/onsi/ginkgo"
+  version = "1.8.0"
+
+[[constraint]]
+  name = "github.com/onsi/gomega"
+  version = "1.5.0"
+
+[[constraint]]
   name = "github.com/spf13/cobra"
-  version = "0.0.3"
+  version = "0.0.5"
 
 [[constraint]]
   branch = "master"
@@ -51,7 +59,7 @@
 
 [[constraint]]
   name = "google.golang.org/grpc"
-  version = "1.18.0"
+  version = "1.21.1"
 
 [prune]
   go-tests = true
