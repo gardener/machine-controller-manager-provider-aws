@@ -192,7 +192,7 @@ func (ms *MachineServer) CreateMachine(ctx context.Context, req *cmi.CreateMachi
 func (ms *MachineServer) DeleteMachine(ctx context.Context, req *cmi.DeleteMachineRequest) (*cmi.DeleteMachineResponse, error) {
 	// Log messages to track delete request
 	glog.V(2).Infof("Machine deletion request has been recieved for %q", req.MachineID)
-	defer glog.V(2).Infof("Machine deletion request has been processed successfully for %q", req.MachineID)
+	defer glog.V(2).Infof("Machine deletion request has been processed for %q", req.MachineID)
 
 	//Validate if map contains necessary values.
 	ProviderAccessKeyID, KeyIDExists := req.Secrets["providerAccessKeyId"]
@@ -247,6 +247,7 @@ func (ms *MachineServer) DeleteMachine(ctx context.Context, req *cmi.DeleteMachi
 		return &cmi.DeleteMachineResponse{}, nil
 	}
 
+	glog.V(2).Infof("Machine %q deleted successfully", req.MachineID)
 	return nil, status.Error(codes.Internal, err.Error())
 }
 

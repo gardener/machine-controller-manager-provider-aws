@@ -12,6 +12,25 @@ import (
 	api "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
 )
 
+const (
+	// FailAtRegion string to fail call due to invalid region
+	FailAtRegion string = "fail-at-region"
+	// FailQueryAtDescribeImages string to fail call at Describeimages call
+	FailQueryAtDescribeImages string = "fail-query-at-DescribeImages"
+	// FailQueryAtRunInstances string to fail call at RunInstances call
+	FailQueryAtRunInstances string = "fail-query-at-RunInstances"
+	// InstanceTerminateError string returns instance terminated error
+	InstanceTerminateError string = "i-instance-terminate-error"
+	// InstanceDoesntExistError string returns instance doesn't exist error
+	InstanceDoesntExistError string = "i-instance-doesnt-exist"
+	// InstanceStopError string returns error mentioning instance has been stopped
+	InstanceStopError string = "i-instance-stop-error"
+	// ReturnEmptyListAtDescribeInstances string returns empty list at DescribeInstances call
+	ReturnEmptyListAtDescribeInstances string = "return-empty-list-at-DescribeInstances"
+	// ReturnErrorAtDescribeInstances string returns error at DescribeInstances call
+	ReturnErrorAtDescribeInstances string = "return-error-at-DescribeInstances"
+)
+
 // MockDriverSPIImpl is the mock implementation of DriverSPI interface that makes dummy calls
 type MockDriverSPIImpl struct {
 	FakeInstances []ec2.Instance
@@ -19,7 +38,7 @@ type MockDriverSPIImpl struct {
 
 // NewSession starts a new AWS session
 func (ms *MockDriverSPIImpl) NewSession(Secrets api.Secrets, region string) (*awssession.Session, error) {
-	if region == "fail-at-region" {
+	if region == FailAtRegion {
 		return nil, fmt.Errorf("Region doesn't exist while trying to create session")
 	}
 	return &awssession.Session{}, nil
@@ -41,7 +60,7 @@ type MockEC2Client struct {
 // DescribeImages implements a mock describe image method
 func (ms *MockEC2Client) DescribeImages(input *ec2.DescribeImagesInput) (*ec2.DescribeImagesOutput, error) {
 
-	if *input.ImageIds[0] == "fail-query-at-DescribeImages" {
+	if *input.ImageIds[0] == FailQueryAtDescribeImages {
 		return nil, fmt.Errorf("Couldn't find image with given ID")
 	}
 
@@ -60,7 +79,7 @@ func (ms *MockEC2Client) DescribeImages(input *ec2.DescribeImagesInput) (*ec2.De
 // The name of the newly created instances depends on the number of instances in cache starts from 0
 func (ms *MockEC2Client) RunInstances(input *ec2.RunInstancesInput) (*ec2.Reservation, error) {
 
-	if *input.ImageId == "fail-query-at-RunInstances" {
+	if *input.ImageId == FailQueryAtRunInstances {
 		return nil, fmt.Errorf("Couldn't run instance with given ID")
 	}
 
@@ -91,7 +110,7 @@ func (ms *MockEC2Client) DescribeInstances(input *ec2.DescribeInstancesInput) (*
 	instanceList := make([]*ec2.Instance, 0)
 
 	if len(input.InstanceIds) > 0 {
-		if *input.InstanceIds[0] == "return-empty-list-at-DescribeInstances" {
+		if *input.InstanceIds[0] == ReturnEmptyListAtDescribeInstances {
 			return &ec2.DescribeInstancesOutput{
 				Reservations: []*ec2.Reservation{
 					&ec2.Reservation{
@@ -116,7 +135,7 @@ func (ms *MockEC2Client) DescribeInstances(input *ec2.DescribeInstancesInput) (*
 		}
 	} else {
 
-		if *input.Filters[0].Values[0] == "kubernetes.io/cluster/return-error-at-DescribeInstances" {
+		if *input.Filters[0].Values[0] == "kubernetes.io/cluster/"+ReturnErrorAtDescribeInstances {
 			return nil, fmt.Errorf("Cloud provider returned error")
 		}
 
@@ -139,9 +158,9 @@ func (ms *MockEC2Client) DescribeInstances(input *ec2.DescribeInstancesInput) (*
 // TerminateInstances implements a mock terminate instance method
 func (ms *MockEC2Client) TerminateInstances(input *ec2.TerminateInstancesInput) (*ec2.TerminateInstancesOutput, error) {
 
-	if *input.InstanceIds[0] == "i-terminate-error" {
+	if *input.InstanceIds[0] == InstanceTerminateError {
 		return nil, fmt.Errorf("Termination of instance errored out")
-	} else if *input.InstanceIds[0] == "i-instance-doesnt-exist" {
+	} else if *input.InstanceIds[0] == InstanceDoesntExistError {
 		// If instance with instance ID doesn't exist
 		return nil, awserr.New(
 			ec2.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceIdMalformed,
@@ -195,9 +214,9 @@ func (ms *MockEC2Client) TerminateInstances(input *ec2.TerminateInstancesInput) 
 // StopInstances implements a mock stop instance method
 func (ms *MockEC2Client) StopInstances(input *ec2.StopInstancesInput) (*ec2.StopInstancesOutput, error) {
 
-	if *input.InstanceIds[0] == "i-stop-error" {
+	if *input.InstanceIds[0] == InstanceStopError {
 		return nil, fmt.Errorf("Stopping of instance errored out")
-	} else if *input.InstanceIds[0] == "i-instance-doesnt-exist" {
+	} else if *input.InstanceIds[0] == InstanceDoesntExistError {
 		// If instance with instance ID doesn't exist
 		return nil, awserr.New(
 			ec2.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceIdMalformed,
