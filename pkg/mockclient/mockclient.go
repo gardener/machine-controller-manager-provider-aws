@@ -93,7 +93,7 @@ func (ms *MockEC2Client) RunInstances(input *ec2.RunInstancesInput) (*ec2.Reserv
 			Code: aws.Int64(16),
 			Name: aws.String("running"),
 		},
-		Tags: input.TagSpecifications[0].Tags,
+		Tags: deepCopyTagList(input.TagSpecifications[0].Tags),
 	}
 	*ms.FakeInstances = append(*ms.FakeInstances, newInstance)
 
@@ -262,4 +262,16 @@ func (ms *MockEC2Client) StopInstances(input *ec2.StopInstancesInput) (*ec2.Stop
 			},
 		},
 	}, nil
+}
+
+// deepCopyTagList copies inTags list to outTags
+func deepCopyTagList(inTags []*ec2.Tag) []*ec2.Tag {
+	var outTags []*ec2.Tag
+
+	for _, tagPtr := range inTags {
+		tag := *tagPtr
+		outTags = append(outTags, &tag)
+	}
+
+	return outTags
 }
