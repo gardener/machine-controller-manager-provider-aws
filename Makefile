@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+BINARY_PATH         := bin/
+COVERPROFILE        := test/output/coverprofile.out
+IMAGE_REPOSITORY    := eu.gcr.io/gardener-project/gardener/machine-controller-manager-provider-aws
+IMAGE_TAG           := $(shell cat VERSION)
 PROVIDER_NAME       := AWS
 PROJECT_NAME        := gardener
-BINARY_PATH         := bin/
-IMAGE_REPOSITORY    := docker-repository-link-goes-here
-IMAGE_TAG           := $(shell cat VERSION)
 
 #########################################
 # Rules for running helper scripts
@@ -59,27 +60,24 @@ test-unit:
 #########################################
 
 .PHONY: release
-release: build-local build docker-image docker-push rename-binaries
+release: build-local build docker-image docker-login docker-push rename-binaries
 
 .PHONY: build-local
 build-local:
-	go build \
-	-v \
-	-o ${BINARY_PATH}/cmi-server \
-	app/controller/cmi-server.go
+	@env LOCAL_BUILD=1 .ci/build
 
 .PHONY: build
 build:
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
-	-a \
-	-v \
-	-o ${BINARY_PATH}/rel/cmi-server \
-	app/controller/cmi-server.go
+	@.ci/build
 
 .PHONY: docker-image
 docker-image:
 	@if [[ ! -f ${BINARY_PATH}/rel/cmi-server ]]; then echo "No binary found. Please run 'make build'"; false; fi
 	@docker build -t $(IMAGE_REPOSITORY):$(IMAGE_TAG) .
+
+.PHONY: docker-login
+docker-login:
+	@gcloud auth activate-service-account --key-file .kube-secrets/gcr/gcr-readwrite.json
 
 .PHONY: docker-push
 docker-push:
