@@ -269,7 +269,13 @@ func deepCopyTagList(inTags []*ec2.Tag) []*ec2.Tag {
 	var outTags []*ec2.Tag
 
 	for _, tagPtr := range inTags {
-		tag := *tagPtr
+		tag := &ec2.Tag{}
+		if tagPtr.Key != nil {
+		  tag.Key = *tagPtr.Key
+		}
+		if tagPtr.Value != nil {
+		  tag.Value = *tagPtr.Value
+		}
 		outTags = append(outTags, &tag)
 	}
 
