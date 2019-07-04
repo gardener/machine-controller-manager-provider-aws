@@ -56,25 +56,17 @@ if ! which golint 1>/dev/null; then
 fi
 
 ###############################################################################
-PACKAGES="$(go list -e ./...)"
-echo $PACKAGES
-echo "package1 done"
-
 PACKAGES="$(go list -e ./... | grep -vE '/tmp/|/vendor/')"
-echo $PACKAGES
 LINT_FOLDERS="$(echo ${PACKAGES} | sed "s|github.com/gardener/machine-controller-manager-provider-aws|.|g")"
-echo $LINT_FOLDERS
 
 # Execute static code checks.
 go vet ${PACKAGES}
-echo "vet done"
 
 # Execute automatic code formatting directive.
 go fmt ${PACKAGES}
-echo "fmt done"
 
 # Execute lint checks.
 for package in ${LINT_FOLDERS}; do
     golint -set_exit_status $(find $package -maxdepth 1 -name "*.go" | grep -vE 'zz_generated|_test.go')
-    echo "golint done"
 done
+echo "Check script has passed successfully"
