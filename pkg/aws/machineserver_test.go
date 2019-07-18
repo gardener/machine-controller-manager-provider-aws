@@ -1015,4 +1015,95 @@ var _ = Describe("MachineServer", func() {
 			}),
 		)
 	})
+
+	Describe("#GetListOfVolumeIDsForExistingPVs", func() {
+		type setup struct {
+		}
+		type action struct {
+			getListOfVolumeIDsForExistingPVsRequest *cmipb.GetListOfVolumeIDsForExistingPVsRequest
+		}
+		type expect struct {
+			getListOfVolumeIDsForExistingPVsResponse *cmipb.GetListOfVolumeIDsForExistingPVsResponse
+			errToHaveOccurred                        bool
+			errMessage                               string
+		}
+		type data struct {
+			setup  setup
+			action action
+			expect expect
+		}
+		DescribeTable("##table",
+			func(data *data) {
+				d := NewDriver("tcp://127.0.0.1:8080")
+				mockDriverSPIImpl := &mockclient.MockDriverSPIImpl{FakeInstances: make([]ec2.Instance, 0)}
+				ms := NewMachineServer(d, mockDriverSPIImpl)
+
+				ctx := context.Background()
+
+				response, err := ms.GetListOfVolumeIDsForExistingPVs(
+					ctx,
+					data.action.getListOfVolumeIDsForExistingPVsRequest,
+				)
+
+				if data.expect.errToHaveOccurred {
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(Equal(data.expect.errMessage))
+				} else {
+					Expect(err).ToNot(HaveOccurred())
+					Expect(response).To(Equal(data.expect.getListOfVolumeIDsForExistingPVsResponse))
+				}
+			},
+			Entry("Simple GetListOfVolumeIDsForExistingPVs request", &data{
+				action: action{
+					getListOfVolumeIDsForExistingPVsRequest: &cmipb.GetListOfVolumeIDsForExistingPVsRequest{
+						PVSpecList: []byte("[{\"capacity\":{\"storage\":\"1Gi\"},\"awsElasticBlockStore\":{\"volumeID\":\"aws://eu-east-2b/vol-xxxxyyyyzzzz11112\",\"fsType\":\"ext4\"},\"accessModes\":[\"ReadWriteOnce\"],\"claimRef\":{\"kind\":\"PersistentVolumeClaim\",\"namespace\":\"default\",\"name\":\"www-web-0\",\"uid\":\"0c3b34f8-a494-11e9-b4c3-0e956a869a31\",\"apiVersion\":\"v1\",\"resourceVersion\":\"32423232\"},\"persistentVolumeReclaimPolicy\":\"Delete\",\"storageClassName\":\"default\",\"nodeAffinity\":{\"required\":{\"nodeSelectorTerms\":[{\"matchExpressions\":[{\"key\":\"failure-domain.beta.kubernetes.io/zone\",\"operator\":\"In\",\"values\":[\"eu-east-2b\"]},{\"key\":\"failure-domain.beta.kubernetes.io/region\",\"operator\":\"In\",\"values\":[\"eu-east-2\"]}]}]}}}]"),
+					},
+				},
+				expect: expect{
+					getListOfVolumeIDsForExistingPVsResponse: &cmipb.GetListOfVolumeIDsForExistingPVsResponse{
+						VolumeIDs: []string{
+							"aws://eu-east-2b/vol-xxxxyyyyzzzz11112",
+						},
+					},
+				},
+			}),
+			Entry("GetListOfVolumeIDsForExistingPVs with multiple pvSpecs request", &data{
+				action: action{
+					getListOfVolumeIDsForExistingPVsRequest: &cmipb.GetListOfVolumeIDsForExistingPVsRequest{
+						PVSpecList: []byte("[{\"capacity\":{\"storage\":\"1Gi\"},\"awsElasticBlockStore\":{\"volumeID\":\"aws://eu-east-2b/vol-xxxxyyyyzzzz11112\",\"fsType\":\"ext4\"},\"accessModes\":[\"ReadWriteOnce\"],\"claimRef\":{\"kind\":\"PersistentVolumeClaim\",\"namespace\":\"default\",\"name\":\"www-web-0\",\"uid\":\"0c3b34f8-a494-11e9-b4c3-0e956a869a31\",\"apiVersion\":\"v1\",\"resourceVersion\":\"32423232\"},\"persistentVolumeReclaimPolicy\":\"Delete\",\"storageClassName\":\"default\",\"nodeAffinity\":{\"required\":{\"nodeSelectorTerms\":[{\"matchExpressions\":[{\"key\":\"failure-domain.beta.kubernetes.io/zone\",\"operator\":\"In\",\"values\":[\"eu-east-2b\"]},{\"key\":\"failure-domain.beta.kubernetes.io/region\",\"operator\":\"In\",\"values\":[\"eu-east-2\"]}]}]}}},{\"capacity\":{\"storage\":\"1Gi\"},\"awsElasticBlockStore\":{\"volumeID\":\"aws://eu-east-2b/vol-xxxxyyyyzzzz11113\",\"fsType\":\"ext4\"},\"accessModes\":[\"ReadWriteOnce\"],\"claimRef\":{\"kind\":\"PersistentVolumeClaim\",\"namespace\":\"default\",\"name\":\"www-web-1\",\"uid\":\"0c3b34f8-a494-11e9-b4c3-0e956a869a31\",\"apiVersion\":\"v1\",\"resourceVersion\":\"32423232\"},\"persistentVolumeReclaimPolicy\":\"Delete\",\"storageClassName\":\"default\",\"nodeAffinity\":{\"required\":{\"nodeSelectorTerms\":[{\"matchExpressions\":[{\"key\":\"failure-domain.beta.kubernetes.io/zone\",\"operator\":\"In\",\"values\":[\"eu-east-2b\"]},{\"key\":\"failure-domain.beta.kubernetes.io/region\",\"operator\":\"In\",\"values\":[\"eu-east-2\"]}]}]}}}]"),
+					},
+				},
+				expect: expect{
+					getListOfVolumeIDsForExistingPVsResponse: &cmipb.GetListOfVolumeIDsForExistingPVsResponse{
+						VolumeIDs: []string{
+							"aws://eu-east-2b/vol-xxxxyyyyzzzz11112",
+							"aws://eu-east-2b/vol-xxxxyyyyzzzz11113",
+						},
+					},
+				},
+			}),
+			Entry("GetListOfVolumeIDsForExistingPVs for Azure pvSpecs request", &data{
+				action: action{
+					getListOfVolumeIDsForExistingPVsRequest: &cmipb.GetListOfVolumeIDsForExistingPVsRequest{
+						PVSpecList: []byte("[{\"capacity\":{\"storage\":\"1Gi\"},\"azureDisk\":{\"volumeID\":\"aws://eu-east-2b/vol-xxxxyyyyzzzz11112\",\"fsType\":\"ext4\"},\"accessModes\":[\"ReadWriteOnce\"],\"claimRef\":{\"kind\":\"PersistentVolumeClaim\",\"namespace\":\"default\",\"name\":\"www-web-0\",\"uid\":\"0c3b34f8-a494-11e9-b4c3-0e956a869a31\",\"apiVersion\":\"v1\",\"resourceVersion\":\"32423232\"},\"persistentVolumeReclaimPolicy\":\"Delete\",\"storageClassName\":\"default\",\"nodeAffinity\":{\"required\":{\"nodeSelectorTerms\":[{\"matchExpressions\":[{\"key\":\"failure-domain.beta.kubernetes.io/zone\",\"operator\":\"In\",\"values\":[\"eu-east-2b\"]},{\"key\":\"failure-domain.beta.kubernetes.io/region\",\"operator\":\"In\",\"values\":[\"eu-east-2\"]}]}]}}}]"),
+					},
+				},
+				expect: expect{
+					getListOfVolumeIDsForExistingPVsResponse: &cmipb.GetListOfVolumeIDsForExistingPVsResponse{},
+				},
+			}),
+			Entry("GetListOfVolumeIDsForExistingPVs for invalid json input", &data{
+				action: action{
+					getListOfVolumeIDsForExistingPVsRequest: &cmipb.GetListOfVolumeIDsForExistingPVsRequest{
+						PVSpecList: []byte("[{\"capacity\":{\"storage\":\"1Gi\"},\"awsElasticBlockStore\":{\"volumeID\":\"aws://eu-east-2b/vol-xxxxyyyyzzzz11112\",\"fsType\":\"ext4\"},\"accessModes\":[\"ReadWriteOnce\"],\"claimRef\":{\"kind\":\"PersistentVolumeClaim\",\"namespace\":\"default\",\"name\":\"www-web-0\",\"uid\":\"0c3b34f8-a494-11e9-b4c3-0e956a869a31\",\"apiVersion\":\"v1\",\"resourceVersion\":\"32423232\"},\"persistentVolumeReclaimPolicy\":\"Delete\",\"storageClassName\":\"default\",\"nodeAffinity\":{\"required\":{\"nodeSelectorTerms\":[{\"matchExpressions\":[{\"key\":\"failure-domain.beta.kubernetes.io/zone\",\"operator\":\"In\",\"values\":[\"eu-east-2b\"]},{\"key\":\"failure-domain.beta.kubernetes.io/region\",\"operator\":\"In\"\"values\":[\"eu-east-2\"]}]}]}}}]"),
+					},
+				},
+				expect: expect{
+					errToHaveOccurred: true,
+					errMessage:        "rpc error: code = Internal desc = invalid character '\"' after object key:value pair",
+				},
+			}),
+		)
+	})
+
 })
