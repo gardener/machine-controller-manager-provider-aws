@@ -27,21 +27,20 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gardener/machine-spec/lib/go/cmi"
-	"github.com/golang/glog"
-	"golang.org/x/net/context"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	api "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
 	validation "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis/validation"
+	"github.com/gardener/machine-spec/lib/go/cmi"
+	"github.com/golang/glog"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // CreateMachine handles a machine creation request
-// REQUIRED METHOD
 //
 // REQUEST PARAMETERS (cmi.CreateMachineRequest)
 // Name                 string              Contains the identification name/tag used to link the machine object with VM on cloud provider
@@ -183,7 +182,6 @@ func (ms *MachineServer) CreateMachine(ctx context.Context, req *cmi.CreateMachi
 }
 
 // DeleteMachine handles a machine deletion request
-// REQUIRED METHOD
 //
 // REQUEST PARAMETERS (cmi.DeleteMachineRequest)
 // MachineID        string              Contains the unique identification of the VM at the cloud provider
@@ -503,6 +501,46 @@ func (ms *MachineServer) ListMachines(ctx context.Context, req *cmi.ListMachines
 	// Core logic ends here.
 	Resp := &cmi.ListMachinesResponse{
 		MachineList: listOfVMs,
+	}
+	return Resp, nil
+}
+
+// GetListOfVolumeIDsForExistingPVs returns a list of Volume IDs for all PV Specs for whom an AWS volume was found
+//
+// REQUEST PARAMETERS (cmi.GetListOfVolumeIDsForExistingPVsRequest)
+// PVSpecList       bytes(blob)         PVSpecsList is a list PV specs for whom volume-IDs are required. Driver should parse this raw data into pre-defined list of PVSpecs.
+//
+// RESPONSE PARAMETERS (cmi.ListMachinesResponse)
+// VolumeIDs       repeated string      VolumeIDs is a repeated list of VolumeIDs.
+//
+func (ms *MachineServer) GetListOfVolumeIDsForExistingPVs(ctx context.Context, req *cmi.GetListOfVolumeIDsForExistingPVsRequest) (*cmi.GetListOfVolumeIDsForExistingPVsResponse, error) {
+	var (
+		volumeIDs   []string
+		volumeSpecs []*corev1.PersistentVolumeSpec
+	)
+
+	// Log messages to track start and end of request
+	glog.V(2).Infof("GetListOfVolumeIDsForExistingPVs request has been recieved for %q", req.PVSpecList)
+
+	err := json.Unmarshal(req.PVSpecList, &volumeSpecs)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	for i := range volumeSpecs {
+		spec := volumeSpecs[i]
+		if spec.AWSElasticBlockStore == nil {
+			// Not an aws volume
+			continue
+		}
+		volumeID := spec.AWSElasticBlockStore.VolumeID
+		volumeIDs = append(volumeIDs, volumeID)
+	}
+
+	glog.V(2).Infof("GetListOfVolumeIDsForExistingPVs machines request has been processed successfully. \nList: %v", volumeIDs)
+
+	Resp := &cmi.GetListOfVolumeIDsForExistingPVsResponse{
+		VolumeIDs: volumeIDs,
 	}
 	return Resp, nil
 }
