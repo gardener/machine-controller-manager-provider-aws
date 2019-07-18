@@ -45,7 +45,12 @@ start:
 
 .PHONY: revendor
 revendor:
-	@dep ensure -v --update
+	@env GO111MODULE=on go mod vendor -v
+	@env GO111MODULE=on go mod tidy -v
+
+.PHONY: update-dependencies
+update-dependencies:
+	@env GO111MODULE=on go get -u
 
 #########################################
 # Rules for testing
