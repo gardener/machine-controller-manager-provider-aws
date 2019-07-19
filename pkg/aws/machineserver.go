@@ -40,6 +40,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+// NOTE
+//
+// The basic working of the controller will work with just implementing the CreateMachine() & DeleteMachine() methods.
+// You can first implement these two methods and check the working of the controller.
+// Once this works you can implement the rest of the methods.
+// Implementation of few methods like - ShutDownMachine() are optional, however we highly recommend implementing it as well.
+
 // CreateMachine handles a machine creation request
 //
 // REQUEST PARAMETERS (cmi.CreateMachineRequest)
@@ -53,6 +60,11 @@ import (
 //                                          Eg: gce://project-name/region/vm-machineID
 // NodeName             string              Returns the name of the node-object that the VM register's with Kubernetes.
 //                                          This could be different from req.Name as well
+//
+// OPTIONAL IMPLEMENTATION LOGIC
+// It is optionally expected by the safety controller to use an identification mechanisms to map the VM Created by a providerSpec.
+// These could be done using tag(s)/resource-groups etc.
+// This logic is used by safety controller to delete orphan VMs which are not backed by any machine CRD
 //
 func (ms *MachineServer) CreateMachine(ctx context.Context, req *cmi.CreateMachineRequest) (*cmi.CreateMachineResponse, error) {
 	// Log messages to track request
