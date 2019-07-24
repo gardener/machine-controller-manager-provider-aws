@@ -257,7 +257,7 @@ func (ms *MachineServer) DeleteMachine(ctx context.Context, req *cmi.DeleteMachi
 		return &cmi.DeleteMachineResponse{}, nil
 	}
 
-	glog.V(2).Infof("Machine %q deleted successfully", req.MachineID)
+	glog.V(2).Infof("Machine %q deletion failed. Error: %s", req.MachineID, awsErr.Message())
 	return nil, status.Error(codes.Internal, err.Error())
 }
 
