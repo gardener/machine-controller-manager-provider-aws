@@ -32,9 +32,7 @@ github.com/aws/aws-sdk-go/private/protocol/xml/xmlutil
 github.com/aws/aws-sdk-go/private/protocol/query
 github.com/aws/aws-sdk-go/internal/sdkuri
 github.com/aws/aws-sdk-go/private/protocol/json/jsonutil
-# github.com/container-storage-interface/spec v0.3.0
-github.com/container-storage-interface/spec/lib/go/csi/v0
-# github.com/gardener/machine-spec v0.0.0-20190916105733-70a34003d1c6
+# github.com/gardener/machine-spec v0.0.0-00000000000000-3c5d9286001512dea107bcb5b2fdefc7e38be7ff
 github.com/gardener/machine-spec/lib/go/cmi
 # github.com/gogo/protobuf v1.0.0
 github.com/gogo/protobuf/proto

@@ -4,8 +4,7 @@ go 1.12
 
 require (
 	github.com/aws/aws-sdk-go v1.20.12
-	github.com/container-storage-interface/spec v0.3.0
-	github.com/gardener/machine-spec v0.0.0-20190916105733-70a34003d1c6
+	github.com/gardener/machine-spec v0.0.0-00000000000000-3c5d9286001512dea107bcb5b2fdefc7e38be7ff
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/onsi/ginkgo v1.8.0
 	github.com/onsi/gomega v1.5.0
