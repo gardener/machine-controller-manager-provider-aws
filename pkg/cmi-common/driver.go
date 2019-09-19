@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 This file was copied and modified from the kubernetes-csi/drivers project
-https://github.com/kubernetes-csi/drivers/blob/release-1.0/pkg/csi-common/driver.go
+https://github.com/kubernetes-csi/drivers/blob/release-1.0/pkg/csi-common/drivers.go
 
 Modifications Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved.
 */
@@ -25,20 +25,20 @@ import (
 	"github.com/golang/glog"
 )
 
-// CMIDriver object is used to store the driver details
-type CMIDriver struct {
-	name    string
-	version string
+// DefaultPlugin object is used to store the plugin details
+type DefaultPlugin struct {
+	Name    string
+	Version string
 	/*
 		TODO Add controller service capability handler
 		cap     []*cmi.ControllerServiceCapability
 	*/
 }
 
-// NewCMIDriver creates a new CMIDriver object and returns the same
-func NewCMIDriver(name string, v string) *CMIDriver {
+// NewDefaultPlugin creates a new DefaultPlugin object and returns the same
+func NewDefaultPlugin(name string, v string) *DefaultPlugin {
 	if name == "" {
-		glog.Errorf("Driver name missing")
+		glog.Errorf("Plugin name missing")
 		return nil
 	}
 
@@ -48,10 +48,10 @@ func NewCMIDriver(name string, v string) *CMIDriver {
 		return nil
 	}
 
-	driver := CMIDriver{
-		name:    name,
-		version: v,
+	plugin := DefaultPlugin{
+		Name:    name,
+		Version: v,
 	}
 
-	return &driver
+	return &plugin
 }

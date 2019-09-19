@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 This file was copied and modified from the kubernetes-csi/drivers project
-https://github.com/kubernetes-csi/drivers/blob/release-1.0/pkg/sampleprovider/machineserver.go
+https://github.com/kubernetes-csi/drivers/blob/master/pkg/csi-common/nodeserver-default.go
 
 Modifications Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved.
 */
@@ -66,7 +66,7 @@ import (
 // These could be done using tag(s)/resource-groups etc.
 // This logic is used by safety controller to delete orphan VMs which are not backed by any machine CRD
 //
-func (ms *MachineServer) CreateMachine(ctx context.Context, req *cmi.CreateMachineRequest) (*cmi.CreateMachineResponse, error) {
+func (ms *MachineNIdentityPlugin) CreateMachine(ctx context.Context, req *cmi.CreateMachineRequest) (*cmi.CreateMachineResponse, error) {
 	// Log messages to track request
 	glog.V(2).Infof("Machine creation request has been recieved for %q", req.Name)
 
@@ -199,7 +199,7 @@ func (ms *MachineServer) CreateMachine(ctx context.Context, req *cmi.CreateMachi
 // MachineID        string              Contains the unique identification of the VM at the cloud provider
 // Secrets          map<string,bytes>   (Optional) Contains a map from string to string contains any cloud specific secrets that can be used by the provider
 //
-func (ms *MachineServer) DeleteMachine(ctx context.Context, req *cmi.DeleteMachineRequest) (*cmi.DeleteMachineResponse, error) {
+func (ms *MachineNIdentityPlugin) DeleteMachine(ctx context.Context, req *cmi.DeleteMachineRequest) (*cmi.DeleteMachineResponse, error) {
 	// Log messages to track delete request
 	glog.V(2).Infof("Machine deletion request has been recieved for %q", req.MachineID)
 	defer glog.V(2).Infof("Machine deletion request has been processed for %q", req.MachineID)
@@ -234,31 +234,21 @@ func (ms *MachineServer) DeleteMachine(ctx context.Context, req *cmi.DeleteMachi
 		InstanceIds: []*string{
 			aws.String(machineID),
 		},
-		DryRun: aws.Bool(true),
+		DryRun: aws.Bool(false),
 	}
 	_, err = svc.TerminateInstances(input)
 	awsErr, ok := err.(awserr.Error)
-	if ok && awsErr.Code() == "DryRunOperation" {
-		input.DryRun = aws.Bool(false)
-		_, err := svc.TerminateInstances(input)
-		if err != nil {
-			glog.Errorf("Could not terminate machine: %s", err.Error())
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-
-		glog.V(2).Infof("Machine %q deleted successfully", req.MachineID)
-		return &cmi.DeleteMachineResponse{}, nil
-
-	} else if ok &&
-		(awsErr.Code() == ec2.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceIdMalformed ||
-			awsErr.Code() == ec2.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceIdNotFound) {
-
+	if ok &&
+		(awsErr.Code() == ec2.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceIdNotFound) {
 		glog.V(2).Infof("Machine %q does not exist", req.MachineID)
 		return &cmi.DeleteMachineResponse{}, nil
+	} else if err != nil {
+		glog.Errorf("Could not terminate machine: %s", err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	glog.V(2).Infof("Machine %q deletion failed. Error: %s", req.MachineID, awsErr.Message())
-	return nil, status.Error(codes.Internal, err.Error())
+	glog.V(2).Infof("Machine %q deleted successfully", req.MachineID)
+	return &cmi.DeleteMachineResponse{}, nil
 }
 
 // GetMachine handles a machine details fetching request
@@ -271,7 +261,7 @@ func (ms *MachineServer) DeleteMachine(ctx context.Context, req *cmi.DeleteMachi
 // Exists           bool                Returns a boolean value which is set to true when it exists on the cloud provider
 // Status           enum                Contains the status of the machine on the cloud provider mapped to the enum values - {Unknown, Stopped, Running}
 //
-func (ms *MachineServer) GetMachine(ctx context.Context, req *cmi.GetMachineRequest) (*cmi.GetMachineResponse, error) {
+func (ms *MachineNIdentityPlugin) GetMachine(ctx context.Context, req *cmi.GetMachineRequest) (*cmi.GetMachineResponse, error) {
 	// Log messages to track start and end of request
 	glog.V(2).Infof("Get request has been recieved for %q", req.MachineID)
 
@@ -308,7 +298,7 @@ func (ms *MachineServer) GetMachine(ctx context.Context, req *cmi.GetMachineRequ
 
 	runResult, err := svc.DescribeInstances(&input)
 	if err != nil {
-		glog.Errorf("AWS driver is returning error while describe instances request is sent: %s", err)
+		glog.Errorf("AWS plugin is returning error while describe instances request is sent: %s", err)
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -338,7 +328,7 @@ func (ms *MachineServer) GetMachine(ctx context.Context, req *cmi.GetMachineRequ
 // MachineID        string              Contains the unique identification of the VM at the cloud provider
 // Secrets          map<string,bytes>   (Optional) Contains a map from string to string contains any cloud specific secrets that can be used by the provider
 //
-func (ms *MachineServer) ShutDownMachine(ctx context.Context, req *cmi.ShutDownMachineRequest) (*cmi.ShutDownMachineResponse, error) {
+func (ms *MachineNIdentityPlugin) ShutDownMachine(ctx context.Context, req *cmi.ShutDownMachineRequest) (*cmi.ShutDownMachineResponse, error) {
 	// Log messages to track start of request
 	glog.V(2).Infof("ShutDown machine request has been recieved for %q", req.MachineID)
 	defer glog.V(2).Infof("Machine shutdown request has been processed successfully for %q", req.MachineID)
@@ -410,7 +400,7 @@ func (ms *MachineServer) ShutDownMachine(ctx context.Context, req *cmi.ShutDownM
 // MachineList      map<string,string>  A map containing the keys as the MachineID and value as the MachineName
 //                                      for all machine's who where possibilly created by this ProviderSpec
 //
-func (ms *MachineServer) ListMachines(ctx context.Context, req *cmi.ListMachinesRequest) (*cmi.ListMachinesResponse, error) {
+func (ms *MachineNIdentityPlugin) ListMachines(ctx context.Context, req *cmi.ListMachinesRequest) (*cmi.ListMachinesResponse, error) {
 	// Log messages to track start and end of request
 	glog.V(2).Infof("List machines request has been recieved for %q", req.ProviderSpec)
 
@@ -490,7 +480,7 @@ func (ms *MachineServer) ListMachines(ctx context.Context, req *cmi.ListMachines
 
 	runResult, err := svc.DescribeInstances(&input)
 	if err != nil {
-		glog.Errorf("AWS driver is returning error while describe instances request is sent: %s", err)
+		glog.Errorf("AWS plugin is returning error while describe instances request is sent: %s", err)
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -517,22 +507,22 @@ func (ms *MachineServer) ListMachines(ctx context.Context, req *cmi.ListMachines
 	return Resp, nil
 }
 
-// GetListOfVolumeIDsForExistingPVs returns a list of Volume IDs for all PV Specs for whom an AWS volume was found
+// GetVolumeIDs returns a list of Volume IDs for all PV Specs for whom an AWS volume was found
 //
-// REQUEST PARAMETERS (cmi.GetListOfVolumeIDsForExistingPVsRequest)
-// PVSpecList       bytes(blob)         PVSpecsList is a list PV specs for whom volume-IDs are required. Driver should parse this raw data into pre-defined list of PVSpecs.
+// REQUEST PARAMETERS (cmi.GetVolumeIDsRequest)
+// PVSpecList       bytes(blob)         PVSpecsList is a list PV specs for whom volume-IDs are required. Plugin should parse this raw data into pre-defined list of PVSpecs.
 //
-// RESPONSE PARAMETERS (cmi.ListMachinesResponse)
+// RESPONSE PARAMETERS (cmi.GetVolumeIDsResponse)
 // VolumeIDs       repeated string      VolumeIDs is a repeated list of VolumeIDs.
 //
-func (ms *MachineServer) GetListOfVolumeIDsForExistingPVs(ctx context.Context, req *cmi.GetListOfVolumeIDsForExistingPVsRequest) (*cmi.GetListOfVolumeIDsForExistingPVsResponse, error) {
+func (ms *MachineNIdentityPlugin) GetVolumeIDs(ctx context.Context, req *cmi.GetVolumeIDsRequest) (*cmi.GetVolumeIDsResponse, error) {
 	var (
 		volumeIDs   []string
 		volumeSpecs []*corev1.PersistentVolumeSpec
 	)
 
 	// Log messages to track start and end of request
-	glog.V(2).Infof("GetListOfVolumeIDsForExistingPVs request has been recieved for %q", req.PVSpecList)
+	glog.V(2).Infof("GetVolumeIDs request has been recieved for %q", req.PVSpecList)
 
 	err := json.Unmarshal(req.PVSpecList, &volumeSpecs)
 	if err != nil {
@@ -549,9 +539,9 @@ func (ms *MachineServer) GetListOfVolumeIDsForExistingPVs(ctx context.Context, r
 		volumeIDs = append(volumeIDs, volumeID)
 	}
 
-	glog.V(2).Infof("GetListOfVolumeIDsForExistingPVs machines request has been processed successfully. \nList: %v", volumeIDs)
+	glog.V(2).Infof("GetVolumeIDs machines request has been processed successfully. \nList: %v", volumeIDs)
 
-	Resp := &cmi.GetListOfVolumeIDsForExistingPVsResponse{
+	Resp := &cmi.GetVolumeIDsResponse{
 		VolumeIDs: volumeIDs,
 	}
 	return Resp, nil

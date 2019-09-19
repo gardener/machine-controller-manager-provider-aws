@@ -1,3 +1,16 @@
+/*
+Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+    http://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package aws
 
 import (
@@ -39,9 +52,9 @@ var _ = Describe("MachineServer", func() {
 		}
 		DescribeTable("##table",
 			func(data *data) {
-				d := NewDriver("tcp://127.0.0.1:8080")
-				mockDriverSPIImpl := &mockclient.MockDriverSPIImpl{FakeInstances: make([]ec2.Instance, 0)}
-				ms := NewMachineServer(d, mockDriverSPIImpl)
+				p := NewPlugin("tcp://127.0.0.1:8080")
+				mockPluginSPIImpl := &mockclient.MockPluginSPIImpl{FakeInstances: make([]ec2.Instance, 0)}
+				ms := NewMachineNIdentityPlugin(p, mockPluginSPIImpl)
 
 				ctx := context.Background()
 				response, err := ms.CreateMachine(ctx, data.action.machineRequest)
@@ -238,9 +251,9 @@ var _ = Describe("MachineServer", func() {
 		}
 		DescribeTable("##table",
 			func(data *data) {
-				d := NewDriver("tcp://127.0.0.1:8080")
-				mockDriverSPIImpl := &mockclient.MockDriverSPIImpl{FakeInstances: make([]ec2.Instance, 0)}
-				ms := NewMachineServer(d, mockDriverSPIImpl)
+				p := NewPlugin("tcp://127.0.0.1:8080")
+				mockPluginSPIImpl := &mockclient.MockPluginSPIImpl{FakeInstances: make([]ec2.Instance, 0)}
+				ms := NewMachineNIdentityPlugin(p, mockPluginSPIImpl)
 
 				ctx := context.Background()
 
@@ -408,7 +421,7 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        "rpc error: code = Internal desc = Termination of instance errored out",
+					errMessage:        "rpc error: code = Internal desc = InvalidInstanceID.Malformed: Termination of instance errored out\ncaused by: Termination of instance errored out",
 				},
 			}),
 			Entry("Delete Request without a create request", &data{
@@ -447,9 +460,9 @@ var _ = Describe("MachineServer", func() {
 		}
 		DescribeTable("##table",
 			func(data *data) {
-				d := NewDriver("tcp://127.0.0.1:8080")
-				mockDriverSPIImpl := &mockclient.MockDriverSPIImpl{FakeInstances: make([]ec2.Instance, 0)}
-				ms := NewMachineServer(d, mockDriverSPIImpl)
+				p := NewPlugin("tcp://127.0.0.1:8080")
+				mockPluginSPIImpl := &mockclient.MockPluginSPIImpl{FakeInstances: make([]ec2.Instance, 0)}
+				ms := NewMachineNIdentityPlugin(p, mockPluginSPIImpl)
 
 				ctx := context.Background()
 
@@ -644,9 +657,9 @@ var _ = Describe("MachineServer", func() {
 		}
 		DescribeTable("##table",
 			func(data *data) {
-				d := NewDriver("tcp://127.0.0.1:8080")
-				mockDriverSPIImpl := &mockclient.MockDriverSPIImpl{FakeInstances: make([]ec2.Instance, 0)}
-				ms := NewMachineServer(d, mockDriverSPIImpl)
+				p := NewPlugin("tcp://127.0.0.1:8080")
+				mockPluginSPIImpl := &mockclient.MockPluginSPIImpl{FakeInstances: make([]ec2.Instance, 0)}
+				ms := NewMachineNIdentityPlugin(p, mockPluginSPIImpl)
 
 				ctx := context.Background()
 
@@ -834,9 +847,9 @@ var _ = Describe("MachineServer", func() {
 		}
 		DescribeTable("##table",
 			func(data *data) {
-				d := NewDriver("tcp://127.0.0.1:8080")
-				mockDriverSPIImpl := &mockclient.MockDriverSPIImpl{FakeInstances: make([]ec2.Instance, 0)}
-				ms := NewMachineServer(d, mockDriverSPIImpl)
+				p := NewPlugin("tcp://127.0.0.1:8080")
+				mockPluginSPIImpl := &mockclient.MockPluginSPIImpl{FakeInstances: make([]ec2.Instance, 0)}
+				ms := NewMachineNIdentityPlugin(p, mockPluginSPIImpl)
 
 				ctx := context.Background()
 
@@ -1016,14 +1029,14 @@ var _ = Describe("MachineServer", func() {
 		)
 	})
 
-	Describe("#GetListOfVolumeIDsForExistingPVs", func() {
+	Describe("#GetVolumeIDs", func() {
 		type setup struct {
 		}
 		type action struct {
-			getListOfVolumeIDsForExistingPVsRequest *cmipb.GetListOfVolumeIDsForExistingPVsRequest
+			getListOfVolumeIDsForExistingPVsRequest *cmipb.GetVolumeIDsRequest
 		}
 		type expect struct {
-			getListOfVolumeIDsForExistingPVsResponse *cmipb.GetListOfVolumeIDsForExistingPVsResponse
+			getListOfVolumeIDsForExistingPVsResponse *cmipb.GetVolumeIDsResponse
 			errToHaveOccurred                        bool
 			errMessage                               string
 		}
@@ -1034,13 +1047,13 @@ var _ = Describe("MachineServer", func() {
 		}
 		DescribeTable("##table",
 			func(data *data) {
-				d := NewDriver("tcp://127.0.0.1:8080")
-				mockDriverSPIImpl := &mockclient.MockDriverSPIImpl{FakeInstances: make([]ec2.Instance, 0)}
-				ms := NewMachineServer(d, mockDriverSPIImpl)
+				p := NewPlugin("tcp://127.0.0.1:8080")
+				mockPluginSPIImpl := &mockclient.MockPluginSPIImpl{FakeInstances: make([]ec2.Instance, 0)}
+				ms := NewMachineNIdentityPlugin(p, mockPluginSPIImpl)
 
 				ctx := context.Background()
 
-				response, err := ms.GetListOfVolumeIDsForExistingPVs(
+				response, err := ms.GetVolumeIDs(
 					ctx,
 					data.action.getListOfVolumeIDsForExistingPVsRequest,
 				)
@@ -1053,28 +1066,28 @@ var _ = Describe("MachineServer", func() {
 					Expect(response).To(Equal(data.expect.getListOfVolumeIDsForExistingPVsResponse))
 				}
 			},
-			Entry("Simple GetListOfVolumeIDsForExistingPVs request", &data{
+			Entry("Simple GetVolumeIDs request", &data{
 				action: action{
-					getListOfVolumeIDsForExistingPVsRequest: &cmipb.GetListOfVolumeIDsForExistingPVsRequest{
+					getListOfVolumeIDsForExistingPVsRequest: &cmipb.GetVolumeIDsRequest{
 						PVSpecList: []byte("[{\"capacity\":{\"storage\":\"1Gi\"},\"awsElasticBlockStore\":{\"volumeID\":\"aws://eu-east-2b/vol-xxxxyyyyzzzz11112\",\"fsType\":\"ext4\"},\"accessModes\":[\"ReadWriteOnce\"],\"claimRef\":{\"kind\":\"PersistentVolumeClaim\",\"namespace\":\"default\",\"name\":\"www-web-0\",\"uid\":\"0c3b34f8-a494-11e9-b4c3-0e956a869a31\",\"apiVersion\":\"v1\",\"resourceVersion\":\"32423232\"},\"persistentVolumeReclaimPolicy\":\"Delete\",\"storageClassName\":\"default\",\"nodeAffinity\":{\"required\":{\"nodeSelectorTerms\":[{\"matchExpressions\":[{\"key\":\"failure-domain.beta.kubernetes.io/zone\",\"operator\":\"In\",\"values\":[\"eu-east-2b\"]},{\"key\":\"failure-domain.beta.kubernetes.io/region\",\"operator\":\"In\",\"values\":[\"eu-east-2\"]}]}]}}}]"),
 					},
 				},
 				expect: expect{
-					getListOfVolumeIDsForExistingPVsResponse: &cmipb.GetListOfVolumeIDsForExistingPVsResponse{
+					getListOfVolumeIDsForExistingPVsResponse: &cmipb.GetVolumeIDsResponse{
 						VolumeIDs: []string{
 							"aws://eu-east-2b/vol-xxxxyyyyzzzz11112",
 						},
 					},
 				},
 			}),
-			Entry("GetListOfVolumeIDsForExistingPVs with multiple pvSpecs request", &data{
+			Entry("GetVolumeIDs with multiple pvSpecs request", &data{
 				action: action{
-					getListOfVolumeIDsForExistingPVsRequest: &cmipb.GetListOfVolumeIDsForExistingPVsRequest{
+					getListOfVolumeIDsForExistingPVsRequest: &cmipb.GetVolumeIDsRequest{
 						PVSpecList: []byte("[{\"capacity\":{\"storage\":\"1Gi\"},\"awsElasticBlockStore\":{\"volumeID\":\"aws://eu-east-2b/vol-xxxxyyyyzzzz11112\",\"fsType\":\"ext4\"},\"accessModes\":[\"ReadWriteOnce\"],\"claimRef\":{\"kind\":\"PersistentVolumeClaim\",\"namespace\":\"default\",\"name\":\"www-web-0\",\"uid\":\"0c3b34f8-a494-11e9-b4c3-0e956a869a31\",\"apiVersion\":\"v1\",\"resourceVersion\":\"32423232\"},\"persistentVolumeReclaimPolicy\":\"Delete\",\"storageClassName\":\"default\",\"nodeAffinity\":{\"required\":{\"nodeSelectorTerms\":[{\"matchExpressions\":[{\"key\":\"failure-domain.beta.kubernetes.io/zone\",\"operator\":\"In\",\"values\":[\"eu-east-2b\"]},{\"key\":\"failure-domain.beta.kubernetes.io/region\",\"operator\":\"In\",\"values\":[\"eu-east-2\"]}]}]}}},{\"capacity\":{\"storage\":\"1Gi\"},\"awsElasticBlockStore\":{\"volumeID\":\"aws://eu-east-2b/vol-xxxxyyyyzzzz11113\",\"fsType\":\"ext4\"},\"accessModes\":[\"ReadWriteOnce\"],\"claimRef\":{\"kind\":\"PersistentVolumeClaim\",\"namespace\":\"default\",\"name\":\"www-web-1\",\"uid\":\"0c3b34f8-a494-11e9-b4c3-0e956a869a31\",\"apiVersion\":\"v1\",\"resourceVersion\":\"32423232\"},\"persistentVolumeReclaimPolicy\":\"Delete\",\"storageClassName\":\"default\",\"nodeAffinity\":{\"required\":{\"nodeSelectorTerms\":[{\"matchExpressions\":[{\"key\":\"failure-domain.beta.kubernetes.io/zone\",\"operator\":\"In\",\"values\":[\"eu-east-2b\"]},{\"key\":\"failure-domain.beta.kubernetes.io/region\",\"operator\":\"In\",\"values\":[\"eu-east-2\"]}]}]}}}]"),
 					},
 				},
 				expect: expect{
-					getListOfVolumeIDsForExistingPVsResponse: &cmipb.GetListOfVolumeIDsForExistingPVsResponse{
+					getListOfVolumeIDsForExistingPVsResponse: &cmipb.GetVolumeIDsResponse{
 						VolumeIDs: []string{
 							"aws://eu-east-2b/vol-xxxxyyyyzzzz11112",
 							"aws://eu-east-2b/vol-xxxxyyyyzzzz11113",
@@ -1082,19 +1095,19 @@ var _ = Describe("MachineServer", func() {
 					},
 				},
 			}),
-			Entry("GetListOfVolumeIDsForExistingPVs for Azure pvSpecs request", &data{
+			Entry("GetVolumeIDs for Azure pvSpecs request", &data{
 				action: action{
-					getListOfVolumeIDsForExistingPVsRequest: &cmipb.GetListOfVolumeIDsForExistingPVsRequest{
+					getListOfVolumeIDsForExistingPVsRequest: &cmipb.GetVolumeIDsRequest{
 						PVSpecList: []byte("[{\"capacity\":{\"storage\":\"1Gi\"},\"azureDisk\":{\"volumeID\":\"aws://eu-east-2b/vol-xxxxyyyyzzzz11112\",\"fsType\":\"ext4\"},\"accessModes\":[\"ReadWriteOnce\"],\"claimRef\":{\"kind\":\"PersistentVolumeClaim\",\"namespace\":\"default\",\"name\":\"www-web-0\",\"uid\":\"0c3b34f8-a494-11e9-b4c3-0e956a869a31\",\"apiVersion\":\"v1\",\"resourceVersion\":\"32423232\"},\"persistentVolumeReclaimPolicy\":\"Delete\",\"storageClassName\":\"default\",\"nodeAffinity\":{\"required\":{\"nodeSelectorTerms\":[{\"matchExpressions\":[{\"key\":\"failure-domain.beta.kubernetes.io/zone\",\"operator\":\"In\",\"values\":[\"eu-east-2b\"]},{\"key\":\"failure-domain.beta.kubernetes.io/region\",\"operator\":\"In\",\"values\":[\"eu-east-2\"]}]}]}}}]"),
 					},
 				},
 				expect: expect{
-					getListOfVolumeIDsForExistingPVsResponse: &cmipb.GetListOfVolumeIDsForExistingPVsResponse{},
+					getListOfVolumeIDsForExistingPVsResponse: &cmipb.GetVolumeIDsResponse{},
 				},
 			}),
-			Entry("GetListOfVolumeIDsForExistingPVs for invalid json input", &data{
+			Entry("GetVolumeIDs for invalid json input", &data{
 				action: action{
-					getListOfVolumeIDsForExistingPVsRequest: &cmipb.GetListOfVolumeIDsForExistingPVsRequest{
+					getListOfVolumeIDsForExistingPVsRequest: &cmipb.GetVolumeIDsRequest{
 						PVSpecList: []byte("[{\"capacity\":{\"storage\":\"1Gi\"},\"awsElasticBlockStore\":{\"volumeID\":\"aws://eu-east-2b/vol-xxxxyyyyzzzz11112\",\"fsType\":\"ext4\"},\"accessModes\":[\"ReadWriteOnce\"],\"claimRef\":{\"kind\":\"PersistentVolumeClaim\",\"namespace\":\"default\",\"name\":\"www-web-0\",\"uid\":\"0c3b34f8-a494-11e9-b4c3-0e956a869a31\",\"apiVersion\":\"v1\",\"resourceVersion\":\"32423232\"},\"persistentVolumeReclaimPolicy\":\"Delete\",\"storageClassName\":\"default\",\"nodeAffinity\":{\"required\":{\"nodeSelectorTerms\":[{\"matchExpressions\":[{\"key\":\"failure-domain.beta.kubernetes.io/zone\",\"operator\":\"In\",\"values\":[\"eu-east-2b\"]},{\"key\":\"failure-domain.beta.kubernetes.io/region\",\"operator\":\"In\"\"values\":[\"eu-east-2\"]}]}]}}}]"),
 					},
 				},

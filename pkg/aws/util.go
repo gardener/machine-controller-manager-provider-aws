@@ -43,7 +43,7 @@ func decodeRegionAndMachineID(id string) (string, string, error) {
 }
 
 // Helper function to create SVC
-func (ms *MachineServer) createSVC(secrets api.Secrets, region string) (ec2iface.EC2API, error) {
+func (ms *MachineNIdentityPlugin) createSVC(secrets api.Secrets, region string) (ec2iface.EC2API, error) {
 	session, err := ms.SPI.NewSession(secrets, region)
 	if err != nil {
 		return nil, err
@@ -52,11 +52,11 @@ func (ms *MachineServer) createSVC(secrets api.Secrets, region string) (ec2iface
 	return svc, nil
 }
 
-//driverSPIImpl is the real implementation of DriverSPI interface that makes the calls to the AWS SDK.
-type driverSPIImpl struct{}
+//pluginSPIImpl is the real implementation of PluginSPI interface that makes the calls to the AWS SDK.
+type pluginSPIImpl struct{}
 
 // NewSession starts a new AWS session
-func (ms *driverSPIImpl) NewSession(Secrets api.Secrets, region string) (*awssession.Session, error) {
+func (ms *pluginSPIImpl) NewSession(Secrets api.Secrets, region string) (*awssession.Session, error) {
 	var (
 		err     error
 		session *awssession.Session
@@ -85,7 +85,7 @@ func (ms *driverSPIImpl) NewSession(Secrets api.Secrets, region string) (*awsses
 }
 
 // NewEC2API Returns a EC2API object
-func (ms *driverSPIImpl) NewEC2API(session *session.Session) ec2iface.EC2API {
+func (ms *pluginSPIImpl) NewEC2API(session *session.Session) ec2iface.EC2API {
 	service := ec2.New(session)
 	return service
 }

@@ -44,14 +44,14 @@ func main() {
 	flag.CommandLine.Parse([]string{})
 
 	cmd := &cobra.Command{
-		Use:   "grpc-driver",
-		Short: "gRPC driver for machine-controller-manager",
+		Use:   "cmi-plugin",
+		Short: "gRPC CMI Plugin for machine-controller-manager",
 		Run: func(cmd *cobra.Command, args []string) {
 			handle()
 		},
 	}
 
-	cmd.PersistentFlags().StringVar(&endpoint, "endpoint", "", "Endpoint to be used for driver")
+	cmd.PersistentFlags().StringVar(&endpoint, "endpoint", "", "Endpoint to be used for plugin")
 	cmd.MarkPersistentFlagRequired("endpoint")
 
 	cmd.ParseFlags(os.Args[1:])
@@ -64,6 +64,6 @@ func main() {
 }
 
 func handle() {
-	d := aws.NewDriver(endpoint)
+	d := aws.NewPlugin(endpoint)
 	d.Run()
 }

@@ -1,3 +1,16 @@
+/*
+Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+    http://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package mockclient
 
 import (
@@ -31,13 +44,13 @@ const (
 	ReturnErrorAtDescribeInstances string = "return-error-at-DescribeInstances"
 )
 
-// MockDriverSPIImpl is the mock implementation of DriverSPI interface that makes dummy calls
-type MockDriverSPIImpl struct {
+// MockPluginSPIImpl is the mock implementation of PluginSPI interface that makes dummy calls
+type MockPluginSPIImpl struct {
 	FakeInstances []ec2.Instance
 }
 
 // NewSession starts a new AWS session
-func (ms *MockDriverSPIImpl) NewSession(Secrets api.Secrets, region string) (*awssession.Session, error) {
+func (ms *MockPluginSPIImpl) NewSession(Secrets api.Secrets, region string) (*awssession.Session, error) {
 	if region == FailAtRegion {
 		return nil, fmt.Errorf("Region doesn't exist while trying to create session")
 	}
@@ -45,7 +58,7 @@ func (ms *MockDriverSPIImpl) NewSession(Secrets api.Secrets, region string) (*aw
 }
 
 // NewEC2API Returns a EC2API object
-func (ms *MockDriverSPIImpl) NewEC2API(session *session.Session) ec2iface.EC2API {
+func (ms *MockPluginSPIImpl) NewEC2API(session *session.Session) ec2iface.EC2API {
 	return &MockEC2Client{
 		FakeInstances: &ms.FakeInstances,
 	}
@@ -159,11 +172,15 @@ func (ms *MockEC2Client) DescribeInstances(input *ec2.DescribeInstancesInput) (*
 func (ms *MockEC2Client) TerminateInstances(input *ec2.TerminateInstancesInput) (*ec2.TerminateInstancesOutput, error) {
 
 	if *input.InstanceIds[0] == InstanceTerminateError {
-		return nil, fmt.Errorf("Termination of instance errored out")
+		return nil, awserr.New(
+			ec2.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceIdMalformed,
+			"Termination of instance errored out",
+			fmt.Errorf("Termination of instance errored out"),
+		)
 	} else if *input.InstanceIds[0] == InstanceDoesntExistError {
 		// If instance with instance ID doesn't exist
 		return nil, awserr.New(
-			ec2.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceIdMalformed,
+			ec2.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceIdNotFound,
 			"Instance with instance-ID doesn't exist",
 			fmt.Errorf("Instance with instance-ID doesn't exist"),
 		)

@@ -1,4 +1,4 @@
-## machine-controller-manager-provider-sampleprovider
+## machine-controller-manager-provider-aws
 Copyright (c) 2018-2019 SAP SE or an SAP affiliate company. All rights reserved.
 
 ## Seed Source
@@ -16,9 +16,10 @@ Commit-Message:  Merge pull request #129 from pohly/hostpath-1.0.0 -backport-2
 To the left are the list of copied files -> and to the right the current location they are at.   
 
     app/nfsplugin/main.go -> app/aws/main.go
-    pkg/nfs/driver.go -> pkg/aws/driver.go
-    pkg/nfs/nodeserver.go -> pkg/aws/machineserver.go
-    pkg/csi-common/driver.go -> pkg/cmi-common/driver.go
+    pkg/nfs/driver.go -> pkg/aws/plugin.go
+    pkg/nfs/nodeserver.go -> pkg/aws/machine-server.go
+    pkg/csi-common/identityserver-default.go -> pkg/cmi-common/identity-server.go
+    pkg/csi-common/driver.go -> pkg/cmi-common/plugin.go
     pkg/csi-common/identityserver-default.go -> pkg/cmi-common/identity-server-defaults.go
     pkg/csi-common/nodeserver-default.go -> pkg/cmi-common/machine-server-defaults.go
     pkg/csi-common/server.go -> pkg/cmi-common/server.go

@@ -30,25 +30,26 @@ import (
 )
 
 // DefaultIdentityServer contains the server identity
+// Implements the cmi.IdentityServer
 type DefaultIdentityServer struct {
-	Driver *CMIDriver
+	Plugin *DefaultPlugin
 }
 
 // GetPluginInfo returns the Server details
 func (ids *DefaultIdentityServer) GetPluginInfo(ctx context.Context, req *csi.GetPluginInfoRequest) (*csi.GetPluginInfoResponse, error) {
 	glog.V(5).Infof("Using default GetPluginInfo")
 
-	if ids.Driver.name == "" {
-		return nil, status.Error(codes.Unavailable, "Driver name not configured")
+	if ids.Plugin.Name == "" {
+		return nil, status.Error(codes.Unavailable, "Plugin name not configured")
 	}
 
-	if ids.Driver.version == "" {
-		return nil, status.Error(codes.Unavailable, "Driver is missing version")
+	if ids.Plugin.Version == "" {
+		return nil, status.Error(codes.Unavailable, "Plugin is missing version")
 	}
 
 	return &csi.GetPluginInfoResponse{
-		Name:          ids.Driver.name,
-		VendorVersion: ids.Driver.version,
+		Name:          ids.Plugin.Name,
+		VendorVersion: ids.Plugin.Version,
 	}, nil
 }
 

@@ -31,9 +31,7 @@ import (
 
 // DefaultMachineServer contains the machine server info
 // It implements the cmi.MachineClient interface
-type DefaultMachineServer struct {
-	Driver *CMIDriver
-}
+type DefaultMachineServer struct{}
 
 // CreateMachine method handles default machine creation request
 func (ms *DefaultMachineServer) CreateMachine(ctx context.Context, req *cmi.CreateMachineRequest) (*cmi.CreateMachineResponse, error) {
@@ -70,18 +68,9 @@ func (ms *DefaultMachineServer) ShutDownMachine(ctx context.Context, req *cmi.Sh
 	return nil, status.Error(codes.Unimplemented, "")
 }
 
-// GetListOfVolumeIDsForExistingPVs method handles default getPVIDs request
-func (ms *DefaultMachineServer) GetListOfVolumeIDsForExistingPVs(ctx context.Context, req *cmi.GetListOfVolumeIDsForExistingPVsRequest) (*cmi.GetListOfVolumeIDsForExistingPVsResponse, error) {
+// GetVolumeIDs method handles default getPVIDs request
+func (ms *DefaultMachineServer) GetVolumeIDs(ctx context.Context, req *cmi.GetVolumeIDsRequest) (*cmi.GetVolumeIDsResponse, error) {
 	// Log messages to track start of request
 	glog.V(2).Infof("GetListOfVolumeIDsForExistingPVs request has been recieved for %v", req.PVSpecList)
 	return nil, status.Error(codes.Unimplemented, "")
-}
-
-// ControllerGetCapabilities implements the default GRPC callout.
-// Default supports all capabilities
-func (ms *DefaultMachineServer) ControllerGetCapabilities(ctx context.Context, req *cmi.ControllerGetCapabilitiesRequest) (*cmi.ControllerGetCapabilitiesResponse, error) {
-	glog.V(5).Infof("Using default ControllerGetCapabilities")
-
-	// TODO: Update later to return default caps.
-	return &cmi.ControllerGetCapabilitiesResponse{}, nil
 }
