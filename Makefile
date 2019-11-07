@@ -32,12 +32,12 @@ rename-project:
 	@./hack/rename-project ${PROJECT_NAME}
 
 #########################################
-# Rules for starting cmi-server locally
+# Rules for starting cmi-plugin locally
 #########################################
 
 .PHONY: start
 start:
-	go run app/aws/cmi-server.go --endpoint=tcp://127.0.0.1:8080
+	go run app/aws/cmi-plugin.go --endpoint=tcp://127.0.0.1:8080
 
 #########################################
 # Rules for re-vendoring
@@ -77,7 +77,7 @@ build:
 
 .PHONY: docker-image
 docker-image:
-	@if [[ ! -f ${BINARY_PATH}/rel/cmi-server ]]; then echo "No binary found. Please run 'make build'"; false; fi
+	@if [[ ! -f ${BINARY_PATH}/rel/cmi-plugin ]]; then echo "No binary found. Please run 'make build'"; false; fi
 	@docker build -t $(IMAGE_REPOSITORY):$(IMAGE_TAG) .
 
 .PHONY: docker-login
@@ -91,8 +91,8 @@ docker-push:
 
 .PHONY: rename-binaries
 rename-binaries:
-	@if [[ -f bin/cmi-server ]]; then cp bin/cmi-server cmi-server-darwin-amd64; fi
-	@if [[ -f bin/rel/cmi-server ]]; then cp bin/rel/cmi-server cmi-server-linux-amd64; fi
+	@if [[ -f bin/cmi-plugin ]]; then cp bin/cmi-plugin cmi-plugin-darwin-amd64; fi
+	@if [[ -f bin/rel/cmi-plugin ]]; then cp bin/rel/cmi-plugin cmi-plugin-linux-amd64; fi
 
 .PHONY: clean
 clean:
