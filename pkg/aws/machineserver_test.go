@@ -54,7 +54,7 @@ var _ = Describe("MachineServer", func() {
 			func(data *data) {
 				p := NewPlugin("tcp://127.0.0.1:8080")
 				mockPluginSPIImpl := &mockclient.MockPluginSPIImpl{FakeInstances: make([]ec2.Instance, 0)}
-				ms := NewMachineNIdentityPlugin(p, mockPluginSPIImpl)
+				ms := NewMachinePlugin(p, mockPluginSPIImpl)
 
 				ctx := context.Background()
 				response, err := ms.CreateMachine(ctx, data.action.machineRequest)
@@ -253,7 +253,7 @@ var _ = Describe("MachineServer", func() {
 			func(data *data) {
 				p := NewPlugin("tcp://127.0.0.1:8080")
 				mockPluginSPIImpl := &mockclient.MockPluginSPIImpl{FakeInstances: make([]ec2.Instance, 0)}
-				ms := NewMachineNIdentityPlugin(p, mockPluginSPIImpl)
+				ms := NewMachinePlugin(p, mockPluginSPIImpl)
 
 				ctx := context.Background()
 
@@ -462,7 +462,7 @@ var _ = Describe("MachineServer", func() {
 			func(data *data) {
 				p := NewPlugin("tcp://127.0.0.1:8080")
 				mockPluginSPIImpl := &mockclient.MockPluginSPIImpl{FakeInstances: make([]ec2.Instance, 0)}
-				ms := NewMachineNIdentityPlugin(p, mockPluginSPIImpl)
+				ms := NewMachinePlugin(p, mockPluginSPIImpl)
 
 				ctx := context.Background()
 
@@ -659,7 +659,7 @@ var _ = Describe("MachineServer", func() {
 			func(data *data) {
 				p := NewPlugin("tcp://127.0.0.1:8080")
 				mockPluginSPIImpl := &mockclient.MockPluginSPIImpl{FakeInstances: make([]ec2.Instance, 0)}
-				ms := NewMachineNIdentityPlugin(p, mockPluginSPIImpl)
+				ms := NewMachinePlugin(p, mockPluginSPIImpl)
 
 				ctx := context.Background()
 
@@ -849,7 +849,7 @@ var _ = Describe("MachineServer", func() {
 			func(data *data) {
 				p := NewPlugin("tcp://127.0.0.1:8080")
 				mockPluginSPIImpl := &mockclient.MockPluginSPIImpl{FakeInstances: make([]ec2.Instance, 0)}
-				ms := NewMachineNIdentityPlugin(p, mockPluginSPIImpl)
+				ms := NewMachinePlugin(p, mockPluginSPIImpl)
 
 				ctx := context.Background()
 
@@ -1049,7 +1049,7 @@ var _ = Describe("MachineServer", func() {
 			func(data *data) {
 				p := NewPlugin("tcp://127.0.0.1:8080")
 				mockPluginSPIImpl := &mockclient.MockPluginSPIImpl{FakeInstances: make([]ec2.Instance, 0)}
-				ms := NewMachineNIdentityPlugin(p, mockPluginSPIImpl)
+				ms := NewMachinePlugin(p, mockPluginSPIImpl)
 
 				ctx := context.Background()
 

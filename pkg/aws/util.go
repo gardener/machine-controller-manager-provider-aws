@@ -43,7 +43,7 @@ func decodeRegionAndMachineID(id string) (string, string, error) {
 }
 
 // Helper function to create SVC
-func (ms *MachineNIdentityPlugin) createSVC(secrets api.Secrets, region string) (ec2iface.EC2API, error) {
+func (ms *MachinePlugin) createSVC(secrets api.Secrets, region string) (ec2iface.EC2API, error) {
 	session, err := ms.SPI.NewSession(secrets, region)
 	if err != nil {
 		return nil, err

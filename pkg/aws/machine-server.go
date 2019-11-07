@@ -66,7 +66,7 @@ import (
 // These could be done using tag(s)/resource-groups etc.
 // This logic is used by safety controller to delete orphan VMs which are not backed by any machine CRD
 //
-func (ms *MachineNIdentityPlugin) CreateMachine(ctx context.Context, req *cmi.CreateMachineRequest) (*cmi.CreateMachineResponse, error) {
+func (ms *MachinePlugin) CreateMachine(ctx context.Context, req *cmi.CreateMachineRequest) (*cmi.CreateMachineResponse, error) {
 	// Log messages to track request
 	glog.V(2).Infof("Machine creation request has been recieved for %q", req.Name)
 
@@ -199,7 +199,7 @@ func (ms *MachineNIdentityPlugin) CreateMachine(ctx context.Context, req *cmi.Cr
 // MachineID        string              Contains the unique identification of the VM at the cloud provider
 // Secrets          map<string,bytes>   (Optional) Contains a map from string to string contains any cloud specific secrets that can be used by the provider
 //
-func (ms *MachineNIdentityPlugin) DeleteMachine(ctx context.Context, req *cmi.DeleteMachineRequest) (*cmi.DeleteMachineResponse, error) {
+func (ms *MachinePlugin) DeleteMachine(ctx context.Context, req *cmi.DeleteMachineRequest) (*cmi.DeleteMachineResponse, error) {
 	// Log messages to track delete request
 	glog.V(2).Infof("Machine deletion request has been recieved for %q", req.MachineID)
 	defer glog.V(2).Infof("Machine deletion request has been processed for %q", req.MachineID)
@@ -261,7 +261,7 @@ func (ms *MachineNIdentityPlugin) DeleteMachine(ctx context.Context, req *cmi.De
 // Exists           bool                Returns a boolean value which is set to true when it exists on the cloud provider
 // Status           enum                Contains the status of the machine on the cloud provider mapped to the enum values - {Unknown, Stopped, Running}
 //
-func (ms *MachineNIdentityPlugin) GetMachine(ctx context.Context, req *cmi.GetMachineRequest) (*cmi.GetMachineResponse, error) {
+func (ms *MachinePlugin) GetMachine(ctx context.Context, req *cmi.GetMachineRequest) (*cmi.GetMachineResponse, error) {
 	// Log messages to track start and end of request
 	glog.V(2).Infof("Get request has been recieved for %q", req.MachineID)
 
@@ -276,7 +276,7 @@ func (ms *MachineNIdentityPlugin) GetMachine(ctx context.Context, req *cmi.GetMa
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	//TODO: Make validation better to make sure if all the fields under secret are covered.
+	// TODO: Make validation better to make sure if all the fields under secret are covered.
 	var Secrets api.Secrets
 	Secrets.ProviderAccessKeyID = string(ProviderAccessKeyID)
 	Secrets.ProviderSecretAccessKey = string(ProviderAccessKey)
@@ -328,7 +328,7 @@ func (ms *MachineNIdentityPlugin) GetMachine(ctx context.Context, req *cmi.GetMa
 // MachineID        string              Contains the unique identification of the VM at the cloud provider
 // Secrets          map<string,bytes>   (Optional) Contains a map from string to string contains any cloud specific secrets that can be used by the provider
 //
-func (ms *MachineNIdentityPlugin) ShutDownMachine(ctx context.Context, req *cmi.ShutDownMachineRequest) (*cmi.ShutDownMachineResponse, error) {
+func (ms *MachinePlugin) ShutDownMachine(ctx context.Context, req *cmi.ShutDownMachineRequest) (*cmi.ShutDownMachineResponse, error) {
 	// Log messages to track start of request
 	glog.V(2).Infof("ShutDown machine request has been recieved for %q", req.MachineID)
 	defer glog.V(2).Infof("Machine shutdown request has been processed successfully for %q", req.MachineID)
@@ -400,7 +400,7 @@ func (ms *MachineNIdentityPlugin) ShutDownMachine(ctx context.Context, req *cmi.
 // MachineList      map<string,string>  A map containing the keys as the MachineID and value as the MachineName
 //                                      for all machine's who where possibilly created by this ProviderSpec
 //
-func (ms *MachineNIdentityPlugin) ListMachines(ctx context.Context, req *cmi.ListMachinesRequest) (*cmi.ListMachinesResponse, error) {
+func (ms *MachinePlugin) ListMachines(ctx context.Context, req *cmi.ListMachinesRequest) (*cmi.ListMachinesResponse, error) {
 	// Log messages to track start and end of request
 	glog.V(2).Infof("List machines request has been recieved for %q", req.ProviderSpec)
 
@@ -515,7 +515,7 @@ func (ms *MachineNIdentityPlugin) ListMachines(ctx context.Context, req *cmi.Lis
 // RESPONSE PARAMETERS (cmi.GetVolumeIDsResponse)
 // VolumeIDs       repeated string      VolumeIDs is a repeated list of VolumeIDs.
 //
-func (ms *MachineNIdentityPlugin) GetVolumeIDs(ctx context.Context, req *cmi.GetVolumeIDsRequest) (*cmi.GetVolumeIDsResponse, error) {
+func (ms *MachinePlugin) GetVolumeIDs(ctx context.Context, req *cmi.GetVolumeIDsRequest) (*cmi.GetVolumeIDsResponse, error) {
 	var (
 		volumeIDs   []string
 		volumeSpecs []*corev1.PersistentVolumeSpec

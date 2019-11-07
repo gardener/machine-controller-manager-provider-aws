@@ -51,9 +51,11 @@ func NewPlugin(endpoint string) *Plugin {
 // Run starts a new gRPC server to start the plugin
 func (p *Plugin) Run() {
 	s := cmicommon.NewNonBlockingGRPCServer()
-	s.Start(p.endpoint,
-		nil,
-		NewMachineNIdentityPlugin(p, &pluginSPIImpl{}))
+	s.Start(
+		p.endpoint,
+		NewIdentityPlugin(p, &pluginSPIImpl{}),
+		NewMachinePlugin(p, &pluginSPIImpl{}),
+	)
 	s.Wait()
 }
 
@@ -63,21 +65,30 @@ type PluginSPI interface {
 	NewEC2API(*session.Session) ec2iface.EC2API
 }
 
-// MachineNIdentityPlugin implements the cmi.MachineServer
-// & cmi.IdentityServer clients
+// MachinePlugin implements the cmi.MachineServer
 // It also implements the pluginSPI interface
-type MachineNIdentityPlugin struct {
-	*cmicommon.DefaultIdentityServer
+type MachinePlugin struct {
 	*cmicommon.DefaultMachineServer
 	SPI PluginSPI
 }
 
-// NewMachineNIdentityPlugin returns a new MachineNIdentityPlugin
-func NewMachineNIdentityPlugin(p *Plugin, spi PluginSPI) *MachineNIdentityPlugin {
-	return &MachineNIdentityPlugin{
-		DefaultMachineServer:  cmicommon.NewDefaultMachineServer(p.CMIPlugin),
+// NewMachinePlugin returns a new MachinePlugin
+func NewMachinePlugin(p *Plugin, spi PluginSPI) *MachinePlugin {
+	return &MachinePlugin{
+		DefaultMachineServer: cmicommon.NewDefaultMachineServer(p.CMIPlugin),
+		SPI:                  spi,
+	}
+}
+
+// IdentityPlugin implements the cmi.IdentityServer clients
+type IdentityPlugin struct {
+	*cmicommon.DefaultIdentityServer
+}
+
+// NewIdentityPlugin returns a new IdentityPlugin
+func NewIdentityPlugin(p *Plugin, spi PluginSPI) *IdentityPlugin {
+	return &IdentityPlugin{
 		DefaultIdentityServer: cmicommon.NewDefaultIdentityServer(p.CMIPlugin),
-		SPI:                   spi,
 	}
 }
 

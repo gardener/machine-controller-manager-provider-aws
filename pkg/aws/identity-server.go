@@ -22,7 +22,7 @@ Modifications Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights 
 package aws
 
 import (
-	"github.com/container-storage-interface/spec/lib/go/csi/v0"
+	"github.com/gardener/machine-spec/lib/go/cmi"
 	"github.com/golang/glog"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
@@ -30,40 +30,61 @@ import (
 )
 
 // GetPluginInfo returns the Server details
-func (ids *MachineNIdentityPlugin) GetPluginInfo(ctx context.Context, req *csi.GetPluginInfoRequest) (*csi.GetPluginInfoResponse, error) {
-	glog.Infof("Using GetPluginInfo")
+func (ids *IdentityPlugin) GetPluginInfo(ctx context.Context, req *cmi.GetPluginInfoRequest) (*cmi.GetPluginInfoResponse, error) {
+	glog.V(3).Infof("Using GetPluginInfo")
 
 	if ids.Plugin.Name == "" {
-		return nil, status.Error(codes.Unavailable, "Plugin name not configured")
+		return nil, status.Error(codes.Internal, "Plugin name not configured")
 	}
 
 	if ids.Plugin.Name == "" {
-		return nil, status.Error(codes.Unavailable, "Plugin is missing version")
+		return nil, status.Error(codes.Internal, "Plugin is missing version")
 	}
 
-	return &csi.GetPluginInfoResponse{
-		Name:          ids.Plugin.Name,
-		VendorVersion: ids.Plugin.Version,
+	return &cmi.GetPluginInfoResponse{
+		Name:    ids.Plugin.Name,
+		Version: ids.Plugin.Version,
 	}, nil
 }
 
 // Probe tries to probe the server and returns a response
-func (ids *MachineNIdentityPlugin) Probe(ctx context.Context, req *csi.ProbeRequest) (*csi.ProbeResponse, error) {
-	return &csi.ProbeResponse{}, nil
+func (ids *IdentityPlugin) Probe(ctx context.Context, req *cmi.ProbeRequest) (*cmi.ProbeResponse, error) {
+	return &cmi.ProbeResponse{}, nil
 }
 
 // GetPluginCapabilities gets capabilities of the plugin
-func (ids *MachineNIdentityPlugin) GetPluginCapabilities(ctx context.Context, req *csi.GetPluginCapabilitiesRequest) (*csi.GetPluginCapabilitiesResponse, error) {
-	glog.V(5).Infof("Using default capabilities")
-	return &csi.GetPluginCapabilitiesResponse{
-		Capabilities: []*csi.PluginCapability{
-			{
-				Type: &csi.PluginCapability_Service_{
-					Service: &csi.PluginCapability_Service{
-						Type: csi.PluginCapability_Service_CONTROLLER_SERVICE,
-					},
-				},
+func (ids *IdentityPlugin) GetPluginCapabilities(ctx context.Context, req *cmi.GetPluginCapabilitiesRequest) (*cmi.GetPluginCapabilitiesResponse, error) {
+	var (
+		cmc []*cmi.PluginCapability
+		cl  []cmi.PluginCapability_RPC_Type
+	)
+
+	cl = []cmi.PluginCapability_RPC_Type{
+		cmi.PluginCapability_RPC_CREATE_MACHINE,
+		cmi.PluginCapability_RPC_DELETE_MACHINE,
+		cmi.PluginCapability_RPC_GET_MACHINE,
+		cmi.PluginCapability_RPC_LIST_MACHINES,
+		cmi.PluginCapability_RPC_SHUTDOWN_MACHINE,
+		cmi.PluginCapability_RPC_GET_VOLUME_IDS,
+	}
+
+	for _, c := range cl {
+		glog.V(4).Infof("Enabling controller service capability: %v", c.String())
+		cmc = append(cmc, NewPluginCapability(c))
+	}
+
+	return &cmi.GetPluginCapabilitiesResponse{
+		Capabilities: cmc,
+	}, nil
+}
+
+// NewPluginCapability TODO
+func NewPluginCapability(cap cmi.PluginCapability_RPC_Type) *cmi.PluginCapability {
+	return &cmi.PluginCapability{
+		Type: &cmi.PluginCapability_Rpc{
+			Rpc: &cmi.PluginCapability_RPC{
+				Type: cap,
 			},
 		},
-	}, nil
+	}
 }
