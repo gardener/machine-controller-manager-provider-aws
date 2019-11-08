@@ -22,7 +22,7 @@ Modifications Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights 
 package cmicommon
 
 import (
-	"github.com/container-storage-interface/spec/lib/go/csi/v0"
+	"github.com/gardener/machine-spec/lib/go/cmi"
 	"github.com/golang/glog"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
@@ -30,45 +30,38 @@ import (
 )
 
 // DefaultIdentityServer contains the server identity
+// Implements the cmi.IdentityServer
 type DefaultIdentityServer struct {
-	Driver *CMIDriver
+	Plugin *DefaultPlugin
 }
 
 // GetPluginInfo returns the Server details
-func (ids *DefaultIdentityServer) GetPluginInfo(ctx context.Context, req *csi.GetPluginInfoRequest) (*csi.GetPluginInfoResponse, error) {
+func (ids *DefaultIdentityServer) GetPluginInfo(ctx context.Context, req *cmi.GetPluginInfoRequest) (*cmi.GetPluginInfoResponse, error) {
 	glog.V(5).Infof("Using default GetPluginInfo")
 
-	if ids.Driver.name == "" {
-		return nil, status.Error(codes.Unavailable, "Driver name not configured")
+	if ids.Plugin.Name == "" {
+		return nil, status.Error(codes.Unavailable, "Plugin name not configured")
 	}
 
-	if ids.Driver.version == "" {
-		return nil, status.Error(codes.Unavailable, "Driver is missing version")
+	if ids.Plugin.Version == "" {
+		return nil, status.Error(codes.Unavailable, "Plugin is missing version")
 	}
 
-	return &csi.GetPluginInfoResponse{
-		Name:          ids.Driver.name,
-		VendorVersion: ids.Driver.version,
+	return &cmi.GetPluginInfoResponse{
+		Name:    ids.Plugin.Name,
+		Version: ids.Plugin.Version,
 	}, nil
 }
 
 // Probe tries to probe the server and returns a response
-func (ids *DefaultIdentityServer) Probe(ctx context.Context, req *csi.ProbeRequest) (*csi.ProbeResponse, error) {
-	return &csi.ProbeResponse{}, nil
+func (ids *DefaultIdentityServer) Probe(ctx context.Context, req *cmi.ProbeRequest) (*cmi.ProbeResponse, error) {
+	return &cmi.ProbeResponse{}, nil
 }
 
 // GetPluginCapabilities gets capabilities of the plugin
-func (ids *DefaultIdentityServer) GetPluginCapabilities(ctx context.Context, req *csi.GetPluginCapabilitiesRequest) (*csi.GetPluginCapabilitiesResponse, error) {
-	glog.V(5).Infof("Using default capabilities")
-	return &csi.GetPluginCapabilitiesResponse{
-		Capabilities: []*csi.PluginCapability{
-			{
-				Type: &csi.PluginCapability_Service_{
-					Service: &csi.PluginCapability_Service{
-						Type: csi.PluginCapability_Service_CONTROLLER_SERVICE,
-					},
-				},
-			},
-		},
+func (ids *DefaultIdentityServer) GetPluginCapabilities(ctx context.Context, req *cmi.GetPluginCapabilitiesRequest) (*cmi.GetPluginCapabilitiesResponse, error) {
+	glog.V(3).Infof("Using default GetPluginCapabilities")
+	return &cmi.GetPluginCapabilitiesResponse{
+		Capabilities: []*cmi.PluginCapability{},
 	}, nil
 }

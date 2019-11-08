@@ -63,13 +63,13 @@ if [[ -z "$LOCAL_BUILD" ]]; then
   CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -a \
     -v \
-    -o ${BINARY_PATH}/rel/cmi-server \
-    app/aws/cmi-server.go
+    -o ${BINARY_PATH}/rel/cmi-plugin \
+    app/aws/cmi-plugin.go
 
 # If the LOCAL_BUILD environment variable is set, we simply run `go build`.
 else
   go build \
     -v \
-    -o ${BINARY_PATH}/cmi-server \
-    app/aws/cmi-server.go
+    -o ${BINARY_PATH}/cmi-plugin \
+    app/aws/cmi-plugin.go
 fi

@@ -42,17 +42,15 @@ func ParseEndpoint(ep string) (string, string, error) {
 }
 
 // NewDefaultIdentityServer returns the default Identity server object
-func NewDefaultIdentityServer(d *CMIDriver) *DefaultIdentityServer {
+func NewDefaultIdentityServer(plugin *DefaultPlugin) *DefaultIdentityServer {
 	return &DefaultIdentityServer{
-		Driver: d,
+		Plugin: plugin,
 	}
 }
 
 // NewDefaultMachineServer returns a default machine server object
-func NewDefaultMachineServer(d *CMIDriver) *DefaultMachineServer {
-	return &DefaultMachineServer{
-		Driver: d,
-	}
+func NewDefaultMachineServer(d *DefaultPlugin) *DefaultMachineServer {
+	return &DefaultMachineServer{}
 }
 
 // logGRPC logs various GRPC requests and response
