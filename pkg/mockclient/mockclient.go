@@ -15,6 +15,7 @@ package mockclient
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -32,6 +33,8 @@ const (
 	FailQueryAtDescribeImages string = "fail-query-at-DescribeImages"
 	// FailQueryAtRunInstances string to fail call at RunInstances call
 	FailQueryAtRunInstances string = "fail-query-at-RunInstances"
+	// FailQueryAtTerminateInstances string to fail call at TerminateInstances call
+	FailQueryAtTerminateInstances string = "fail-query-at-TerminateInstances"
 	// InstanceTerminateError string returns instance terminated error
 	InstanceTerminateError string = "i-instance-terminate-error"
 	// InstanceDoesntExistError string returns instance doesn't exist error
@@ -42,6 +45,8 @@ const (
 	ReturnEmptyListAtDescribeInstances string = "return-empty-list-at-DescribeInstances"
 	// ReturnErrorAtDescribeInstances string returns error at DescribeInstances call
 	ReturnErrorAtDescribeInstances string = "return-error-at-DescribeInstances"
+	// SetInstanceID string sets the instance ID provided at keyname
+	SetInstanceID string = "set-instance-id"
 )
 
 // MockPluginSPIImpl is the mock implementation of PluginSPI interface that makes dummy calls
@@ -98,6 +103,10 @@ func (ms *MockEC2Client) RunInstances(input *ec2.RunInstancesInput) (*ec2.Reserv
 
 	instanceID := fmt.Sprintf("i-0123456789-%d", len(*ms.FakeInstances))
 	privateDNSName := fmt.Sprintf("ip-%d", len(*ms.FakeInstances))
+
+	if strings.Contains(*input.ImageId, SetInstanceID) {
+		instanceID = *input.KeyName
+	}
 
 	newInstance := ec2.Instance{
 		InstanceId:     &instanceID,
@@ -171,25 +180,16 @@ func (ms *MockEC2Client) DescribeInstances(input *ec2.DescribeInstancesInput) (*
 // TerminateInstances implements a mock terminate instance method
 func (ms *MockEC2Client) TerminateInstances(input *ec2.TerminateInstancesInput) (*ec2.TerminateInstancesOutput, error) {
 
-	if *input.InstanceIds[0] == InstanceTerminateError {
+	if *input.InstanceIds[0] == FailQueryAtTerminateInstances {
 		return nil, awserr.New(
-			ec2.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceIdMalformed,
-			"Termination of instance errored out",
-			fmt.Errorf("Termination of instance errored out"),
+			ec2.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceIdMalformed, "",
+			fmt.Errorf("Termination of instance errorred out"),
 		)
 	} else if *input.InstanceIds[0] == InstanceDoesntExistError {
 		// If instance with instance ID doesn't exist
 		return nil, awserr.New(
-			ec2.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceIdNotFound,
-			"Instance with instance-ID doesn't exist",
+			ec2.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceIdNotFound, "",
 			fmt.Errorf("Instance with instance-ID doesn't exist"),
-		)
-	} else if *input.DryRun {
-		// If it is a dry run
-		return nil, awserr.New(
-			"DryRunOperation",
-			"This is a dryRun call",
-			fmt.Errorf("This is a dry run call"),
 		)
 	}
 
