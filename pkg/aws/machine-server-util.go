@@ -28,7 +28,7 @@ import (
 )
 
 // decodeProviderSpecAndSecret converts request parameters to api.ProviderSpec & api.Secrets
-func decodeProviderSpecAndSecret(providerSpecBytes []byte, secretMap map[string][]byte) (*api.AWSProviderSpec, *api.Secrets, error) {
+func decodeProviderSpecAndSecret(providerSpecBytes []byte, secretMap map[string][]byte, checkUserData bool) (*api.AWSProviderSpec, *api.Secrets, error) {
 	var (
 		providerSpec *api.AWSProviderSpec
 	)
@@ -40,7 +40,7 @@ func decodeProviderSpecAndSecret(providerSpecBytes []byte, secretMap map[string]
 	}
 
 	// Extract secrets from secretMap
-	secrets, err := getSecretsFromSecretMap(secretMap)
+	secrets, err := getSecretsFromSecretMap(secretMap, checkUserData)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -128,17 +128,26 @@ func (ms *MachinePlugin) getInstancesFromMachineName(machineName string, provide
 }
 
 // getSecretsFromSecretMap converts secretMap to api.secrets object
-func getSecretsFromSecretMap(secretMap map[string][]byte) (*api.Secrets, error) {
+func getSecretsFromSecretMap(secretMap map[string][]byte, checkUserData bool) (*api.Secrets, error) {
 	providerAccessKeyID, keyIDExists := secretMap["providerAccessKeyId"]
 	providerAccessKey, accessKeyExists := secretMap["providerSecretAccessKey"]
 	userData, userDataExists := secretMap["userData"]
-	if !keyIDExists || !accessKeyExists || !userDataExists {
-		err := fmt.Errorf(
-			"Invalidate Secret Map. Map variables present \nProviderAccessKeyID: %t, \nProviderSecretAccessKey: %t, \nUserData: %t",
-			keyIDExists,
-			accessKeyExists,
-			userDataExists,
-		)
+	if !keyIDExists || !accessKeyExists || (checkUserData && !userDataExists) {
+		var err error
+		if checkUserData {
+			err = fmt.Errorf(
+				"Invalidate Secret Map. Map variables present \nProviderAccessKeyID: %t, \nProviderSecretAccessKey: %t, \nUserData: %t",
+				keyIDExists,
+				accessKeyExists,
+				userDataExists,
+			)
+		} else {
+			err = fmt.Errorf(
+				"Invalidate Secret Map. Map variables present \nProviderAccessKeyID: %t, \nProviderSecretAccessKey: %t",
+				keyIDExists,
+				accessKeyExists,
+			)
+		}
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 

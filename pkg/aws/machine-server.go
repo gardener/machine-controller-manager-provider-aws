@@ -68,7 +68,7 @@ func (ms *MachinePlugin) CreateMachine(ctx context.Context, req *cmi.CreateMachi
 	// Log messages to track request
 	glog.V(2).Infof("Machine creation request has been recieved for %q", req.MachineName)
 
-	providerSpec, secrets, err := decodeProviderSpecAndSecret(req.ProviderSpec, req.Secrets)
+	providerSpec, secrets, err := decodeProviderSpecAndSecret(req.ProviderSpec, req.Secrets, true)
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +177,7 @@ func (ms *MachinePlugin) DeleteMachine(ctx context.Context, req *cmi.DeleteMachi
 	glog.V(2).Infof("Machine deletion request has been recieved for %q", req.MachineName)
 	defer glog.V(2).Infof("Machine deletion request has been processed for %q", req.MachineName)
 
-	providerSpec, secrets, err := decodeProviderSpecAndSecret(req.ProviderSpec, req.Secrets)
+	providerSpec, secrets, err := decodeProviderSpecAndSecret(req.ProviderSpec, req.Secrets, false)
 	if err != nil {
 		return nil, err
 	}
@@ -200,11 +200,7 @@ func (ms *MachinePlugin) DeleteMachine(ctx context.Context, req *cmi.DeleteMachi
 			DryRun: aws.Bool(false),
 		}
 		_, err = svc.TerminateInstances(input)
-		awsErr, ok := err.(awserr.Error)
-		if ok &&
-			(awsErr.Code() == ec2.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceIdNotFound) {
-			glog.V(2).Infof("VM %q for Machine %q does not exist", *instance.InstanceId, req.MachineName)
-		} else if err != nil {
+		if err != nil {
 			glog.V(2).Infof("VM %q for Machine %q couldn't be terminated: %s",
 				*instance.InstanceId,
 				req.MachineName,
@@ -233,7 +229,7 @@ func (ms *MachinePlugin) GetMachineStatus(ctx context.Context, req *cmi.GetMachi
 	// Log messages to track start and end of request
 	glog.V(2).Infof("Get request has been recieved for %q", req.MachineName)
 
-	providerSpec, secrets, err := decodeProviderSpecAndSecret(req.ProviderSpec, req.Secrets)
+	providerSpec, secrets, err := decodeProviderSpecAndSecret(req.ProviderSpec, req.Secrets, false)
 	if err != nil {
 		return nil, err
 	}
@@ -274,7 +270,7 @@ func (ms *MachinePlugin) ShutDownMachine(ctx context.Context, req *cmi.ShutDownM
 	glog.V(2).Infof("ShutDown machine request has been recieved for %q", req.MachineName)
 	defer glog.V(2).Infof("Machine shutdown request has been processed successfully for %q", req.MachineName)
 
-	providerSpec, secrets, err := decodeProviderSpecAndSecret(req.ProviderSpec, req.Secrets)
+	providerSpec, secrets, err := decodeProviderSpecAndSecret(req.ProviderSpec, req.Secrets, false)
 	if err != nil {
 		return nil, err
 	}
@@ -340,7 +336,7 @@ func (ms *MachinePlugin) ListMachines(ctx context.Context, req *cmi.ListMachines
 	// Log messages to track start and end of request
 	glog.V(2).Infof("List machines request has been recieved for %q", req.ProviderSpec)
 
-	providerSpec, secrets, err := decodeProviderSpecAndSecret(req.ProviderSpec, req.Secrets)
+	providerSpec, secrets, err := decodeProviderSpecAndSecret(req.ProviderSpec, req.Secrets, true)
 	if err != nil {
 		return nil, err
 	}
