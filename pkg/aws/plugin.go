@@ -25,7 +25,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	api "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
-	cmicommon "github.com/gardener/machine-controller-manager-provider-aws/pkg/cmi-common"
+	cmicommon "github.com/gardener/machine-controller-manager-provider-aws/pkg/cmicommon"
 	"github.com/golang/glog"
 )
 
