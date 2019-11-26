@@ -45,18 +45,22 @@ import (
 // Once this works you can implement the rest of the methods.
 
 // CreateMachine handles a machine creation request
+// REQUIRED METHOD
 //
 // REQUEST PARAMETERS (cmi.CreateMachineRequest)
-// MachineName          string              Contains the name of the machine object for whom an VM is to be created at the provider
-// ProviderSpec         bytes(blob)         Template/Configuration of the machine to be created is given by at the provider
-// Secrets              map<string,bytes>   (Optional) Contains a map from string to string contains any cloud specific secrets that can be used by the provider
+// MachineName           string             Contains the name of the machine object for whom an VM is to be created at the provider
+// ProviderSpec          bytes(blob)        Template/Configuration of the machine to be created is given by at the provider
+// Secrets               map<string,bytes>  (Optional) Contains a map from string to string contains any cloud specific secrets that can be used by the provider
+// LastKnownState        bytes(blob)        (Optional) Last known state of VM during last operation. Could be helpful to continue operation from previous state
 //
 // RESPONSE PARAMETERS (cmi.CreateMachineResponse)
-// ProviderID            string              Unique identification of the VM at the cloud provider. This could be the same/different from req.MachineName.
+// ProviderID            string             Unique identification of the VM at the cloud provider. This could be the same/different from req.MachineName.
 //                                          ProviderID typically matches with the node.Spec.ProviderID on the node object.
 //                                          Eg: gce://project-name/region/vm-ProviderID
-// NodeName             string              Returns the name of the node-object that the VM register's with Kubernetes.
+// NodeName              string             Returns the name of the node-object that the VM register's with Kubernetes.
 //                                          This could be different from req.MachineName as well
+// LastKnownState        bytes(blob)        (Optional) Last known state of VM during the current operation.
+//                                          Could be helpful to continue operations in future requests.
 //
 // OPTIONAL IMPLEMENTATION LOGIC
 // It is optionally expected by the safety controller to use an identification mechanisms to map the VM Created by a providerSpec.
@@ -171,6 +175,11 @@ func (ms *MachinePlugin) CreateMachine(ctx context.Context, req *cmi.CreateMachi
 // MachineName          string              Contains the name of the machine object for the backing VM(s) have to be deleted
 // ProviderSpec         bytes(blob)         Template/Configuration of the machine to be deleted is given by at the provider
 // Secrets              map<string,bytes>   (Optional) Contains a map from string to string contains any cloud specific secrets that can be used by the provider
+// LastKnownState       bytes(blob)         (Optional) Last known state of VM during last operation. Could be helpful to continue operation from previous state
+//
+// RESPONSE PARAMETERS (cmi.DeleteMachineResponse)
+// LastKnownState       bytes(blob)        (Optional) Last known state of VM during the current operation.
+//                                          Could be helpful to continue operations in future requests.
 //
 func (ms *MachinePlugin) DeleteMachine(ctx context.Context, req *cmi.DeleteMachineRequest) (*cmi.DeleteMachineResponse, error) {
 	// Log messages to track delete request
@@ -216,7 +225,7 @@ func (ms *MachinePlugin) DeleteMachine(ctx context.Context, req *cmi.DeleteMachi
 }
 
 // GetMachineStatus handles a machine get status request
-// REQUIRED METHOD
+// OPTIONAL METHOD
 //
 // REQUEST PARAMETERS (cmi.GetMachineStatusRequest)
 // MachineName          string              Contains the name of the machine object for whose status is to be retrived
@@ -224,7 +233,7 @@ func (ms *MachinePlugin) DeleteMachine(ctx context.Context, req *cmi.DeleteMachi
 // Secrets              map<string,bytes>   (Optional) Contains a map from string to string contains any cloud specific secrets that can be used by the provider
 //
 // RESPONSE PARAMETERS (cmi.GetMachineStatueResponse)
-// ProviderID            string             Unique identification of the VM at the cloud provider. This could be the same/different from req.MachineName.
+// ProviderID           string              Unique identification of the VM at the cloud provider. This could be the same/different from req.MachineName.
 //                                          ProviderID typically matches with the node.Spec.ProviderID on the node object.
 //                                          Eg: gce://project-name/region/vm-ProviderID
 // NodeName             string              Returns the name of the node-object that the VM register's with Kubernetes.
@@ -267,8 +276,13 @@ func (ms *MachinePlugin) GetMachineStatus(ctx context.Context, req *cmi.GetMachi
 // OPTIONAL METHOD
 //
 // REQUEST PARAMETERS (cmi.ShutDownMachineRequest)
-// ProviderID        string              Contains the unique identification of the VM at the cloud provider
-// Secrets          map<string,bytes>   (Optional) Contains a map from string to string contains any cloud specific secrets that can be used by the provider
+// ProviderSpec          bytes(blob)         Template/Configuration of the machine that wouldn've been created by this ProviderSpec (Machine Class)
+// Secrets               map<string,bytes>   (Optional) Contains a map from string to string contains any cloud specific secrets that can be used by the provider
+// LastKnownState        bytes(blob)        (Optional) Last known state of VM during last operation. Could be helpful to continue operation from previous state
+//
+// RESPONSE PARAMETERS (cmi.DeleteMachineResponse)
+// LastKnownState        bytes(blob)        (Optional) Last known state of VM during the current operation.
+//                                          Could be helpful to continue operations in future requests.
 //
 func (ms *MachinePlugin) ShutDownMachine(ctx context.Context, req *cmi.ShutDownMachineRequest) (*cmi.ShutDownMachineResponse, error) {
 	// Log messages to track start of request
@@ -328,15 +342,15 @@ func (ms *MachinePlugin) ShutDownMachine(ctx context.Context, req *cmi.ShutDownM
 // ListMachines lists all the machines possibilly created by a providerSpec
 // Identifying machines created by a given providerSpec depends on the OPTIONAL IMPLEMENTATION LOGIC
 // you have used to identify machines created by a providerSpec. It could be tags/resource-groups etc
-// REQUIRED METHOD
+// OPTIONAL METHOD
 //
 // REQUEST PARAMETERS (cmi.ListMachinesRequest)
-// ProviderSpec     bytes(blob)         Template/Configuration of the machine that wouldn've been created by this ProviderSpec (Machine Class)
-// Secrets          map<string,bytes>   (Optional) Contains a map from string to string contains any cloud specific secrets that can be used by the provider
+// ProviderSpec          bytes(blob)         Template/Configuration of the machine that wouldn've been created by this ProviderSpec (Machine Class)
+// Secrets               map<string,bytes>   (Optional) Contains a map from string to string contains any cloud specific secrets that can be used by the provider
 //
 // RESPONSE PARAMETERS (cmi.ListMachinesResponse)
-// MachineList      map<string,string>  A map containing the keys as the ProviderID and value as the MachineName
-//                                      for all machine's who where possibilly created by this ProviderSpec
+// MachineList           map<string,string>  A map containing the keys as the MachineID and value as the MachineName
+//                                           for all machine's who where possibilly created by this ProviderSpec
 //
 func (ms *MachinePlugin) ListMachines(ctx context.Context, req *cmi.ListMachinesRequest) (*cmi.ListMachinesResponse, error) {
 	// Log messages to track start and end of request
@@ -418,13 +432,13 @@ func (ms *MachinePlugin) ListMachines(ctx context.Context, req *cmi.ListMachines
 	return Resp, nil
 }
 
-// GetVolumeIDs returns a list of Volume IDs for all PV Specs for whom an AWS volume was found
+// GetVolumeIDs returns a list of Volume IDs for all PV Specs for whom an provider volume was found
 //
 // REQUEST PARAMETERS (cmi.GetVolumeIDsRequest)
-// PVSpecList       bytes(blob)         PVSpecsList is a list PV specs for whom volume-IDs are required. Plugin should parse this raw data into pre-defined list of PVSpecs.
+// PVSpecList            bytes(blob)         PVSpecsList is a list PV specs for whom volume-IDs are required. Plugin should parse this raw data into pre-defined list of PVSpecs.
 //
 // RESPONSE PARAMETERS (cmi.GetVolumeIDsResponse)
-// VolumeIDs       repeated string      VolumeIDs is a repeated list of VolumeIDs.
+// VolumeIDs             repeated string     VolumeIDs is a repeated list of VolumeIDs.
 //
 func (ms *MachinePlugin) GetVolumeIDs(ctx context.Context, req *cmi.GetVolumeIDsRequest) (*cmi.GetVolumeIDsResponse, error) {
 	var (
