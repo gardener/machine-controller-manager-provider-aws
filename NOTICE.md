@@ -17,12 +17,12 @@ To the left are the list of copied files -> and to the right the current locatio
 
     app/nfsplugin/main.go -> app/aws/main.go
     pkg/nfs/driver.go -> pkg/aws/plugin.go
-    pkg/nfs/nodeserver.go -> pkg/aws/machine-server.go
-    pkg/csi-common/identityserver-default.go -> pkg/cmi-common/identity-server.go
-    pkg/csi-common/driver.go -> pkg/cmi-common/plugin.go
-    pkg/csi-common/identityserver-default.go -> pkg/cmi-common/identity-server-defaults.go
-    pkg/csi-common/nodeserver-default.go -> pkg/cmi-common/machine-server-defaults.go
-    pkg/csi-common/server.go -> pkg/cmi-common/server.go
-    pkg/csi-common/utils.go -> pkg/cmi-common/utils.go
+    pkg/nfs/nodeserver.go -> pkg/aws/machine_server.go
+    pkg/csi-common/identityserver-default.go -> pkg/aws/identity_server.go
+    pkg/csi-common/driver.go -> pkg/aws/plugin.go
+    pkg/csi-common/identityserver-default.go -> pkg/aws/identity_server_defaults.go
+    pkg/csi-common/nodeserver-default.go -> pkg/aws/machine_server_defaults.go
+    pkg/csi-common/server.go -> pkg/aws/server.go
+    pkg/csi-common/utils.go -> pkg/aws/utils.go
 
 

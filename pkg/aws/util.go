@@ -27,13 +27,13 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
-// encodeMachineID encodes a given machine-ID as per it's provider ID
-func encodeMachineID(region, machineID string) string {
-	return fmt.Sprintf("aws:///%s/%s", region, machineID)
+// encodeMachineID encodes a given provider-ID as per it's provider ID
+func encodeProviderID(region, providerID string) string {
+	return fmt.Sprintf("aws:///%s/%s", region, providerID)
 }
 
-// decodeRegionAndMachineID extracts region and machine ID
-func decodeRegionAndMachineID(id string) (string, string, error) {
+// decodeRegionAndProviderID extracts region and provider ID
+func decodeRegionAndProviderID(id string) (string, string, error) {
 	splitProviderID := strings.Split(id, "/")
 	if len(splitProviderID) < 2 {
 		err := fmt.Errorf("Unable to decode provider-ID")
@@ -43,8 +43,8 @@ func decodeRegionAndMachineID(id string) (string, string, error) {
 }
 
 // Helper function to create SVC
-func (ms *MachinePlugin) createSVC(secrets api.Secrets, region string) (ec2iface.EC2API, error) {
-	session, err := ms.SPI.NewSession(secrets, region)
+func (ms *MachinePlugin) createSVC(secrets *api.Secrets, region string) (ec2iface.EC2API, error) {
+	session, err := ms.SPI.NewSession(*secrets, region)
 	if err != nil {
 		return nil, err
 	}

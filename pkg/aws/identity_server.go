@@ -62,7 +62,7 @@ func (ids *IdentityPlugin) GetPluginCapabilities(ctx context.Context, req *cmi.G
 	cl = []cmi.PluginCapability_RPC_Type{
 		cmi.PluginCapability_RPC_CREATE_MACHINE,
 		cmi.PluginCapability_RPC_DELETE_MACHINE,
-		cmi.PluginCapability_RPC_GET_MACHINE,
+		cmi.PluginCapability_RPC_GET_MACHINE_STATUS,
 		cmi.PluginCapability_RPC_LIST_MACHINES,
 		cmi.PluginCapability_RPC_SHUTDOWN_MACHINE,
 		cmi.PluginCapability_RPC_GET_VOLUME_IDS,

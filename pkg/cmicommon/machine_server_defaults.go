@@ -36,21 +36,21 @@ type DefaultMachineServer struct{}
 // CreateMachine method handles default machine creation request
 func (ms *DefaultMachineServer) CreateMachine(ctx context.Context, req *cmi.CreateMachineRequest) (*cmi.CreateMachineResponse, error) {
 	// Log messages to track start of request
-	glog.V(2).Infof("Create machine request has been recieved for %q", req.Name)
+	glog.V(2).Infof("Create machine request has been recieved for %q", req.MachineName)
 	return nil, status.Error(codes.Unimplemented, "")
 }
 
 // DeleteMachine method handles default machine deletion request
 func (ms *DefaultMachineServer) DeleteMachine(ctx context.Context, req *cmi.DeleteMachineRequest) (*cmi.DeleteMachineResponse, error) {
 	// Log messages to track start of request
-	glog.V(2).Infof("Delete machine request has been recieved for %q", req.MachineID)
+	glog.V(2).Infof("Delete machine request has been recieved for %q", req.MachineName)
 	return nil, status.Error(codes.Unimplemented, "")
 }
 
-// GetMachine method handles default machine get request
-func (ms *DefaultMachineServer) GetMachine(ctx context.Context, req *cmi.GetMachineRequest) (*cmi.GetMachineResponse, error) {
+// GetMachineStatus method handles default machine get request
+func (ms *DefaultMachineServer) GetMachineStatus(ctx context.Context, req *cmi.GetMachineStatusRequest) (*cmi.GetMachineStatusResponse, error) {
 	// Log messages to track start of request
-	glog.V(2).Infof("Get machine request has been recieved for %q", req.MachineID)
+	glog.V(2).Infof("Get machine request has been recieved for %q", req.MachineName)
 	return nil, status.Error(codes.Unimplemented, "")
 }
 
@@ -64,7 +64,7 @@ func (ms *DefaultMachineServer) ListMachines(ctx context.Context, req *cmi.ListM
 // ShutDownMachine method handles default machines shutdown request
 func (ms *DefaultMachineServer) ShutDownMachine(ctx context.Context, req *cmi.ShutDownMachineRequest) (*cmi.ShutDownMachineResponse, error) {
 	// Log messages to track start of request
-	glog.V(2).Infof("ShutDown machine request has been recieved for %q", req.MachineID)
+	glog.V(2).Infof("ShutDown machine request has been recieved for %q", req.MachineName)
 	return nil, status.Error(codes.Unimplemented, "")
 }
 
