@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved.
+Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -22,48 +22,44 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	api "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
 	validation "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis/validation"
-	"github.com/golang/glog"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	v1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/codes"
+	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/status"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/klog"
 )
 
 // decodeProviderSpecAndSecret converts request parameters to api.ProviderSpec & api.Secrets
-func decodeProviderSpecAndSecret(providerSpecBytes []byte, secretMap map[string][]byte, checkUserData bool) (*api.AWSProviderSpec, *api.Secrets, error) {
+func decodeProviderSpecAndSecret(machineClass *v1alpha1.MachineClass, secret *corev1.Secret) (*api.AWSProviderSpec, error) {
 	var (
 		providerSpec *api.AWSProviderSpec
 	)
 
 	// Extract providerSpec
-	err := json.Unmarshal(providerSpecBytes, &providerSpec)
+	err := json.Unmarshal(machineClass.ProviderSpec.Raw, &providerSpec)
 	if err != nil {
-		return nil, nil, status.Error(codes.Internal, err.Error())
-	}
-
-	// Extract secrets from secretMap
-	secrets, err := getSecretsFromSecretMap(secretMap, checkUserData)
-	if err != nil {
-		return nil, nil, err
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	//Validate the Spec and Secrets
-	ValidationErr := validation.ValidateAWSProviderSpec(providerSpec, secrets)
+	ValidationErr := validation.ValidateAWSProviderSpec(providerSpec, secret)
 	if ValidationErr != nil {
 		err = fmt.Errorf("Error while validating ProviderSpec %v", ValidationErr)
-		return nil, nil, status.Error(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	return providerSpec, secrets, nil
+	return providerSpec, nil
 }
 
 // getInstancesFromMachineName extracts AWS Instance object from given machine name
-func (ms *MachinePlugin) getInstancesFromMachineName(machineName string, providerSpec *api.AWSProviderSpec, secrets *api.Secrets) ([]*ec2.Instance, error) {
+func (d *Driver) getInstancesFromMachineName(machineName string, providerSpec *api.AWSProviderSpec, secret *corev1.Secret) ([]*ec2.Instance, error) {
 	var (
 		clusterName string
 		nodeRole    string
 		instances   []*ec2.Instance
 	)
 
-	svc, err := ms.createSVC(secrets, providerSpec.Region)
+	svc, err := d.createSVC(secret, providerSpec.Region)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -110,7 +106,7 @@ func (ms *MachinePlugin) getInstancesFromMachineName(machineName string, provide
 
 	runResult, err := svc.DescribeInstances(&input)
 	if err != nil {
-		glog.Errorf("AWS plugin is returning error while describe instances request is sent: %s", err)
+		klog.Errorf("AWS plugin is returning error while describe instances request is sent: %s", err)
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -125,36 +121,4 @@ func (ms *MachinePlugin) getInstancesFromMachineName(machineName string, provide
 	}
 
 	return instances, nil
-}
-
-// getSecretsFromSecretMap converts secretMap to api.secrets object
-func getSecretsFromSecretMap(secretMap map[string][]byte, checkUserData bool) (*api.Secrets, error) {
-	providerAccessKeyID, keyIDExists := secretMap["providerAccessKeyId"]
-	providerAccessKey, accessKeyExists := secretMap["providerSecretAccessKey"]
-	userData, userDataExists := secretMap["userData"]
-	if !keyIDExists || !accessKeyExists || (checkUserData && !userDataExists) {
-		var err error
-		if checkUserData {
-			err = fmt.Errorf(
-				"Invalidate Secret Map. Map variables present \nProviderAccessKeyID: %t, \nProviderSecretAccessKey: %t, \nUserData: %t",
-				keyIDExists,
-				accessKeyExists,
-				userDataExists,
-			)
-		} else {
-			err = fmt.Errorf(
-				"Invalidate Secret Map. Map variables present \nProviderAccessKeyID: %t, \nProviderSecretAccessKey: %t",
-				keyIDExists,
-				accessKeyExists,
-			)
-		}
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	var secrets api.Secrets
-	secrets.ProviderAccessKeyID = string(providerAccessKeyID)
-	secrets.ProviderSecretAccessKey = string(providerAccessKey)
-	secrets.UserData = string(userData)
-
-	return &secrets, nil
 }

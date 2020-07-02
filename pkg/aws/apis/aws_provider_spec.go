@@ -13,7 +13,7 @@ limitations under the License.
 
 package api
 
-//AWSProviderSpec is the spec to be used while parsing the gRPC calls.
+//AWSProviderSpec is the spec to be used while parsing the calls.
 type AWSProviderSpec struct {
 	//TODO: figure out a better way to present objectmeta and typemeta without importing k8s.io
 	APIVersion        string                      `json:"apiVersion,omitempty"`
@@ -136,14 +136,4 @@ type AWSNetworkInterfaceSpec struct {
 	// The ID of the subnet associated with the network string. Applies only if
 	// creating a network interface when launching an machine.
 	SubnetID string `json:"subnetID,omitempty"`
-}
-
-// Secrets stores the cloud-provider specific sensitive-information.
-type Secrets struct {
-	// AWS access key id (base64 encoded)
-	ProviderAccessKeyID string `json:"providerAccessKeyId,omitempty"`
-	// AWS secret access key (base64 encoded)
-	ProviderSecretAccessKey string `json:"providerSecretAccessKey,omitempty"`
-	// AWS cloud config file (base64 encoded)
-	UserData string `json:"userData,omitempty"`
 }

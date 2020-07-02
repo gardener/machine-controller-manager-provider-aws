@@ -18,6 +18,9 @@ IMAGE_REPOSITORY    := eu.gcr.io/gardener-project/gardener/machine-controller-ma
 IMAGE_TAG           := $(shell cat VERSION)
 PROVIDER_NAME       := AWS
 PROJECT_NAME        := gardener
+CONTROL_NAMESPACE  := default
+CONTROL_KUBECONFIG := dev/target-kubeconfig.yaml
+TARGET_KUBECONFIG  := dev/target-kubeconfig.yaml
 
 #########################################
 # Rules for running helper scripts
@@ -32,12 +35,25 @@ rename-project:
 	@./hack/rename-project ${PROJECT_NAME}
 
 #########################################
-# Rules for starting cmi-plugin locally
+# Rules for starting machine-controller locally
 #########################################
 
 .PHONY: start
 start:
-	go run app/aws/cmi-plugin.go --endpoint=tcp://127.0.0.1:8080
+	@GO111MODULE=on go run \
+			-mod=vendor \
+			cmd/machine-controller/main.go \
+			--control-kubeconfig=$(CONTROL_KUBECONFIG) \
+			--target-kubeconfig=$(TARGET_KUBECONFIG) \
+			--namespace=$(CONTROL_NAMESPACE) \
+			--machine-creation-timeout=20m \
+			--machine-drain-timeout=5m \
+			--machine-health-timeout=10m \
+			--machine-pv-detach-timeout=2m \
+			--machine-safety-apiserver-statuscheck-timeout=30s \
+			--machine-safety-apiserver-statuscheck-period=1m \
+			--machine-safety-orphan-vms-period=30m \
+			--v=3
 
 #########################################
 # Rules for re-vendoring
@@ -77,12 +93,11 @@ build:
 
 .PHONY: docker-image
 docker-image:
-	@if [[ ! -f ${BINARY_PATH}/rel/cmi-plugin ]]; then echo "No binary found. Please run 'make build'"; false; fi
 	@docker build -t $(IMAGE_REPOSITORY):$(IMAGE_TAG) .
 
 .PHONY: docker-login
 docker-login:
-	@gcloud auth activate-service-account --key-file .kube-secrets/gcr/gcr-readwrite.json
+	@gcloud auth login
 
 .PHONY: docker-push
 docker-push:
@@ -91,8 +106,8 @@ docker-push:
 
 .PHONY: rename-binaries
 rename-binaries:
-	@if [[ -f bin/cmi-plugin ]]; then cp bin/cmi-plugin cmi-plugin-darwin-amd64; fi
-	@if [[ -f bin/rel/cmi-plugin ]]; then cp bin/rel/cmi-plugin cmi-plugin-linux-amd64; fi
+	@if [[ -f bin/machine-controller ]]; then cp bin/machine-controller machine-controller-darwin-amd64; fi
+	@if [[ -f bin/rel/machine-controller ]]; then cp bin/rel/machine-controller machine-controller-linux-amd64; fi
 
 .PHONY: clean
 clean:

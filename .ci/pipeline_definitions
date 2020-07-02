@@ -19,12 +19,12 @@ machine-controller-manager-provider-aws:
             image: 'eu.gcr.io/gardener-project/gardener/machine-controller-manager-provider-aws'
     steps:
       check:
-        image: 'golang:1.12.0'
+        image: 'golang:1.13.5'
       build:
-        image: 'golang:1.12.0'
+        image: 'golang:1.13.5'
         output_dir: 'binary'
       test:
-        image: 'golang:1.12.0'
+        image: 'golang:1.13.5'
   jobs:
     head-update:
       traits:

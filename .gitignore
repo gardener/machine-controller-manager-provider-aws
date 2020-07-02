@@ -3,3 +3,4 @@ main
 seqdiagram.diag
 cmi-plugin
 *coverprofile.out*
+bin/

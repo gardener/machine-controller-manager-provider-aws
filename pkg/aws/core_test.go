@@ -13,35 +13,40 @@ limitations under the License.
 
 package aws
 
+/*
+TODO to adopt this
 import (
 	"context"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/gardener/machine-controller-manager-provider-aws/pkg/mockclient"
-	cmipb "github.com/gardener/machine-spec/lib/go/cmi"
+	"github.com/gardener/machine-controller-manager/pkg/util/provider/driver"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 )
 
 var _ = Describe("MachineServer", func() {
 
 	// Some initializations
 	providerSpec := []byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")
-	providerSecret := map[string][]byte{
-		"providerAccessKeyId":     []byte("dummy-id"),
-		"providerSecretAccessKey": []byte("dummy-secret"),
-		"userData":                []byte("dummy-user-data"),
+	providerSecret := &corev1.Secret{
+		Data: map[string][]byte{
+			"providerAccessKeyId":     []byte("dummy-id"),
+			"providerSecretAccessKey": []byte("dummy-secret"),
+			"userData":                []byte("dummy-user-data"),
+		},
 	}
 
 	Describe("#CreateMachine", func() {
 		type setup struct {
 		}
 		type action struct {
-			machineRequest *cmipb.CreateMachineRequest
+			machineRequest *driver.CreateMachineRequest
 		}
 		type expect struct {
-			machineResponse   *cmipb.CreateMachineResponse
+			machineResponse   *driver.CreateMachineResponse
 			errToHaveOccurred bool
 			errMessage        string
 		}
@@ -52,9 +57,8 @@ var _ = Describe("MachineServer", func() {
 		}
 		DescribeTable("##table",
 			func(data *data) {
-				p := NewPlugin("tcp://127.0.0.1:8080")
 				mockPluginSPIImpl := &mockclient.MockPluginSPIImpl{FakeInstances: make([]ec2.Instance, 0)}
-				ms := NewMachinePlugin(p, mockPluginSPIImpl)
+				ms := NewAWSDriver(mockPluginSPIImpl)
 
 				ctx := context.Background()
 				response, err := ms.CreateMachine(ctx, data.action.machineRequest)
@@ -70,30 +74,35 @@ var _ = Describe("MachineServer", func() {
 			},
 			Entry("Simple Machine Creation Request", &data{
 				action: action{
-					machineRequest: &cmipb.CreateMachineRequest{
-						MachineName:  "test",
-						ProviderSpec: providerSpec,
-						Secrets:      providerSecret,
+					machineRequest: &driver.CreateMachineRequest{
+						Machine:      newMachine(),
+						ProviderSpec: newMachineClass(providerSpec),
+						Secret:       providerSecret,
 					},
 				},
 				expect: expect{
-					machineResponse: &cmipb.CreateMachineResponse{
+					machineResponse: &driver.CreateMachineResponse{
 						ProviderID: "aws:///eu-west-1/i-0123456789-0",
 						NodeName:   "ip-0",
 					},
 					errToHaveOccurred: false,
 				},
 			}),
-			Entry("Machine creation request with volume type io1", &data{
+		)
+	})
+
+})
+
+Entry("Machine creation request with volume type io1", &data{
 				action: action{
-					machineRequest: &cmipb.CreateMachineRequest{
+					machineRequest: &driver.CreateMachineRequest{
 						MachineName:  "test",
 						ProviderSpec: []byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"io1\",\"iops\":50}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}"),
-						Secrets:      providerSecret,
+						Secret:       providerSecret,
 					},
 				},
 				expect: expect{
-					machineResponse: &cmipb.CreateMachineResponse{
+					machineResponse: &driver.CreateMachineResponse{
 						ProviderID: "aws:///eu-west-1/i-0123456789-0",
 						NodeName:   "ip-0",
 					},
@@ -102,7 +111,7 @@ var _ = Describe("MachineServer", func() {
 			}),
 			Entry("Unmarshalling for provider spec fails", &data{
 				action: action{
-					machineRequest: &cmipb.CreateMachineRequest{
+					machineRequest: &driver.CreateMachineRequest{
 						MachineName:  "test",
 						ProviderSpec: []byte(""),
 						Secrets:      providerSecret,
@@ -115,7 +124,7 @@ var _ = Describe("MachineServer", func() {
 			}),
 			Entry("providerAccessKeyId missing for secret", &data{
 				action: action{
-					machineRequest: &cmipb.CreateMachineRequest{
+					machineRequest: &driver.CreateMachineRequest{
 						MachineName:  "test",
 						ProviderSpec: providerSpec,
 						Secrets: map[string][]byte{
@@ -131,7 +140,7 @@ var _ = Describe("MachineServer", func() {
 			}),
 			Entry("providerSecretAccessKey missing for provider secret", &data{
 				action: action{
-					machineRequest: &cmipb.CreateMachineRequest{
+					machineRequest: &driver.CreateMachineRequest{
 						MachineName:  "test",
 						ProviderSpec: providerSpec,
 						Secrets: map[string][]byte{
@@ -147,7 +156,7 @@ var _ = Describe("MachineServer", func() {
 			}),
 			Entry("userData missing for provider secret", &data{
 				action: action{
-					machineRequest: &cmipb.CreateMachineRequest{
+					machineRequest: &driver.CreateMachineRequest{
 						MachineName:  "test",
 						ProviderSpec: providerSpec,
 						Secrets: map[string][]byte{
@@ -163,7 +172,7 @@ var _ = Describe("MachineServer", func() {
 			}),
 			Entry("Validation for providerSpec fails. Missing AMI & Region.", &data{
 				action: action{
-					machineRequest: &cmipb.CreateMachineRequest{
+					machineRequest: &driver.CreateMachineRequest{
 						MachineName:  "test",
 						ProviderSpec: []byte("{\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}"),
 						Secrets:      providerSecret,
@@ -176,7 +185,7 @@ var _ = Describe("MachineServer", func() {
 			}),
 			Entry("Invalid region that doesn't exist", &data{
 				action: action{
-					machineRequest: &cmipb.CreateMachineRequest{
+					machineRequest: &driver.CreateMachineRequest{
 						MachineName:  "test",
 						ProviderSpec: []byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"" + mockclient.FailAtRegion + "\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}"),
 						Secrets:      providerSecret,
@@ -189,7 +198,7 @@ var _ = Describe("MachineServer", func() {
 			}),
 			Entry("Invalid image ID that doesn't exist", &data{
 				action: action{
-					machineRequest: &cmipb.CreateMachineRequest{
+					machineRequest: &driver.CreateMachineRequest{
 						MachineName:  "test",
 						ProviderSpec: []byte("{\"ami\":\"" + mockclient.FailQueryAtDescribeImages + "\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}"),
 						Secrets:      providerSecret,
@@ -202,14 +211,14 @@ var _ = Describe("MachineServer", func() {
 			}),
 			Entry("Name tag cannot be set on AWS instances", &data{
 				action: action{
-					machineRequest: &cmipb.CreateMachineRequest{
+					machineRequest: &driver.CreateMachineRequest{
 						MachineName:  "test",
 						ProviderSpec: []byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\",\"Name\":\"dummy\"}}"),
 						Secrets:      providerSecret,
 					},
 				},
 				expect: expect{
-					machineResponse: &cmipb.CreateMachineResponse{
+					machineResponse: &driver.CreateMachineResponse{
 						ProviderID: "aws:///eu-west-1/i-0123456789-0",
 						NodeName:   "ip-0",
 					},
@@ -218,7 +227,7 @@ var _ = Describe("MachineServer", func() {
 			}),
 			Entry("RunInstance call fails", &data{
 				action: action{
-					machineRequest: &cmipb.CreateMachineRequest{
+					machineRequest: &driver.CreateMachineRequest{
 						MachineName:  "test",
 						ProviderSpec: []byte("{\"ami\":\"" + mockclient.FailQueryAtRunInstances + "\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}"),
 						Secrets:      providerSecret,
@@ -229,18 +238,20 @@ var _ = Describe("MachineServer", func() {
 					errMessage:        "rpc error: code = Internal desc = Couldn't run instance with given ID",
 				},
 			}),
+
 		)
 	})
 
+
 	Describe("#DeleteMachine", func() {
 		type setup struct {
-			createMachineRequest *cmipb.CreateMachineRequest
+			createMachineRequest *driver.CreateMachineRequest
 		}
 		type action struct {
-			deleteMachineRequest *cmipb.DeleteMachineRequest
+			deleteMachineRequest *driver.DeleteMachineRequest
 		}
 		type expect struct {
-			deleteMachineResponse *cmipb.DeleteMachineResponse
+			deleteMachineResponse *driver.DeleteMachineResponse
 			errToHaveOccurred     bool
 			errMessage            string
 		}
@@ -272,33 +283,33 @@ var _ = Describe("MachineServer", func() {
 			},
 			Entry("Simple Machine Delete Request", &data{
 				setup: setup{
-					createMachineRequest: &cmipb.CreateMachineRequest{
+					createMachineRequest: &driver.CreateMachineRequest{
 						MachineName:  "test",
 						ProviderSpec: providerSpec,
 						Secrets:      providerSecret,
 					},
 				},
 				action: action{
-					deleteMachineRequest: &cmipb.DeleteMachineRequest{
+					deleteMachineRequest: &driver.DeleteMachineRequest{
 						MachineName:  "test",
 						Secrets:      providerSecret,
 						ProviderSpec: providerSpec,
 					},
 				},
 				expect: expect{
-					deleteMachineResponse: &cmipb.DeleteMachineResponse{},
+					deleteMachineResponse: &driver.DeleteMachineResponse{},
 				},
 			}),
 			Entry("providerAccessKeyId missing for secret", &data{
 				setup: setup{
-					createMachineRequest: &cmipb.CreateMachineRequest{
+					createMachineRequest: &driver.CreateMachineRequest{
 						MachineName:  "test",
 						ProviderSpec: providerSpec,
 						Secrets:      providerSecret,
 					},
 				},
 				action: action{
-					deleteMachineRequest: &cmipb.DeleteMachineRequest{
+					deleteMachineRequest: &driver.DeleteMachineRequest{
 						MachineName:  "test",
 						ProviderSpec: providerSpec,
 						Secrets: map[string][]byte{
@@ -313,14 +324,14 @@ var _ = Describe("MachineServer", func() {
 			}),
 			Entry("providerSecretAccessKey missing for secret", &data{
 				setup: setup{
-					createMachineRequest: &cmipb.CreateMachineRequest{
+					createMachineRequest: &driver.CreateMachineRequest{
 						MachineName:  "test",
 						ProviderSpec: providerSpec,
 						Secrets:      providerSecret,
 					},
 				},
 				action: action{
-					deleteMachineRequest: &cmipb.DeleteMachineRequest{
+					deleteMachineRequest: &driver.DeleteMachineRequest{
 						MachineName:  "test",
 						ProviderSpec: providerSpec,
 						Secrets: map[string][]byte{
@@ -336,28 +347,28 @@ var _ = Describe("MachineServer", func() {
 			Entry("Termination of instance that doesn't exist on provider", &data{
 				setup: setup{},
 				action: action{
-					deleteMachineRequest: &cmipb.DeleteMachineRequest{
+					deleteMachineRequest: &driver.DeleteMachineRequest{
 						MachineName:  "test",
 						Secrets:      providerSecret,
 						ProviderSpec: providerSpec,
 					},
 				},
 				expect: expect{
-					deleteMachineResponse: &cmipb.DeleteMachineResponse{},
+					deleteMachineResponse: &driver.DeleteMachineResponse{},
 					errToHaveOccurred:     true,
 					errMessage:            "rpc error: code = NotFound desc = AWS plugin is returning no VM instances backing this machine object",
 				},
 			}),
 			Entry("Termination of instance that doesn't exist on provider", &data{
 				setup: setup{
-					createMachineRequest: &cmipb.CreateMachineRequest{
+					createMachineRequest: &driver.CreateMachineRequest{
 						MachineName:  "test",
 						ProviderSpec: []byte("{\"ami\":\"" + mockclient.SetInstanceID + "\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"" + mockclient.FailQueryAtTerminateInstances + "\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}"),
 						Secrets:      providerSecret,
 					},
 				},
 				action: action{
-					deleteMachineRequest: &cmipb.DeleteMachineRequest{
+					deleteMachineRequest: &driver.DeleteMachineRequest{
 						MachineName:  "test",
 						ProviderSpec: []byte("{\"ami\":\"" + mockclient.SetInstanceID + "\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"" + mockclient.FailQueryAtTerminateInstances + "\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}"),
 						Secrets:      providerSecret,
@@ -373,13 +384,13 @@ var _ = Describe("MachineServer", func() {
 
 	Describe("#GetMachine", func() {
 		type setup struct {
-			createMachineRequest *cmipb.CreateMachineRequest
+			createMachineRequest *driver.CreateMachineRequest
 		}
 		type action struct {
-			getMachineRequest *cmipb.GetMachineStatusRequest
+			getMachineRequest *driver.GetMachineStatusRequest
 		}
 		type expect struct {
-			getMachineResponse *cmipb.GetMachineStatusResponse
+			getMachineResponse *driver.GetMachineStatusResponse
 			errToHaveOccurred  bool
 			errMessage         string
 		}
@@ -412,14 +423,14 @@ var _ = Describe("MachineServer", func() {
 			},
 			Entry("Simple Machine Get Request", &data{
 				setup: setup{
-					createMachineRequest: &cmipb.CreateMachineRequest{
+					createMachineRequest: &driver.CreateMachineRequest{
 						MachineName:  "test",
 						ProviderSpec: providerSpec,
 						Secrets:      providerSecret,
 					},
 				},
 				action: action{
-					getMachineRequest: &cmipb.GetMachineStatusRequest{
+					getMachineRequest: &driver.GetMachineStatusRequest{
 						MachineName:  "test",
 						ProviderSpec: providerSpec,
 						Secrets:      providerSecret,
@@ -429,14 +440,14 @@ var _ = Describe("MachineServer", func() {
 			}),
 			Entry("providerAccessKeyId missing for secret", &data{
 				setup: setup{
-					createMachineRequest: &cmipb.CreateMachineRequest{
+					createMachineRequest: &driver.CreateMachineRequest{
 						MachineName:  "test",
 						ProviderSpec: providerSpec,
 						Secrets:      providerSecret,
 					},
 				},
 				action: action{
-					getMachineRequest: &cmipb.GetMachineStatusRequest{
+					getMachineRequest: &driver.GetMachineStatusRequest{
 						MachineName:  "test",
 						ProviderSpec: providerSpec,
 						Secrets: map[string][]byte{
@@ -451,14 +462,14 @@ var _ = Describe("MachineServer", func() {
 			}),
 			Entry("providerSecretAccessKey missing for secret", &data{
 				setup: setup{
-					createMachineRequest: &cmipb.CreateMachineRequest{
+					createMachineRequest: &driver.CreateMachineRequest{
 						MachineName:  "test",
 						ProviderSpec: providerSpec,
 						Secrets:      providerSecret,
 					},
 				},
 				action: action{
-					getMachineRequest: &cmipb.GetMachineStatusRequest{
+					getMachineRequest: &driver.GetMachineStatusRequest{
 						MachineName:  "test",
 						ProviderSpec: providerSpec,
 						Secrets: map[string][]byte{
@@ -471,18 +482,18 @@ var _ = Describe("MachineServer", func() {
 					errMessage:        "rpc error: code = Internal desc = Invalidate Secret Map. Map variables present \nProviderAccessKeyID: true, \nProviderSecretAccessKey: false",
 				},
 			}),
-			/*
+
 				TODO: Try to incorporate these changes if feasible
 				Entry("Provider-ID is an invalid format", &data{
 					setup: setup{
-						createMachineRequest: &cmipb.CreateMachineRequest{
+						createMachineRequest: &driver.CreateMachineRequest{
 							MachineName:  "test",
 							ProviderSpec: providerSpec,
 							Secrets:      providerSecret,
 						},
 					},
 					action: action{
-						getMachineRequest: &cmipb.GetMachineStatusRequest{
+						getMachineRequest: &driver.GetMachineStatusRequest{
 							//ProviderID: "aws:eu-west-1:i-0123456789-0",
 							MachineName: "test",
 							Secrets:     providerSecret,
@@ -495,14 +506,14 @@ var _ = Describe("MachineServer", func() {
 				}),
 				Entry("Region doesn't exist", &data{
 					setup: setup{
-						createMachineRequest: &cmipb.CreateMachineRequest{
+						createMachineRequest: &driver.CreateMachineRequest{
 							MachineName:  "test",
 							ProviderSpec: providerSpec,
 							Secrets:      providerSecret,
 						},
 					},
 					action: action{
-						getMachineRequest: &cmipb.GetMachineStatusRequest{
+						getMachineRequest: &driver.GetMachineStatusRequest{
 							//ProviderID: "aws:///" + mockclient.FailAtRegion + "/i-0123456789-0",
 							MachineName: "test",
 							Secrets:     providerSecret,
@@ -515,14 +526,14 @@ var _ = Describe("MachineServer", func() {
 				}),
 				Entry("Get machine of non-existant instance fails", &data{
 					setup: setup{
-						createMachineRequest: &cmipb.CreateMachineRequest{
+						createMachineRequest: &driver.CreateMachineRequest{
 							MachineName:  "test",
 							ProviderSpec: providerSpec,
 							Secrets:      providerSecret,
 						},
 					},
 					action: action{
-						getMachineRequest: &cmipb.GetMachineStatusRequest{
+						getMachineRequest: &driver.GetMachineStatusRequest{
 							//ProviderID: "aws:///eu-west-1/i-not-found",
 							MachineName: "test",
 							Secrets:     providerSecret,
@@ -535,14 +546,14 @@ var _ = Describe("MachineServer", func() {
 				}),
 				Entry("Return of empty list of machines for Get", &data{
 					setup: setup{
-						createMachineRequest: &cmipb.CreateMachineRequest{
+						createMachineRequest: &driver.CreateMachineRequest{
 							MachineName:  "test",
 							ProviderSpec: providerSpec,
 							Secrets:      providerSecret,
 						},
 					},
 					action: action{
-						getMachineRequest: &cmipb.GetMachineStatusRequest{
+						getMachineRequest: &driver.GetMachineStatusRequest{
 							//ProviderID: "aws:///eu-west-1/" + mockclient.ReturnEmptyListAtDescribeInstances,
 							MachineName: "test",
 							Secrets:     providerSecret,
@@ -550,7 +561,7 @@ var _ = Describe("MachineServer", func() {
 					},
 					expect: expect{
 						errToHaveOccurred: false,
-						//getMachineResponse: &cmipb.GetMachineStatusResponse{
+						//getMachineResponse: &driver.GetMachineStatusResponse{
 						//Exists: false,
 						//},
 					},
@@ -558,232 +569,30 @@ var _ = Describe("MachineServer", func() {
 				Entry("Get request without a create request", &data{
 					setup: setup{},
 					action: action{
-						getMachineRequest: &cmipb.GetMachineStatusRequest{
+						getMachineRequest: &driver.GetMachineStatusRequest{
 							MachineName: "test",
 							//ProviderID: "aws:///eu-west-1/i-0123456789-0",
 							Secrets: providerSecret,
 						},
 					},
 					expect: expect{
-						getMachineResponse: &cmipb.GetMachineStatusResponse{},
+						getMachineResponse: &driver.GetMachineStatusResponse{},
 						errToHaveOccurred:  true,
 						errMessage:         "rpc error: code = Internal desc = Couldn't find any instance matching requirement",
 					},
 				}),
-			*/
-		)
-	})
-
-	Describe("#ShutDownMachine", func() {
-		type setup struct {
-			createMachineRequest *cmipb.CreateMachineRequest
-		}
-		type action struct {
-			shutDownMachineRequest *cmipb.ShutDownMachineRequest
-		}
-		type expect struct {
-			shutDownMachineResponse *cmipb.ShutDownMachineResponse
-			errToHaveOccurred       bool
-			errMessage              string
-		}
-		type data struct {
-			setup  setup
-			action action
-			expect expect
-		}
-		DescribeTable("##table",
-			func(data *data) {
-				p := NewPlugin("tcp://127.0.0.1:8080")
-				mockPluginSPIImpl := &mockclient.MockPluginSPIImpl{FakeInstances: make([]ec2.Instance, 0)}
-				ms := NewMachinePlugin(p, mockPluginSPIImpl)
-
-				ctx := context.Background()
-
-				if data.setup.createMachineRequest != nil {
-					_, err := ms.CreateMachine(ctx, data.setup.createMachineRequest)
-					Expect(err).ToNot(HaveOccurred())
-				}
-
-				_, err := ms.ShutDownMachine(ctx, data.action.shutDownMachineRequest)
-
-				if data.expect.errToHaveOccurred {
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(Equal(data.expect.errMessage))
-				} else {
-					Expect(err).ToNot(HaveOccurred())
-				}
-			},
-			Entry("Simple Machine Shutdown Request", &data{
-				setup: setup{
-					createMachineRequest: &cmipb.CreateMachineRequest{
-						MachineName:  "test",
-						ProviderSpec: providerSpec,
-						Secrets:      providerSecret,
-					},
-				},
-				action: action{
-					shutDownMachineRequest: &cmipb.ShutDownMachineRequest{
-						ProviderSpec: providerSpec,
-						MachineName:  "test",
-						Secrets:      providerSecret,
-					},
-				},
-				expect: expect{
-					shutDownMachineResponse: &cmipb.ShutDownMachineResponse{},
-					errToHaveOccurred:       false,
-				},
-			}),
-			Entry("providerSecretAccessKey missing for secret", &data{
-				setup: setup{
-					createMachineRequest: &cmipb.CreateMachineRequest{
-						MachineName:  "test",
-						ProviderSpec: providerSpec,
-						Secrets:      providerSecret,
-					},
-				},
-				action: action{
-					shutDownMachineRequest: &cmipb.ShutDownMachineRequest{
-						ProviderSpec: providerSpec,
-						MachineName:  "test",
-						Secrets: map[string][]byte{
-							"providerAccessKeyId": []byte("dummy-key"),
-						},
-					},
-				},
-				expect: expect{
-					errToHaveOccurred: true,
-					errMessage:        "rpc error: code = Internal desc = Invalidate Secret Map. Map variables present \nProviderAccessKeyID: true, \nProviderSecretAccessKey: false",
-				},
-			}),
-			/*
-				TODO: Try to incorporate these changes if feasible
-				Entry("Provider-ID is an invalid format", &data{
-					setup: setup{
-						createMachineRequest: &cmipb.CreateMachineRequest{
-							MachineName:  "test",
-							ProviderSpec: providerSpec,
-							Secrets:      providerSecret,
-						},
-					},
-					action: action{
-						shutDownMachineRequest: &cmipb.ShutDownMachineRequest{
-							ProviderSpec: providerSpec,
-							MachineName:  "test",
-							Secrets:      providerSecret,
-						},
-					},
-					expect: expect{
-						errToHaveOccurred: true,
-						errMessage:        "rpc error: code = Internal desc = Unable to decode provider-ID",
-					},
-				}),
-				Entry("Region doesn't exist", &data{
-					setup: setup{
-						createMachineRequest: &cmipb.CreateMachineRequest{
-							MachineName:  "test",
-							ProviderSpec: providerSpec,
-							Secrets:      providerSecret,
-						},
-					},
-					action: action{
-						shutDownMachineRequest: &cmipb.ShutDownMachineRequest{
-							//ProviderID: "aws:///" + mockclient.FailAtRegion + "/i-0123456789-0",
-							MachineName: "test",
-							Secrets:     providerSecret,
-						},
-					},
-					expect: expect{
-						errToHaveOccurred: true,
-						errMessage:        "rpc error: code = Internal desc = Region doesn't exist while trying to create session",
-					},
-				}),
-				Entry("Couldn't find instance with given ID, but fails", &data{
-					setup: setup{
-						createMachineRequest: &cmipb.CreateMachineRequest{
-							MachineName:  "test",
-							ProviderSpec: providerSpec,
-							Secrets:      providerSecret,
-						},
-					},
-					action: action{
-						shutDownMachineRequest: &cmipb.ShutDownMachineRequest{
-							//ProviderID: "aws:///eu-west-1/i-0123456789-1",
-							MachineName: "test",
-							Secrets:     providerSecret,
-						},
-					},
-					expect: expect{
-						errToHaveOccurred: true,
-						errMessage:        "rpc error: code = Internal desc = Couldn't find any instance matching requirement",
-					},
-				}),
-				Entry("ShutDown instance results in returning error", &data{
-					setup: setup{
-						createMachineRequest: &cmipb.CreateMachineRequest{
-							MachineName:  "test",
-							ProviderSpec: providerSpec,
-							Secrets:      providerSecret,
-						},
-					},
-					action: action{
-						shutDownMachineRequest: &cmipb.ShutDownMachineRequest{
-							//ProviderID: "aws:///eu-west-1/" + mockclient.InstanceStopError,
-							MachineName: "test",
-							Secrets:     providerSecret,
-						},
-					},
-					expect: expect{
-						errToHaveOccurred: true,
-						errMessage:        "rpc error: code = Internal desc = Stopping of instance errored out",
-					},
-				}),
-				Entry("ShutDown instance doesn't exist. No error.", &data{
-					setup: setup{
-						createMachineRequest: &cmipb.CreateMachineRequest{
-							MachineName:  "test",
-							ProviderSpec: providerSpec,
-							Secrets:      providerSecret,
-						},
-					},
-					action: action{
-						shutDownMachineRequest: &cmipb.ShutDownMachineRequest{
-							//ProviderID: "aws:///eu-west-1/" + mockclient.InstanceDoesntExistError,
-							MachineName: "test",
-							Secrets:     providerSecret,
-						},
-					},
-					expect: expect{
-						errToHaveOccurred: false,
-					},
-				}),
-				Entry("Shutdown request without a create request", &data{
-					setup: setup{},
-					action: action{
-						shutDownMachineRequest: &cmipb.ShutDownMachineRequest{
-							//ProviderID: "aws:///eu-west-1/i-0123456789-0",
-							MachineName: "test",
-							Secrets:     providerSecret,
-						},
-					},
-					expect: expect{
-						shutDownMachineResponse: &cmipb.ShutDownMachineResponse{},
-						errToHaveOccurred:       true,
-						errMessage:              "rpc error: code = Internal desc = Couldn't find any instance matching requirement",
-					},
-				}),
-			*/
 		)
 	})
 
 	Describe("#ListMachines", func() {
 		type setup struct {
-			createMachineRequest []*cmipb.CreateMachineRequest
+			createMachineRequest []*driver.CreateMachineRequest
 		}
 		type action struct {
-			listMachineRequest *cmipb.ListMachinesRequest
+			listMachineRequest *driver.ListMachinesRequest
 		}
 		type expect struct {
-			listMachineResponse *cmipb.ListMachinesResponse
+			listMachineResponse *driver.ListMachinesResponse
 			errToHaveOccurred   bool
 			errMessage          string
 		}
@@ -817,18 +626,18 @@ var _ = Describe("MachineServer", func() {
 			},
 			Entry("Simple Machine List Request", &data{
 				setup: setup{
-					createMachineRequest: []*cmipb.CreateMachineRequest{
-						&cmipb.CreateMachineRequest{
+					createMachineRequest: []*driver.CreateMachineRequest{
+						&driver.CreateMachineRequest{
 							MachineName:  "test-0",
 							ProviderSpec: providerSpec,
 							Secrets:      providerSecret,
 						},
-						&cmipb.CreateMachineRequest{
+						&driver.CreateMachineRequest{
 							MachineName:  "test-1",
 							ProviderSpec: providerSpec,
 							Secrets:      providerSecret,
 						},
-						&cmipb.CreateMachineRequest{
+						&driver.CreateMachineRequest{
 							MachineName:  "test-2",
 							ProviderSpec: providerSpec,
 							Secrets:      providerSecret,
@@ -836,13 +645,13 @@ var _ = Describe("MachineServer", func() {
 					},
 				},
 				action: action{
-					listMachineRequest: &cmipb.ListMachinesRequest{
+					listMachineRequest: &driver.ListMachinesRequest{
 						ProviderSpec: providerSpec,
 						Secrets:      providerSecret,
 					},
 				},
 				expect: expect{
-					listMachineResponse: &cmipb.ListMachinesResponse{
+					listMachineResponse: &driver.ListMachinesResponse{
 						MachineList: map[string]string{
 							"aws:///eu-west-1/i-0123456789-0": "test-0",
 							"aws:///eu-west-1/i-0123456789-1": "test-1",
@@ -854,7 +663,7 @@ var _ = Describe("MachineServer", func() {
 			Entry("Unexpected end of JSON input", &data{
 				setup: setup{},
 				action: action{
-					listMachineRequest: &cmipb.ListMachinesRequest{
+					listMachineRequest: &driver.ListMachinesRequest{
 						ProviderSpec: []byte(""),
 						Secrets:      providerSecret,
 					},
@@ -867,7 +676,7 @@ var _ = Describe("MachineServer", func() {
 			Entry("providerAccessKeyId missing for secret", &data{
 				setup: setup{},
 				action: action{
-					listMachineRequest: &cmipb.ListMachinesRequest{
+					listMachineRequest: &driver.ListMachinesRequest{
 						ProviderSpec: providerSpec,
 						Secrets: map[string][]byte{
 							"providerSecretAccessKey": []byte("dummy-secret"),
@@ -883,7 +692,7 @@ var _ = Describe("MachineServer", func() {
 			Entry("providerSecretAccessKey missing for secret", &data{
 				setup: setup{},
 				action: action{
-					listMachineRequest: &cmipb.ListMachinesRequest{
+					listMachineRequest: &driver.ListMachinesRequest{
 						ProviderSpec: providerSpec,
 						Secrets: map[string][]byte{
 							"providerAccessKeyId": []byte("dummy-id"),
@@ -899,7 +708,7 @@ var _ = Describe("MachineServer", func() {
 			Entry("userData missing for secret", &data{
 				setup: setup{},
 				action: action{
-					listMachineRequest: &cmipb.ListMachinesRequest{
+					listMachineRequest: &driver.ListMachinesRequest{
 						ProviderSpec: providerSpec,
 						Secrets: map[string][]byte{
 							"providerAccessKeyId":     []byte("dummy-id"),
@@ -914,7 +723,7 @@ var _ = Describe("MachineServer", func() {
 			}),
 			Entry("Validation for providerSpec fails. Missing AMI & Region.", &data{
 				action: action{
-					listMachineRequest: &cmipb.ListMachinesRequest{
+					listMachineRequest: &driver.ListMachinesRequest{
 						ProviderSpec: []byte("{\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}"),
 						Secrets:      providerSecret,
 					},
@@ -927,7 +736,7 @@ var _ = Describe("MachineServer", func() {
 			Entry("Region doesn't exist", &data{
 				setup: setup{},
 				action: action{
-					listMachineRequest: &cmipb.ListMachinesRequest{
+					listMachineRequest: &driver.ListMachinesRequest{
 						ProviderSpec: []byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"" + mockclient.FailAtRegion + "\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}"),
 						Secrets:      providerSecret,
 					},
@@ -939,7 +748,7 @@ var _ = Describe("MachineServer", func() {
 			}),
 			Entry("Cluster details missing in machine class", &data{
 				action: action{
-					listMachineRequest: &cmipb.ListMachinesRequest{
+					listMachineRequest: &driver.ListMachinesRequest{
 						ProviderSpec: []byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/role/test\":\"1\"}}"),
 						Secrets:      providerSecret,
 					},
@@ -951,7 +760,7 @@ var _ = Describe("MachineServer", func() {
 			}),
 			Entry("Cloud provider returned error while describing instance", &data{
 				action: action{
-					listMachineRequest: &cmipb.ListMachinesRequest{
+					listMachineRequest: &driver.ListMachinesRequest{
 						ProviderSpec: []byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/" + mockclient.ReturnErrorAtDescribeInstances + "\":\"1\",\"kubernetes.io/role/test\":\"1\"}}"),
 						Secrets:      providerSecret,
 					},
@@ -964,13 +773,13 @@ var _ = Describe("MachineServer", func() {
 			Entry("List request without a create request", &data{
 				setup: setup{},
 				action: action{
-					listMachineRequest: &cmipb.ListMachinesRequest{
+					listMachineRequest: &driver.ListMachinesRequest{
 						ProviderSpec: providerSpec,
 						Secrets:      providerSecret,
 					},
 				},
 				expect: expect{
-					listMachineResponse: &cmipb.ListMachinesResponse{},
+					listMachineResponse: &driver.ListMachinesResponse{},
 				},
 			}),
 		)
@@ -980,10 +789,10 @@ var _ = Describe("MachineServer", func() {
 		type setup struct {
 		}
 		type action struct {
-			getListOfVolumeIDsForExistingPVsRequest *cmipb.GetVolumeIDsRequest
+			getListOfVolumeIDsForExistingPVsRequest *driver.GetVolumeIDsRequest
 		}
 		type expect struct {
-			getListOfVolumeIDsForExistingPVsResponse *cmipb.GetVolumeIDsResponse
+			getListOfVolumeIDsForExistingPVsResponse *driver.GetVolumeIDsResponse
 			errToHaveOccurred                        bool
 			errMessage                               string
 		}
@@ -1015,12 +824,12 @@ var _ = Describe("MachineServer", func() {
 			},
 			Entry("Simple GetVolumeIDs request", &data{
 				action: action{
-					getListOfVolumeIDsForExistingPVsRequest: &cmipb.GetVolumeIDsRequest{
+					getListOfVolumeIDsForExistingPVsRequest: &driver.GetVolumeIDsRequest{
 						PVSpecList: []byte("[{\"capacity\":{\"storage\":\"1Gi\"},\"awsElasticBlockStore\":{\"volumeID\":\"aws://eu-east-2b/vol-xxxxyyyyzzzz11112\",\"fsType\":\"ext4\"},\"accessModes\":[\"ReadWriteOnce\"],\"claimRef\":{\"kind\":\"PersistentVolumeClaim\",\"namespace\":\"default\",\"name\":\"www-web-0\",\"uid\":\"0c3b34f8-a494-11e9-b4c3-0e956a869a31\",\"apiVersion\":\"v1\",\"resourceVersion\":\"32423232\"},\"persistentVolumeReclaimPolicy\":\"Delete\",\"storageClassName\":\"default\",\"nodeAffinity\":{\"required\":{\"nodeSelectorTerms\":[{\"matchExpressions\":[{\"key\":\"failure-domain.beta.kubernetes.io/zone\",\"operator\":\"In\",\"values\":[\"eu-east-2b\"]},{\"key\":\"failure-domain.beta.kubernetes.io/region\",\"operator\":\"In\",\"values\":[\"eu-east-2\"]}]}]}}}]"),
 					},
 				},
 				expect: expect{
-					getListOfVolumeIDsForExistingPVsResponse: &cmipb.GetVolumeIDsResponse{
+					getListOfVolumeIDsForExistingPVsResponse: &driver.GetVolumeIDsResponse{
 						VolumeIDs: []string{
 							"aws://eu-east-2b/vol-xxxxyyyyzzzz11112",
 						},
@@ -1029,12 +838,12 @@ var _ = Describe("MachineServer", func() {
 			}),
 			Entry("GetVolumeIDs with multiple pvSpecs request", &data{
 				action: action{
-					getListOfVolumeIDsForExistingPVsRequest: &cmipb.GetVolumeIDsRequest{
+					getListOfVolumeIDsForExistingPVsRequest: &driver.GetVolumeIDsRequest{
 						PVSpecList: []byte("[{\"capacity\":{\"storage\":\"1Gi\"},\"awsElasticBlockStore\":{\"volumeID\":\"aws://eu-east-2b/vol-xxxxyyyyzzzz11112\",\"fsType\":\"ext4\"},\"accessModes\":[\"ReadWriteOnce\"],\"claimRef\":{\"kind\":\"PersistentVolumeClaim\",\"namespace\":\"default\",\"name\":\"www-web-0\",\"uid\":\"0c3b34f8-a494-11e9-b4c3-0e956a869a31\",\"apiVersion\":\"v1\",\"resourceVersion\":\"32423232\"},\"persistentVolumeReclaimPolicy\":\"Delete\",\"storageClassName\":\"default\",\"nodeAffinity\":{\"required\":{\"nodeSelectorTerms\":[{\"matchExpressions\":[{\"key\":\"failure-domain.beta.kubernetes.io/zone\",\"operator\":\"In\",\"values\":[\"eu-east-2b\"]},{\"key\":\"failure-domain.beta.kubernetes.io/region\",\"operator\":\"In\",\"values\":[\"eu-east-2\"]}]}]}}},{\"capacity\":{\"storage\":\"1Gi\"},\"awsElasticBlockStore\":{\"volumeID\":\"aws://eu-east-2b/vol-xxxxyyyyzzzz11113\",\"fsType\":\"ext4\"},\"accessModes\":[\"ReadWriteOnce\"],\"claimRef\":{\"kind\":\"PersistentVolumeClaim\",\"namespace\":\"default\",\"name\":\"www-web-1\",\"uid\":\"0c3b34f8-a494-11e9-b4c3-0e956a869a31\",\"apiVersion\":\"v1\",\"resourceVersion\":\"32423232\"},\"persistentVolumeReclaimPolicy\":\"Delete\",\"storageClassName\":\"default\",\"nodeAffinity\":{\"required\":{\"nodeSelectorTerms\":[{\"matchExpressions\":[{\"key\":\"failure-domain.beta.kubernetes.io/zone\",\"operator\":\"In\",\"values\":[\"eu-east-2b\"]},{\"key\":\"failure-domain.beta.kubernetes.io/region\",\"operator\":\"In\",\"values\":[\"eu-east-2\"]}]}]}}}]"),
 					},
 				},
 				expect: expect{
-					getListOfVolumeIDsForExistingPVsResponse: &cmipb.GetVolumeIDsResponse{
+					getListOfVolumeIDsForExistingPVsResponse: &driver.GetVolumeIDsResponse{
 						VolumeIDs: []string{
 							"aws://eu-east-2b/vol-xxxxyyyyzzzz11112",
 							"aws://eu-east-2b/vol-xxxxyyyyzzzz11113",
@@ -1044,17 +853,17 @@ var _ = Describe("MachineServer", func() {
 			}),
 			Entry("GetVolumeIDs for Azure pvSpecs request", &data{
 				action: action{
-					getListOfVolumeIDsForExistingPVsRequest: &cmipb.GetVolumeIDsRequest{
+					getListOfVolumeIDsForExistingPVsRequest: &driver.GetVolumeIDsRequest{
 						PVSpecList: []byte("[{\"capacity\":{\"storage\":\"1Gi\"},\"azureDisk\":{\"volumeID\":\"aws://eu-east-2b/vol-xxxxyyyyzzzz11112\",\"fsType\":\"ext4\"},\"accessModes\":[\"ReadWriteOnce\"],\"claimRef\":{\"kind\":\"PersistentVolumeClaim\",\"namespace\":\"default\",\"name\":\"www-web-0\",\"uid\":\"0c3b34f8-a494-11e9-b4c3-0e956a869a31\",\"apiVersion\":\"v1\",\"resourceVersion\":\"32423232\"},\"persistentVolumeReclaimPolicy\":\"Delete\",\"storageClassName\":\"default\",\"nodeAffinity\":{\"required\":{\"nodeSelectorTerms\":[{\"matchExpressions\":[{\"key\":\"failure-domain.beta.kubernetes.io/zone\",\"operator\":\"In\",\"values\":[\"eu-east-2b\"]},{\"key\":\"failure-domain.beta.kubernetes.io/region\",\"operator\":\"In\",\"values\":[\"eu-east-2\"]}]}]}}}]"),
 					},
 				},
 				expect: expect{
-					getListOfVolumeIDsForExistingPVsResponse: &cmipb.GetVolumeIDsResponse{},
+					getListOfVolumeIDsForExistingPVsResponse: &driver.GetVolumeIDsResponse{},
 				},
 			}),
 			Entry("GetVolumeIDs for invalid json input", &data{
 				action: action{
-					getListOfVolumeIDsForExistingPVsRequest: &cmipb.GetVolumeIDsRequest{
+					getListOfVolumeIDsForExistingPVsRequest: &driver.GetVolumeIDsRequest{
 						PVSpecList: []byte("[{\"capacity\":{\"storage\":\"1Gi\"},\"awsElasticBlockStore\":{\"volumeID\":\"aws://eu-east-2b/vol-xxxxyyyyzzzz11112\",\"fsType\":\"ext4\"},\"accessModes\":[\"ReadWriteOnce\"],\"claimRef\":{\"kind\":\"PersistentVolumeClaim\",\"namespace\":\"default\",\"name\":\"www-web-0\",\"uid\":\"0c3b34f8-a494-11e9-b4c3-0e956a869a31\",\"apiVersion\":\"v1\",\"resourceVersion\":\"32423232\"},\"persistentVolumeReclaimPolicy\":\"Delete\",\"storageClassName\":\"default\",\"nodeAffinity\":{\"required\":{\"nodeSelectorTerms\":[{\"matchExpressions\":[{\"key\":\"failure-domain.beta.kubernetes.io/zone\",\"operator\":\"In\",\"values\":[\"eu-east-2b\"]},{\"key\":\"failure-domain.beta.kubernetes.io/region\",\"operator\":\"In\"\"values\":[\"eu-east-2\"]}]}]}}}]"),
 					},
 				},
@@ -1063,7 +872,4 @@ var _ = Describe("MachineServer", func() {
 					errMessage:        "rpc error: code = Internal desc = invalid character '\"' after object key:value pair",
 				},
 			}),
-		)
-	})
-
-})
+*/
