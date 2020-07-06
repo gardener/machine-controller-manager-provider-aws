@@ -23,7 +23,8 @@ import (
 	"strconv"
 	"strings"
 
-	api "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
+	awsapi "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
+	corev1 "k8s.io/api/core/v1"
 )
 
 const nameFmt string = `[-a-z0-9]+`
@@ -32,7 +33,7 @@ const nameMaxLength int = 63
 var nameRegexp = regexp.MustCompile("^" + nameFmt + "$")
 
 // ValidateAWSProviderSpec validates AWS provider spec
-func ValidateAWSProviderSpec(spec *api.AWSProviderSpec, secrets *api.Secrets) []error {
+func ValidateAWSProviderSpec(spec *awsapi.AWSProviderSpec, secrets *corev1.Secret) []error {
 	var allErrs []error
 
 	if "" == spec.AMI {
@@ -81,7 +82,7 @@ func validateSpecTags(tags map[string]string) []error {
 	return allErrs
 }
 
-func validateBlockDevices(blockDevices []api.AWSBlockDeviceMappingSpec) []error {
+func validateBlockDevices(blockDevices []awsapi.AWSBlockDeviceMappingSpec) []error {
 
 	var allErrs []error
 
@@ -100,7 +101,7 @@ func validateBlockDevices(blockDevices []api.AWSBlockDeviceMappingSpec) []error 
 	return allErrs
 }
 
-func validateNetworkInterfaces(networkInterfaces []api.AWSNetworkInterfaceSpec) []error {
+func validateNetworkInterfaces(networkInterfaces []awsapi.AWSNetworkInterfaceSpec) []error {
 	var allErrs []error
 	if len(networkInterfaces) == 0 {
 		allErrs = append(allErrs, fmt.Errorf("Mention at least one NetworkInterface"))
@@ -127,16 +128,16 @@ func validateNetworkInterfaces(networkInterfaces []api.AWSNetworkInterfaceSpec) 
 	return allErrs
 }
 
-func validateSecrets(reference *api.Secrets) []error {
+func validateSecrets(secret *corev1.Secret) []error {
 	var allErrs []error
-	if "" == reference.ProviderAccessKeyID {
+	if "" == string(secret.Data["providerAccessKeyId"]) {
 		allErrs = append(allErrs, fmt.Errorf("Secret ProviderAccessKeyID is required field"))
 	}
-	if "" == reference.ProviderSecretAccessKey {
+	if "" == string(secret.Data["providerSecretAccessKey"]) {
 		allErrs = append(allErrs, fmt.Errorf("Secret ProviderSecretAccessKey is required field"))
 	}
 
-	if "" == reference.UserData {
+	if "" == string(secret.Data["userData"]) {
 		allErrs = append(allErrs, fmt.Errorf("Secret UserData is required field"))
 	}
 	return allErrs

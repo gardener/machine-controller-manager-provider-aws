@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved.
+Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -23,7 +23,7 @@ import (
 	awssession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
-	api "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
+	corev1 "k8s.io/api/core/v1"
 )
 
 const (
@@ -55,7 +55,7 @@ type MockPluginSPIImpl struct {
 }
 
 // NewSession starts a new AWS session
-func (ms *MockPluginSPIImpl) NewSession(Secrets api.Secrets, region string) (*awssession.Session, error) {
+func (ms *MockPluginSPIImpl) NewSession(secret *corev1.Secret, region string) (*awssession.Session, error) {
 	if region == FailAtRegion {
 		return nil, fmt.Errorf("Region doesn't exist while trying to create session")
 	}
