@@ -29,6 +29,14 @@ import (
 	"k8s.io/klog"
 )
 
+const (
+	// AWSMachineClassKind for AWSMachineClass
+	AWSMachineClassKind = "AWSMachineClass"
+
+	// MachineClassKind for MachineClass
+	MachineClassKind = "MachineClass"
+)
+
 // decodeProviderSpecAndSecret converts request parameters to api.ProviderSpec & api.Secrets
 func decodeProviderSpecAndSecret(machineClass *v1alpha1.MachineClass, secret *corev1.Secret) (*api.AWSProviderSpec, error) {
 	var (
@@ -36,12 +44,16 @@ func decodeProviderSpecAndSecret(machineClass *v1alpha1.MachineClass, secret *co
 	)
 
 	// Extract providerSpec
+	if machineClass == nil {
+		return nil, status.Error(codes.Internal, "MachineClass ProviderSpec is nil")
+	}
+
 	err := json.Unmarshal(machineClass.ProviderSpec.Raw, &providerSpec)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	//Validate the Spec and Secrets
+	// Validate the Spec and Secrets
 	ValidationErr := validation.ValidateAWSProviderSpec(providerSpec, secret)
 	if ValidationErr != nil {
 		err = fmt.Errorf("Error while validating ProviderSpec %v", ValidationErr)
@@ -74,25 +86,25 @@ func (d *Driver) getInstancesFromMachineName(machineName string, providerSpec *a
 
 	input := ec2.DescribeInstancesInput{
 		Filters: []*ec2.Filter{
-			&ec2.Filter{
+			{
 				Name: aws.String("tag:Name"),
 				Values: []*string{
 					aws.String(machineName),
 				},
 			},
-			&ec2.Filter{
+			{
 				Name: aws.String("tag-key"),
 				Values: []*string{
 					&clusterName,
 				},
 			},
-			&ec2.Filter{
+			{
 				Name: aws.String("tag-key"),
 				Values: []*string{
 					&nodeRole,
 				},
 			},
-			&ec2.Filter{
+			{
 				Name: aws.String("instance-state-name"),
 				Values: []*string{
 					aws.String("pending"),

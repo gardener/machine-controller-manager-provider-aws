@@ -1,19 +1,31 @@
 package validation
 
-//. "github.com/onsi/ginkgo"
-//. "github.com/onsi/ginkgo/extensions/table"
-//. "github.com/onsi/gomega"
+import (
+	"fmt"
 
-/*
-TODO fix this
+	awsapi "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+)
+
 var _ = Describe("Validation", func() {
+
+	providerSecret := &corev1.Secret{
+		Data: map[string][]byte{
+			"providerAccessKeyId":     []byte("dummy-id"),
+			"providerSecretAccessKey": []byte("dummy-secret"),
+			"userData":                []byte("dummy-user-data"),
+		},
+	}
 
 	Describe("#ValidateAWSProviderSpec", func() {
 		type setup struct {
 		}
 		type action struct {
-			spec    *api.AWSProviderSpec
-			secrets *api.Secrets
+			spec   *awsapi.AWSProviderSpec
+			secret *corev1.Secret
 		}
 		type expect struct {
 			errToHaveOccurred bool
@@ -26,7 +38,7 @@ var _ = Describe("Validation", func() {
 		}
 		DescribeTable("##table",
 			func(data *data) {
-				validationErr := ValidateAWSProviderSpec(data.action.spec, data.action.secrets)
+				validationErr := ValidateAWSProviderSpec(data.action.spec, data.action.secret)
 
 				if data.expect.errToHaveOccurred {
 					Expect(validationErr).NotTo(Equal(nil))
@@ -37,24 +49,24 @@ var _ = Describe("Validation", func() {
 			Entry("Simple validation of AWS machine class", &data{
 				setup: setup{},
 				action: action{
-					spec: &api.AWSProviderSpec{
+					spec: &awsapi.AWSProviderSpec{
 						AMI: "ami-123456789",
-						BlockDevices: []api.AWSBlockDeviceMappingSpec{
-							api.AWSBlockDeviceMappingSpec{
-								Ebs: api.AWSEbsBlockDeviceSpec{
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
 									VolumeSize: 50,
 									VolumeType: "gp2",
 								},
 							},
 						},
-						IAM: api.AWSIAMProfileSpec{
+						IAM: awsapi.AWSIAMProfileSpec{
 							Name: "test-iam",
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
 						KeyName:     "test-ssh-publickey",
-						NetworkInterfaces: []api.AWSNetworkInterfaceSpec{
-							api.AWSNetworkInterfaceSpec{
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
 								SecurityGroupIDs: []string{
 									"sg-00002132323",
 								},
@@ -66,11 +78,7 @@ var _ = Describe("Validation", func() {
 							"kubernetes.io/role/test":           "1",
 						},
 					},
-					secrets: &api.Secrets{
-						UserData:                "dummy-user-data",
-						ProviderAccessKeyID:     "dummy-id",
-						ProviderSecretAccessKey: "dummy-secret",
-					},
+					secret: providerSecret,
 				},
 				expect: expect{
 					errToHaveOccurred: false,
@@ -79,25 +87,25 @@ var _ = Describe("Validation", func() {
 			Entry("AWS machine class with io1 type block device", &data{
 				setup: setup{},
 				action: action{
-					spec: &api.AWSProviderSpec{
+					spec: &awsapi.AWSProviderSpec{
 						AMI: "ami-123456789",
-						BlockDevices: []api.AWSBlockDeviceMappingSpec{
-							api.AWSBlockDeviceMappingSpec{
-								Ebs: api.AWSEbsBlockDeviceSpec{
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
 									VolumeSize: 50,
 									VolumeType: "io1",
 									Iops:       1000,
 								},
 							},
 						},
-						IAM: api.AWSIAMProfileSpec{
+						IAM: awsapi.AWSIAMProfileSpec{
 							Name: "test-iam",
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
 						KeyName:     "test-ssh-publickey",
-						NetworkInterfaces: []api.AWSNetworkInterfaceSpec{
-							api.AWSNetworkInterfaceSpec{
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
 								SecurityGroupIDs: []string{
 									"sg-00002132323",
 								},
@@ -109,36 +117,33 @@ var _ = Describe("Validation", func() {
 							"kubernetes.io/role/test":           "1",
 						},
 					},
-					secrets: &api.Secrets{
-						UserData:                "dummy-user-data",
-						ProviderAccessKeyID:     "dummy-id",
-						ProviderSecretAccessKey: "dummy-secret",
-					},
+					secret: providerSecret,
 				},
 				expect: expect{
 					errToHaveOccurred: false,
 				},
 			}),
+
 			Entry("AMI field missing", &data{
 				setup: setup{},
 				action: action{
-					spec: &api.AWSProviderSpec{
-						BlockDevices: []api.AWSBlockDeviceMappingSpec{
-							api.AWSBlockDeviceMappingSpec{
-								Ebs: api.AWSEbsBlockDeviceSpec{
+					spec: &awsapi.AWSProviderSpec{
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
 									VolumeSize: 50,
 									VolumeType: "gp2",
 								},
 							},
 						},
-						IAM: api.AWSIAMProfileSpec{
+						IAM: awsapi.AWSIAMProfileSpec{
 							Name: "test-iam",
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
 						KeyName:     "test-ssh-publickey",
-						NetworkInterfaces: []api.AWSNetworkInterfaceSpec{
-							api.AWSNetworkInterfaceSpec{
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
 								SecurityGroupIDs: []string{
 									"sg-00002132323",
 								},
@@ -150,11 +155,7 @@ var _ = Describe("Validation", func() {
 							"kubernetes.io/role/test":           "1",
 						},
 					},
-					secrets: &api.Secrets{
-						UserData:                "dummy-user-data",
-						ProviderAccessKeyID:     "dummy-id",
-						ProviderSecretAccessKey: "dummy-secret",
-					},
+					secret: providerSecret,
 				},
 				expect: expect{
 					errToHaveOccurred: true,
@@ -166,23 +167,23 @@ var _ = Describe("Validation", func() {
 			Entry("Region field missing", &data{
 				setup: setup{},
 				action: action{
-					spec: &api.AWSProviderSpec{
+					spec: &awsapi.AWSProviderSpec{
 						AMI: "ami-123456789",
-						BlockDevices: []api.AWSBlockDeviceMappingSpec{
-							api.AWSBlockDeviceMappingSpec{
-								Ebs: api.AWSEbsBlockDeviceSpec{
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
 									VolumeSize: 50,
 									VolumeType: "gp2",
 								},
 							},
 						},
-						IAM: api.AWSIAMProfileSpec{
+						IAM: awsapi.AWSIAMProfileSpec{
 							Name: "test-iam",
 						},
 						MachineType: "m4.large",
 						KeyName:     "test-ssh-publickey",
-						NetworkInterfaces: []api.AWSNetworkInterfaceSpec{
-							api.AWSNetworkInterfaceSpec{
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
 								SecurityGroupIDs: []string{
 									"sg-00002132323",
 								},
@@ -194,11 +195,7 @@ var _ = Describe("Validation", func() {
 							"kubernetes.io/role/test":           "1",
 						},
 					},
-					secrets: &api.Secrets{
-						UserData:                "dummy-user-data",
-						ProviderAccessKeyID:     "dummy-id",
-						ProviderSecretAccessKey: "dummy-secret",
-					},
+					secret: providerSecret,
 				},
 				expect: expect{
 					errToHaveOccurred: true,
@@ -210,23 +207,23 @@ var _ = Describe("Validation", func() {
 			Entry("MachineType field missing", &data{
 				setup: setup{},
 				action: action{
-					spec: &api.AWSProviderSpec{
+					spec: &awsapi.AWSProviderSpec{
 						AMI: "ami-123456789",
-						BlockDevices: []api.AWSBlockDeviceMappingSpec{
-							api.AWSBlockDeviceMappingSpec{
-								Ebs: api.AWSEbsBlockDeviceSpec{
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
 									VolumeSize: 50,
 									VolumeType: "gp2",
 								},
 							},
 						},
-						IAM: api.AWSIAMProfileSpec{
+						IAM: awsapi.AWSIAMProfileSpec{
 							Name: "test-iam",
 						},
 						Region:  "eu-west-1",
 						KeyName: "test-ssh-publickey",
-						NetworkInterfaces: []api.AWSNetworkInterfaceSpec{
-							api.AWSNetworkInterfaceSpec{
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
 								SecurityGroupIDs: []string{
 									"sg-00002132323",
 								},
@@ -238,11 +235,7 @@ var _ = Describe("Validation", func() {
 							"kubernetes.io/role/test":           "1",
 						},
 					},
-					secrets: &api.Secrets{
-						UserData:                "dummy-user-data",
-						ProviderAccessKeyID:     "dummy-id",
-						ProviderSecretAccessKey: "dummy-secret",
-					},
+					secret: providerSecret,
 				},
 				expect: expect{
 					errToHaveOccurred: true,
@@ -254,11 +247,11 @@ var _ = Describe("Validation", func() {
 			Entry("IAM.Name field missing", &data{
 				setup: setup{},
 				action: action{
-					spec: &api.AWSProviderSpec{
+					spec: &awsapi.AWSProviderSpec{
 						AMI: "ami-123456789",
-						BlockDevices: []api.AWSBlockDeviceMappingSpec{
-							api.AWSBlockDeviceMappingSpec{
-								Ebs: api.AWSEbsBlockDeviceSpec{
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
 									VolumeSize: 50,
 									VolumeType: "gp2",
 								},
@@ -267,8 +260,8 @@ var _ = Describe("Validation", func() {
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
 						KeyName:     "test-ssh-publickey",
-						NetworkInterfaces: []api.AWSNetworkInterfaceSpec{
-							api.AWSNetworkInterfaceSpec{
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
 								SecurityGroupIDs: []string{
 									"sg-00002132323",
 								},
@@ -280,11 +273,7 @@ var _ = Describe("Validation", func() {
 							"kubernetes.io/role/test":           "1",
 						},
 					},
-					secrets: &api.Secrets{
-						UserData:                "dummy-user-data",
-						ProviderAccessKeyID:     "dummy-id",
-						ProviderSecretAccessKey: "dummy-secret",
-					},
+					secret: providerSecret,
 				},
 				expect: expect{
 					errToHaveOccurred: true,
@@ -296,23 +285,23 @@ var _ = Describe("Validation", func() {
 			Entry("KeyName field missing", &data{
 				setup: setup{},
 				action: action{
-					spec: &api.AWSProviderSpec{
+					spec: &awsapi.AWSProviderSpec{
 						AMI: "ami-123456789",
-						BlockDevices: []api.AWSBlockDeviceMappingSpec{
-							api.AWSBlockDeviceMappingSpec{
-								Ebs: api.AWSEbsBlockDeviceSpec{
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
 									VolumeSize: 50,
 									VolumeType: "gp2",
 								},
 							},
 						},
-						IAM: api.AWSIAMProfileSpec{
+						IAM: awsapi.AWSIAMProfileSpec{
 							Name: "test-iam",
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						NetworkInterfaces: []api.AWSNetworkInterfaceSpec{
-							api.AWSNetworkInterfaceSpec{
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
 								SecurityGroupIDs: []string{
 									"sg-00002132323",
 								},
@@ -324,11 +313,7 @@ var _ = Describe("Validation", func() {
 							"kubernetes.io/role/test":           "1",
 						},
 					},
-					secrets: &api.Secrets{
-						UserData:                "dummy-user-data",
-						ProviderAccessKeyID:     "dummy-id",
-						ProviderSecretAccessKey: "dummy-secret",
-					},
+					secret: providerSecret,
 				},
 				expect: expect{
 					errToHaveOccurred: true,
@@ -340,24 +325,24 @@ var _ = Describe("Validation", func() {
 			Entry("Cluster tag missing", &data{
 				setup: setup{},
 				action: action{
-					spec: &api.AWSProviderSpec{
+					spec: &awsapi.AWSProviderSpec{
 						AMI: "ami-123456789",
-						BlockDevices: []api.AWSBlockDeviceMappingSpec{
-							api.AWSBlockDeviceMappingSpec{
-								Ebs: api.AWSEbsBlockDeviceSpec{
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
 									VolumeSize: 50,
 									VolumeType: "gp2",
 								},
 							},
 						},
-						IAM: api.AWSIAMProfileSpec{
+						IAM: awsapi.AWSIAMProfileSpec{
 							Name: "test-iam",
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
 						KeyName:     "test-ssh-publickey",
-						NetworkInterfaces: []api.AWSNetworkInterfaceSpec{
-							api.AWSNetworkInterfaceSpec{
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
 								SecurityGroupIDs: []string{
 									"sg-00002132323",
 								},
@@ -368,11 +353,7 @@ var _ = Describe("Validation", func() {
 							"kubernetes.io/role/test": "1",
 						},
 					},
-					secrets: &api.Secrets{
-						UserData:                "dummy-user-data",
-						ProviderAccessKeyID:     "dummy-id",
-						ProviderSecretAccessKey: "dummy-secret",
-					},
+					secret: providerSecret,
 				},
 				expect: expect{
 					errToHaveOccurred: true,
@@ -384,24 +365,24 @@ var _ = Describe("Validation", func() {
 			Entry("Role tag missing", &data{
 				setup: setup{},
 				action: action{
-					spec: &api.AWSProviderSpec{
+					spec: &awsapi.AWSProviderSpec{
 						AMI: "ami-123456789",
-						BlockDevices: []api.AWSBlockDeviceMappingSpec{
-							api.AWSBlockDeviceMappingSpec{
-								Ebs: api.AWSEbsBlockDeviceSpec{
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
 									VolumeSize: 50,
 									VolumeType: "gp2",
 								},
 							},
 						},
-						IAM: api.AWSIAMProfileSpec{
+						IAM: awsapi.AWSIAMProfileSpec{
 							Name: "test-iam",
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
 						KeyName:     "test-ssh-publickey",
-						NetworkInterfaces: []api.AWSNetworkInterfaceSpec{
-							api.AWSNetworkInterfaceSpec{
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
 								SecurityGroupIDs: []string{
 									"sg-00002132323",
 								},
@@ -412,11 +393,7 @@ var _ = Describe("Validation", func() {
 							"kubernetes.io/cluster/shoot--test": "1",
 						},
 					},
-					secrets: &api.Secrets{
-						UserData:                "dummy-user-data",
-						ProviderAccessKeyID:     "dummy-id",
-						ProviderSecretAccessKey: "dummy-secret",
-					},
+					secret: providerSecret,
 				},
 				expect: expect{
 					errToHaveOccurred: true,
@@ -428,30 +405,30 @@ var _ = Describe("Validation", func() {
 			Entry("Multiple block devices specified", &data{
 				setup: setup{},
 				action: action{
-					spec: &api.AWSProviderSpec{
+					spec: &awsapi.AWSProviderSpec{
 						AMI: "ami-123456789",
-						BlockDevices: []api.AWSBlockDeviceMappingSpec{
-							api.AWSBlockDeviceMappingSpec{
-								Ebs: api.AWSEbsBlockDeviceSpec{
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
 									VolumeSize: 50,
 									VolumeType: "gp2",
 								},
 							},
-							api.AWSBlockDeviceMappingSpec{
-								Ebs: api.AWSEbsBlockDeviceSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
 									VolumeSize: 50,
 									VolumeType: "gp2",
 								},
 							},
 						},
-						IAM: api.AWSIAMProfileSpec{
+						IAM: awsapi.AWSIAMProfileSpec{
 							Name: "test-iam",
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
 						KeyName:     "test-ssh-publickey",
-						NetworkInterfaces: []api.AWSNetworkInterfaceSpec{
-							api.AWSNetworkInterfaceSpec{
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
 								SecurityGroupIDs: []string{
 									"sg-00002132323",
 								},
@@ -463,11 +440,7 @@ var _ = Describe("Validation", func() {
 							"kubernetes.io/role/test":           "1",
 						},
 					},
-					secrets: &api.Secrets{
-						UserData:                "dummy-user-data",
-						ProviderAccessKeyID:     "dummy-id",
-						ProviderSecretAccessKey: "dummy-secret",
-					},
+					secret: providerSecret,
 				},
 				expect: expect{
 					errToHaveOccurred: true,
@@ -479,24 +452,24 @@ var _ = Describe("Validation", func() {
 			Entry("Invalid block device size specified", &data{
 				setup: setup{},
 				action: action{
-					spec: &api.AWSProviderSpec{
+					spec: &awsapi.AWSProviderSpec{
 						AMI: "ami-123456789",
-						BlockDevices: []api.AWSBlockDeviceMappingSpec{
-							api.AWSBlockDeviceMappingSpec{
-								Ebs: api.AWSEbsBlockDeviceSpec{
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
 									VolumeSize: -10,
 									VolumeType: "gp2",
 								},
 							},
 						},
-						IAM: api.AWSIAMProfileSpec{
+						IAM: awsapi.AWSIAMProfileSpec{
 							Name: "test-iam",
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
 						KeyName:     "test-ssh-publickey",
-						NetworkInterfaces: []api.AWSNetworkInterfaceSpec{
-							api.AWSNetworkInterfaceSpec{
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
 								SecurityGroupIDs: []string{
 									"sg-00002132323",
 								},
@@ -508,11 +481,7 @@ var _ = Describe("Validation", func() {
 							"kubernetes.io/role/test":           "1",
 						},
 					},
-					secrets: &api.Secrets{
-						UserData:                "dummy-user-data",
-						ProviderAccessKeyID:     "dummy-id",
-						ProviderSecretAccessKey: "dummy-secret",
-					},
+					secret: providerSecret,
 				},
 				expect: expect{
 					errToHaveOccurred: true,
@@ -524,23 +493,23 @@ var _ = Describe("Validation", func() {
 			Entry("EBS volume type is missing", &data{
 				setup: setup{},
 				action: action{
-					spec: &api.AWSProviderSpec{
+					spec: &awsapi.AWSProviderSpec{
 						AMI: "ami-123456789",
-						BlockDevices: []api.AWSBlockDeviceMappingSpec{
-							api.AWSBlockDeviceMappingSpec{
-								Ebs: api.AWSEbsBlockDeviceSpec{
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
 									VolumeSize: 50,
 								},
 							},
 						},
-						IAM: api.AWSIAMProfileSpec{
+						IAM: awsapi.AWSIAMProfileSpec{
 							Name: "test-iam",
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
 						KeyName:     "test-ssh-publickey",
-						NetworkInterfaces: []api.AWSNetworkInterfaceSpec{
-							api.AWSNetworkInterfaceSpec{
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
 								SecurityGroupIDs: []string{
 									"sg-00002132323",
 								},
@@ -552,11 +521,7 @@ var _ = Describe("Validation", func() {
 							"kubernetes.io/role/test":           "1",
 						},
 					},
-					secrets: &api.Secrets{
-						UserData:                "dummy-user-data",
-						ProviderAccessKeyID:     "dummy-id",
-						ProviderSecretAccessKey: "dummy-secret",
-					},
+					secret: providerSecret,
 				},
 				expect: expect{
 					errToHaveOccurred: true,
@@ -568,24 +533,24 @@ var _ = Describe("Validation", func() {
 			Entry("EBS volume of type io1 is missing iops field", &data{
 				setup: setup{},
 				action: action{
-					spec: &api.AWSProviderSpec{
+					spec: &awsapi.AWSProviderSpec{
 						AMI: "ami-123456789",
-						BlockDevices: []api.AWSBlockDeviceMappingSpec{
-							api.AWSBlockDeviceMappingSpec{
-								Ebs: api.AWSEbsBlockDeviceSpec{
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
 									VolumeSize: 50,
 									VolumeType: "io1",
 								},
 							},
 						},
-						IAM: api.AWSIAMProfileSpec{
+						IAM: awsapi.AWSIAMProfileSpec{
 							Name: "test-iam",
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
 						KeyName:     "test-ssh-publickey",
-						NetworkInterfaces: []api.AWSNetworkInterfaceSpec{
-							api.AWSNetworkInterfaceSpec{
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
 								SecurityGroupIDs: []string{
 									"sg-00002132323",
 								},
@@ -597,11 +562,7 @@ var _ = Describe("Validation", func() {
 							"kubernetes.io/role/test":           "1",
 						},
 					},
-					secrets: &api.Secrets{
-						UserData:                "dummy-user-data",
-						ProviderAccessKeyID:     "dummy-id",
-						ProviderSecretAccessKey: "dummy-secret",
-					},
+					secret: providerSecret,
 				},
 				expect: expect{
 					errToHaveOccurred: true,
@@ -613,17 +574,17 @@ var _ = Describe("Validation", func() {
 			Entry("NICs are missing", &data{
 				setup: setup{},
 				action: action{
-					spec: &api.AWSProviderSpec{
+					spec: &awsapi.AWSProviderSpec{
 						AMI: "ami-123456789",
-						BlockDevices: []api.AWSBlockDeviceMappingSpec{
-							api.AWSBlockDeviceMappingSpec{
-								Ebs: api.AWSEbsBlockDeviceSpec{
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
 									VolumeSize: 50,
 									VolumeType: "gp2",
 								},
 							},
 						},
-						IAM: api.AWSIAMProfileSpec{
+						IAM: awsapi.AWSIAMProfileSpec{
 							Name: "test-iam",
 						},
 						Region:      "eu-west-1",
@@ -634,11 +595,7 @@ var _ = Describe("Validation", func() {
 							"kubernetes.io/role/test":           "1",
 						},
 					},
-					secrets: &api.Secrets{
-						UserData:                "dummy-user-data",
-						ProviderAccessKeyID:     "dummy-id",
-						ProviderSecretAccessKey: "dummy-secret",
-					},
+					secret: providerSecret,
 				},
 				expect: expect{
 					errToHaveOccurred: true,
@@ -650,24 +607,24 @@ var _ = Describe("Validation", func() {
 			Entry("SubnetID is missing", &data{
 				setup: setup{},
 				action: action{
-					spec: &api.AWSProviderSpec{
+					spec: &awsapi.AWSProviderSpec{
 						AMI: "ami-123456789",
-						BlockDevices: []api.AWSBlockDeviceMappingSpec{
-							api.AWSBlockDeviceMappingSpec{
-								Ebs: api.AWSEbsBlockDeviceSpec{
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
 									VolumeSize: 50,
 									VolumeType: "gp2",
 								},
 							},
 						},
-						IAM: api.AWSIAMProfileSpec{
+						IAM: awsapi.AWSIAMProfileSpec{
 							Name: "test-iam",
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
 						KeyName:     "test-ssh-publickey",
-						NetworkInterfaces: []api.AWSNetworkInterfaceSpec{
-							api.AWSNetworkInterfaceSpec{
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
 								SecurityGroupIDs: []string{
 									"sg-00002132323",
 								},
@@ -678,11 +635,7 @@ var _ = Describe("Validation", func() {
 							"kubernetes.io/role/test":           "1",
 						},
 					},
-					secrets: &api.Secrets{
-						UserData:                "dummy-user-data",
-						ProviderAccessKeyID:     "dummy-id",
-						ProviderSecretAccessKey: "dummy-secret",
-					},
+					secret: providerSecret,
 				},
 				expect: expect{
 					errToHaveOccurred: true,
@@ -694,24 +647,24 @@ var _ = Describe("Validation", func() {
 			Entry("SecurityGroupIDs are missing", &data{
 				setup: setup{},
 				action: action{
-					spec: &api.AWSProviderSpec{
+					spec: &awsapi.AWSProviderSpec{
 						AMI: "ami-123456789",
-						BlockDevices: []api.AWSBlockDeviceMappingSpec{
-							api.AWSBlockDeviceMappingSpec{
-								Ebs: api.AWSEbsBlockDeviceSpec{
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
 									VolumeSize: 50,
 									VolumeType: "gp2",
 								},
 							},
 						},
-						IAM: api.AWSIAMProfileSpec{
+						IAM: awsapi.AWSIAMProfileSpec{
 							Name: "test-iam",
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
 						KeyName:     "test-ssh-publickey",
-						NetworkInterfaces: []api.AWSNetworkInterfaceSpec{
-							api.AWSNetworkInterfaceSpec{
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
 								SubnetID: "subnet-123456",
 							},
 						},
@@ -720,11 +673,7 @@ var _ = Describe("Validation", func() {
 							"kubernetes.io/role/test":           "1",
 						},
 					},
-					secrets: &api.Secrets{
-						UserData:                "dummy-user-data",
-						ProviderAccessKeyID:     "dummy-id",
-						ProviderSecretAccessKey: "dummy-secret",
-					},
+					secret: providerSecret,
 				},
 				expect: expect{
 					errToHaveOccurred: true,
@@ -736,24 +685,24 @@ var _ = Describe("Validation", func() {
 			Entry("ProviderAccessKeyID is missing", &data{
 				setup: setup{},
 				action: action{
-					spec: &api.AWSProviderSpec{
+					spec: &awsapi.AWSProviderSpec{
 						AMI: "ami-123456789",
-						BlockDevices: []api.AWSBlockDeviceMappingSpec{
-							api.AWSBlockDeviceMappingSpec{
-								Ebs: api.AWSEbsBlockDeviceSpec{
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
 									VolumeSize: 50,
 									VolumeType: "gp2",
 								},
 							},
 						},
-						IAM: api.AWSIAMProfileSpec{
+						IAM: awsapi.AWSIAMProfileSpec{
 							Name: "test-iam",
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
 						KeyName:     "test-ssh-publickey",
-						NetworkInterfaces: []api.AWSNetworkInterfaceSpec{
-							api.AWSNetworkInterfaceSpec{
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
 								SecurityGroupIDs: []string{
 									"sg-00002132323",
 								},
@@ -765,39 +714,41 @@ var _ = Describe("Validation", func() {
 							"kubernetes.io/role/test":           "1",
 						},
 					},
-					secrets: &api.Secrets{
-						UserData:                "dummy-user-data",
-						ProviderSecretAccessKey: "dummy-secret",
+					secret: &corev1.Secret{
+						Data: map[string][]byte{
+							"providerSecretAccessKey": []byte("dummy-secret"),
+							"userData":                []byte("dummy-user-data"),
+						},
 					},
 				},
 				expect: expect{
 					errToHaveOccurred: true,
 					errList: []error{
-						fmt.Errorf("Secret ProviderAccessKeyID is required field"),
+						fmt.Errorf("Secret providerAccessKeyId is required field"),
 					},
 				},
 			}),
 			Entry("Secret ProviderSecretAccessKey is required field", &data{
 				setup: setup{},
 				action: action{
-					spec: &api.AWSProviderSpec{
+					spec: &awsapi.AWSProviderSpec{
 						AMI: "ami-123456789",
-						BlockDevices: []api.AWSBlockDeviceMappingSpec{
-							api.AWSBlockDeviceMappingSpec{
-								Ebs: api.AWSEbsBlockDeviceSpec{
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
 									VolumeSize: 50,
 									VolumeType: "gp2",
 								},
 							},
 						},
-						IAM: api.AWSIAMProfileSpec{
+						IAM: awsapi.AWSIAMProfileSpec{
 							Name: "test-iam",
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
 						KeyName:     "test-ssh-publickey",
-						NetworkInterfaces: []api.AWSNetworkInterfaceSpec{
-							api.AWSNetworkInterfaceSpec{
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
 								SecurityGroupIDs: []string{
 									"sg-00002132323",
 								},
@@ -809,39 +760,41 @@ var _ = Describe("Validation", func() {
 							"kubernetes.io/role/test":           "1",
 						},
 					},
-					secrets: &api.Secrets{
-						UserData:            "dummy-user-data",
-						ProviderAccessKeyID: "dummy-id",
+					secret: &corev1.Secret{
+						Data: map[string][]byte{
+							"providerAccessKeyId": []byte("dummy-id"),
+							"userData":            []byte("dummy-user-data"),
+						},
 					},
 				},
 				expect: expect{
 					errToHaveOccurred: true,
 					errList: []error{
-						fmt.Errorf("Secret ProviderSecretAccessKey is required field"),
+						fmt.Errorf("Secret providerSecretAccessKey is required field"),
 					},
 				},
 			}),
 			Entry("Secret UserData is required field", &data{
 				setup: setup{},
 				action: action{
-					spec: &api.AWSProviderSpec{
+					spec: &awsapi.AWSProviderSpec{
 						AMI: "ami-123456789",
-						BlockDevices: []api.AWSBlockDeviceMappingSpec{
-							api.AWSBlockDeviceMappingSpec{
-								Ebs: api.AWSEbsBlockDeviceSpec{
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
 									VolumeSize: 50,
 									VolumeType: "gp2",
 								},
 							},
 						},
-						IAM: api.AWSIAMProfileSpec{
+						IAM: awsapi.AWSIAMProfileSpec{
 							Name: "test-iam",
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
 						KeyName:     "test-ssh-publickey",
-						NetworkInterfaces: []api.AWSNetworkInterfaceSpec{
-							api.AWSNetworkInterfaceSpec{
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
 								SecurityGroupIDs: []string{
 									"sg-00002132323",
 								},
@@ -853,40 +806,41 @@ var _ = Describe("Validation", func() {
 							"kubernetes.io/role/test":           "1",
 						},
 					},
-					secrets: &api.Secrets{
-
-						ProviderAccessKeyID:     "dummy-id",
-						ProviderSecretAccessKey: "dummy-secret",
+					secret: &corev1.Secret{
+						Data: map[string][]byte{
+							"providerAccessKeyId":     []byte("dummy-id"),
+							"providerSecretAccessKey": []byte("dummy-secret"),
+						},
 					},
 				},
 				expect: expect{
 					errToHaveOccurred: true,
 					errList: []error{
-						fmt.Errorf("Secret UserData is required field"),
+						fmt.Errorf("Secret userData is required field"),
 					},
 				},
 			}),
 			Entry("Security group ID left blank for NIC", &data{
 				setup: setup{},
 				action: action{
-					spec: &api.AWSProviderSpec{
+					spec: &awsapi.AWSProviderSpec{
 						AMI: "ami-123456789",
-						BlockDevices: []api.AWSBlockDeviceMappingSpec{
-							api.AWSBlockDeviceMappingSpec{
-								Ebs: api.AWSEbsBlockDeviceSpec{
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
 									VolumeSize: 50,
 									VolumeType: "gp2",
 								},
 							},
 						},
-						IAM: api.AWSIAMProfileSpec{
+						IAM: awsapi.AWSIAMProfileSpec{
 							Name: "test-iam",
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
 						KeyName:     "test-ssh-publickey",
-						NetworkInterfaces: []api.AWSNetworkInterfaceSpec{
-							api.AWSNetworkInterfaceSpec{
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
 								SecurityGroupIDs: []string{
 									"",
 								},
@@ -898,11 +852,7 @@ var _ = Describe("Validation", func() {
 							"kubernetes.io/role/test":           "1",
 						},
 					},
-					secrets: &api.Secrets{
-						UserData:                "dummy-user-data",
-						ProviderAccessKeyID:     "dummy-id",
-						ProviderSecretAccessKey: "dummy-secret",
-					},
+					secret: providerSecret,
 				},
 				expect: expect{
 					errToHaveOccurred: true,
@@ -914,4 +864,3 @@ var _ = Describe("Validation", func() {
 		)
 	})
 })
-*/

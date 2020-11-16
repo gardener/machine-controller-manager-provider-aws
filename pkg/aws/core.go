@@ -25,11 +25,12 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis/validation"
 	"github.com/gardener/machine-controller-manager-provider-aws/pkg/spi"
+	v1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/driver"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/codes"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/status"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/klog"
 )
 
@@ -41,6 +42,8 @@ type Driver struct {
 const (
 	resourceTypeInstance = "instance"
 	resourceTypeVolume   = "volume"
+	// awsEBSDriverName is the name of the CSI driver for EBS
+	awsEBSDriverName = "ebs.csi.aws.com"
 )
 
 // NewAWSDriver returns an empty AWSDriver object
@@ -149,6 +152,20 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 		TagSpecifications:   []*ec2.TagSpecification{tagInstance},
 	}
 
+	// Set spot price if it has been set
+	if providerSpec.SpotPrice != nil {
+		inputConfig.InstanceMarketOptions = &ec2.InstanceMarketOptionsRequest{
+			MarketType: aws.String(ec2.MarketTypeSpot),
+			SpotOptions: &ec2.SpotMarketOptions{
+				SpotInstanceType: aws.String(ec2.SpotInstanceTypeOneTime),
+			},
+		}
+
+		if *providerSpec.SpotPrice != "" {
+			inputConfig.InstanceMarketOptions.SpotOptions.MaxPrice = providerSpec.SpotPrice
+		}
+	}
+
 	runResult, err := svc.RunInstances(&inputConfig)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -165,49 +182,43 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 
 // DeleteMachine handles a machine deletion request
 func (d *Driver) DeleteMachine(ctx context.Context, req *driver.DeleteMachineRequest) (*driver.DeleteMachineResponse, error) {
-	var (
-		secret       = req.Secret
-		machineClass = req.MachineClass
-	)
-
 	// Log messages to track delete request
 	klog.V(3).Infof("Machine deletion request has been recieved for %q", req.Machine.Name)
 	defer klog.V(3).Infof("Machine deletion request has been processed for %q", req.Machine.Name)
 
-	providerSpec, err := decodeProviderSpecAndSecret(machineClass, secret)
-	if err != nil {
-		return nil, err
-	}
-
-	instances, err := d.getInstancesFromMachineName(req.Machine.Name, providerSpec, secret)
-	if err != nil {
-		return nil, err
-	}
-
-	svc, err := d.createSVC(secret, providerSpec.Region)
+	region, machineID, err := decodeRegionAndProviderID(req.Machine.Spec.ProviderID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	for _, instance := range instances {
-		input := &ec2.TerminateInstancesInput{
-			InstanceIds: []*string{
-				aws.String(*instance.InstanceId),
-			},
-			DryRun: aws.Bool(false),
-		}
-		_, err = svc.TerminateInstances(input)
-		if err != nil {
-			klog.Errorf("VM %q for Machine %q couldn't be terminated: %s",
-				*instance.InstanceId,
-				req.Machine.Name,
-				err.Error(),
-			)
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-
-		klog.V(3).Infof("VM %q for Machine %q was terminated succesfully", *instance.InstanceId, req.Machine.Name)
+	validationErr := validation.ValidateSecret(req.Secret)
+	if validationErr != nil {
+		err = fmt.Errorf("%v", validationErr)
+		return nil, status.Error(codes.Internal, err.Error())
 	}
+
+	svc, err := d.createSVC(req.Secret, region)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	input := &ec2.TerminateInstancesInput{
+		InstanceIds: []*string{
+			aws.String(machineID),
+		},
+		DryRun: aws.Bool(false),
+	}
+	_, err = svc.TerminateInstances(input)
+	if err != nil {
+		klog.Errorf("VM %q for Machine %q couldn't be terminated: %s",
+			req.Machine.Spec.ProviderID,
+			req.Machine.Name,
+			err.Error(),
+		)
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	klog.V(3).Infof("VM %q for Machine %q was terminated succesfully", req.Machine.Spec.ProviderID, req.Machine.Name)
 
 	return &driver.DeleteMachineResponse{}, nil
 }
@@ -228,6 +239,7 @@ func (d *Driver) GetMachineStatus(ctx context.Context, req *driver.GetMachineSta
 	}
 
 	instances, err := d.getInstancesFromMachineName(req.Machine.Name, providerSpec, secret)
+
 	if err != nil {
 		return nil, err
 	} else if len(instances) > 1 {
@@ -284,19 +296,19 @@ func (d *Driver) ListMachines(ctx context.Context, req *driver.ListMachinesReque
 
 	input := ec2.DescribeInstancesInput{
 		Filters: []*ec2.Filter{
-			&ec2.Filter{
+			{
 				Name: aws.String("tag-key"),
 				Values: []*string{
 					&clusterName,
 				},
 			},
-			&ec2.Filter{
+			{
 				Name: aws.String("tag-key"),
 				Values: []*string{
 					&nodeRole,
 				},
 			},
-			&ec2.Filter{
+			{
 				Name: aws.String("instance-state-name"),
 				Values: []*string{
 					aws.String("pending"),
@@ -340,21 +352,26 @@ func (d *Driver) ListMachines(ctx context.Context, req *driver.ListMachinesReque
 // GetVolumeIDs returns a list of Volume IDs for all PV Specs for whom an provider volume was found
 func (d *Driver) GetVolumeIDs(ctx context.Context, req *driver.GetVolumeIDsRequest) (*driver.GetVolumeIDsResponse, error) {
 	var (
-		volumeIDs   []string
-		volumeSpecs []*corev1.PersistentVolumeSpec
+		volumeIDs []string
 	)
 
 	// Log messages to track start and end of request
 	klog.V(3).Infof("GetVolumeIDs request has been recieved for %q", req.PVSpecs)
 
-	for i := range req.PVSpecs {
-		spec := volumeSpecs[i]
-		if spec.AWSElasticBlockStore == nil {
-			// Not an aws volume
-			continue
+	for _, spec := range req.PVSpecs {
+
+		if spec.AWSElasticBlockStore != nil {
+			volumeID, err := kubernetesVolumeIDToEBSVolumeID(spec.AWSElasticBlockStore.VolumeID)
+			if err != nil {
+				klog.Errorf("Failed to translate Kubernetes volume ID '%s' to EBS volume ID: %v", spec.AWSElasticBlockStore.VolumeID, err)
+				continue
+			}
+
+			volumeIDs = append(volumeIDs, volumeID)
+		} else if spec.CSI != nil && spec.CSI.Driver == awsEBSDriverName && spec.CSI.VolumeHandle != "" {
+			volumeID := spec.CSI.VolumeHandle
+			volumeIDs = append(volumeIDs, volumeID)
 		}
-		volumeID := spec.AWSElasticBlockStore.VolumeID
-		volumeIDs = append(volumeIDs, volumeID)
 	}
 
 	klog.V(3).Infof("GetVolumeIDs machines request has been processed successfully. \nList: %v", volumeIDs)
@@ -363,4 +380,20 @@ func (d *Driver) GetVolumeIDs(ctx context.Context, req *driver.GetVolumeIDsReque
 		VolumeIDs: volumeIDs,
 	}
 	return resp, nil
+}
+
+// GenerateMachineClassForMigration converts providerSpecificMachineClass to (generic) MachineClass
+func (d *Driver) GenerateMachineClassForMigration(ctx context.Context, req *driver.GenerateMachineClassForMigrationRequest) (*driver.GenerateMachineClassForMigrationResponse, error) {
+	klog.V(1).Infof("Migrate request has been recieved for %v", req.MachineClass.Name)
+	defer klog.V(1).Infof("Migrate request has been processed for %v", req.MachineClass.Name)
+
+	gcpMachineClass := req.ProviderSpecificMachineClass.(*v1alpha1.AWSMachineClass)
+
+	// Check if incoming CR is valid CR for migration
+	// In this case, the MachineClassKind to be matching
+	if req.ClassSpec.Kind != AWSMachineClassKind {
+		return nil, status.Error(codes.Internal, "Migration cannot be done for this machineClass kind")
+	}
+
+	return &driver.GenerateMachineClassForMigrationResponse{}, fillUpMachineClass(gcpMachineClass, req.MachineClass)
 }

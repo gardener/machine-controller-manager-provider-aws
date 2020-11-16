@@ -15,11 +15,16 @@ package aws
 
 import (
 	"fmt"
+	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	corev1 "k8s.io/api/core/v1"
 )
+
+// awsVolumeRegMatch represents Regex Match for AWS volume.
+var awsVolumeRegMatch = regexp.MustCompile("^vol-[^/]*$")
 
 // encodeMachineID encodes a given provider-ID as per it's provider ID
 func encodeProviderID(region, providerID string) string {
@@ -44,4 +49,45 @@ func (d *Driver) createSVC(secret *corev1.Secret, region string) (ec2iface.EC2AP
 	}
 	svc := d.SPI.NewEC2API(session)
 	return svc, nil
+}
+
+// kubernetesVolumeIDToEBSVolumeID translates Kubernetes volume ID to EBS volume ID
+// KubernetsVolumeID forms:
+//  * aws://<zone>/<awsVolumeId>
+//  * aws:///<awsVolumeId>
+//  * <awsVolumeId>
+// EBS Volume ID form:
+//  * vol-<alphanumberic>
+func kubernetesVolumeIDToEBSVolumeID(kubernetesID string) (string, error) {
+	// name looks like aws://availability-zone/awsVolumeId
+
+	// The original idea of the URL-style name was to put the AZ into the
+	// host, so we could find the AZ immediately from the name without
+	// querying the API.  But it turns out we don't actually need it for
+	// multi-AZ clusters, as we put the AZ into the labels on the PV instead.
+	// However, if in future we want to support multi-AZ cluster
+	// volume-awareness without using PersistentVolumes, we likely will
+	// want the AZ in the host.
+	if !strings.HasPrefix(kubernetesID, "aws://") {
+		// Assume a bare aws volume id (vol-1234...)
+		return kubernetesID, nil
+	}
+	url, err := url.Parse(kubernetesID)
+	if err != nil {
+		return "", fmt.Errorf("invalid disk name (%s): %v", kubernetesID, err)
+	}
+	if url.Scheme != "aws" {
+		return "", fmt.Errorf("invalid scheme for AWS volume (%s)", kubernetesID)
+	}
+
+	awsID := url.Path
+	awsID = strings.Trim(awsID, "/")
+
+	// We sanity check the resulting volume; the two known formats are
+	// vol-12345678 and vol-12345678abcdef01
+	if !awsVolumeRegMatch.MatchString(awsID) {
+		return "", fmt.Errorf("invalid format for AWS volume (%s)", kubernetesID)
+	}
+
+	return awsID, nil
 }

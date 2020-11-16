@@ -33,7 +33,7 @@ const nameMaxLength int = 63
 var nameRegexp = regexp.MustCompile("^" + nameFmt + "$")
 
 // ValidateAWSProviderSpec validates AWS provider spec
-func ValidateAWSProviderSpec(spec *awsapi.AWSProviderSpec, secrets *corev1.Secret) []error {
+func ValidateAWSProviderSpec(spec *awsapi.AWSProviderSpec, secret *corev1.Secret) []error {
 	var allErrs []error
 
 	if "" == spec.AMI {
@@ -54,7 +54,7 @@ func ValidateAWSProviderSpec(spec *awsapi.AWSProviderSpec, secrets *corev1.Secre
 
 	allErrs = append(allErrs, validateBlockDevices(spec.BlockDevices)...)
 	allErrs = append(allErrs, validateNetworkInterfaces(spec.NetworkInterfaces)...)
-	allErrs = append(allErrs, validateSecrets(secrets)...)
+	allErrs = append(allErrs, ValidateSecret(secret)...)
 	allErrs = append(allErrs, validateSpecTags(spec.Tags)...)
 
 	return allErrs
@@ -128,17 +128,22 @@ func validateNetworkInterfaces(networkInterfaces []awsapi.AWSNetworkInterfaceSpe
 	return allErrs
 }
 
-func validateSecrets(secret *corev1.Secret) []error {
+// ValidateSecret makes sure that the supplied secrets contains the required fields
+func ValidateSecret(secret *corev1.Secret) []error {
 	var allErrs []error
-	if "" == string(secret.Data["providerAccessKeyId"]) {
-		allErrs = append(allErrs, fmt.Errorf("Secret ProviderAccessKeyID is required field"))
-	}
-	if "" == string(secret.Data["providerSecretAccessKey"]) {
-		allErrs = append(allErrs, fmt.Errorf("Secret ProviderSecretAccessKey is required field"))
-	}
+	if secret == nil {
+		allErrs = append(allErrs, fmt.Errorf("SecretReference is Nil"))
+	} else {
+		if "" == string(secret.Data["providerAccessKeyId"]) {
+			allErrs = append(allErrs, fmt.Errorf("Secret providerAccessKeyId is required field"))
+		}
+		if "" == string(secret.Data["providerSecretAccessKey"]) {
+			allErrs = append(allErrs, fmt.Errorf("Secret providerSecretAccessKey is required field"))
+		}
 
-	if "" == string(secret.Data["userData"]) {
-		allErrs = append(allErrs, fmt.Errorf("Secret UserData is required field"))
+		if "" == string(secret.Data["userData"]) {
+			allErrs = append(allErrs, fmt.Errorf("Secret userData is required field"))
+		}
 	}
 	return allErrs
 }
