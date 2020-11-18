@@ -91,65 +91,58 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 	output, err := svc.DescribeImages(&describeImagesRequest)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
+	} else if len(output.Images) < 1 {
+		return nil, status.Error(codes.Internal, fmt.Sprintf("Image %s not found", *imageID))
 	}
 
-	var blkDeviceMappings []*ec2.BlockDeviceMapping
-	deviceName := output.Images[0].RootDeviceName
-	volumeSize := providerSpec.BlockDevices[0].Ebs.VolumeSize
-	volumeType := providerSpec.BlockDevices[0].Ebs.VolumeType
-	blkDeviceMapping := ec2.BlockDeviceMapping{
-		DeviceName: deviceName,
-		Ebs: &ec2.EbsBlockDevice{
-			VolumeSize: &volumeSize,
-			VolumeType: &volumeType,
-		},
+	blkDeviceMappings, err := d.generateBlockDevices(providerSpec.BlockDevices, output.Images[0].RootDeviceName)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
-	if volumeType == "io1" {
-		blkDeviceMapping.Ebs.Iops = &providerSpec.BlockDevices[0].Ebs.Iops
-	}
-	blkDeviceMappings = append(blkDeviceMappings, &blkDeviceMapping)
 
-	// Add tags to the created machine
-	tagList := []*ec2.Tag{}
-	for idx, element := range providerSpec.Tags {
-		if idx == "Name" {
-			// Name tag cannot be set, as its used to identify backing machine object
-			klog.Warning("Name tag cannot be set on AWS instance, as its used to identify backing machine object")
-			continue
+	tagInstance, err := d.generateTags(providerSpec.Tags, resourceTypeInstance, req.Machine.Name)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	tagVolume, err := d.generateTags(providerSpec.Tags, resourceTypeVolume, req.Machine.Name)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	var networkInterfaceSpecs []*ec2.InstanceNetworkInterfaceSpecification
+	for i, netIf := range providerSpec.NetworkInterfaces {
+		spec := &ec2.InstanceNetworkInterfaceSpecification{
+			Groups:                   aws.StringSlice(netIf.SecurityGroupIDs),
+			DeviceIndex:              aws.Int64(int64(i)),
+			AssociatePublicIpAddress: netIf.AssociatePublicIPAddress,
+			DeleteOnTermination:      netIf.DeleteOnTermination,
+			Description:              netIf.Description,
+			SubnetId:                 aws.String(netIf.SubnetID),
 		}
-		newTag := ec2.Tag{
-			Key:   aws.String(idx),
-			Value: aws.String(element),
-		}
-		tagList = append(tagList, &newTag)
-	}
-	nameTag := ec2.Tag{
-		Key:   aws.String("Name"),
-		Value: aws.String(machine.Name),
-	}
-	tagList = append(tagList, &nameTag)
 
-	tagInstance := &ec2.TagSpecification{
-		ResourceType: aws.String("instance"),
-		Tags:         tagList,
+		if netIf.DeleteOnTermination == nil {
+			spec.DeleteOnTermination = aws.Bool(true)
+		}
+
+		networkInterfaceSpecs = append(networkInterfaceSpecs, spec)
 	}
 
 	// Specify the details of the machine that you want to create.
 	inputConfig := ec2.RunInstancesInput{
-		// An Amazon Linux AMI ID for t2.micro machines in the us-west-2 region
-		ImageId:      aws.String(providerSpec.AMI),
-		InstanceType: aws.String(providerSpec.MachineType),
-		MinCount:     aws.Int64(1),
-		MaxCount:     aws.Int64(1),
-		UserData:     &UserDataEnc,
-		KeyName:      aws.String(providerSpec.KeyName),
-		SubnetId:     aws.String(providerSpec.NetworkInterfaces[0].SubnetID),
+		BlockDeviceMappings: blkDeviceMappings,
+		ImageId:             aws.String(providerSpec.AMI),
+		InstanceType:        aws.String(providerSpec.MachineType),
+		MinCount:            aws.Int64(1),
+		MaxCount:            aws.Int64(1),
+		UserData:            &UserDataEnc,
+		KeyName:             aws.String(providerSpec.KeyName),
 		IamInstanceProfile: &ec2.IamInstanceProfileSpecification{
 			Name: &(providerSpec.IAM.Name),
 		},
-		SecurityGroupIds:    []*string{aws.String(providerSpec.NetworkInterfaces[0].SecurityGroupIDs[0])},
-		BlockDeviceMappings: blkDeviceMappings,
-		TagSpecifications:   []*ec2.TagSpecification{tagInstance},
+		SecurityGroupIds:  []*string{aws.String(providerSpec.NetworkInterfaces[0].SecurityGroupIDs[0])},
+		NetworkInterfaces: networkInterfaceSpecs,
+		TagSpecifications: []*ec2.TagSpecification{tagInstance, tagVolume},
 	}
 
 	// Set spot price if it has been set

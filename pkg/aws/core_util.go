@@ -134,3 +134,76 @@ func (d *Driver) getInstancesFromMachineName(machineName string, providerSpec *a
 
 	return instances, nil
 }
+
+func (d *Driver) generateBlockDevices(blockDevices []api.AWSBlockDeviceMappingSpec, rootDeviceName *string) ([]*ec2.BlockDeviceMapping, error) {
+
+	var blkDeviceMappings []*ec2.BlockDeviceMapping
+	// if blockDevices is empty, AWS will automatically create a root partition
+	for _, disk := range blockDevices {
+
+		deviceName := disk.DeviceName
+		if disk.DeviceName == "/root" || len(blockDevices) == 1 {
+			deviceName = *rootDeviceName
+		}
+		deleteOnTermination := disk.Ebs.DeleteOnTermination
+		volumeSize := disk.Ebs.VolumeSize
+		volumeType := disk.Ebs.VolumeType
+		encrypted := disk.Ebs.Encrypted
+		snapshotID := disk.Ebs.SnapshotID
+
+		blkDeviceMapping := ec2.BlockDeviceMapping{
+			DeviceName: aws.String(deviceName),
+			Ebs: &ec2.EbsBlockDevice{
+				Encrypted:  aws.Bool(encrypted),
+				VolumeSize: aws.Int64(volumeSize),
+				VolumeType: aws.String(volumeType),
+			},
+		}
+
+		if deleteOnTermination != nil {
+			blkDeviceMapping.Ebs.DeleteOnTermination = deleteOnTermination
+		} else {
+			// If deletionOnTermination is not set, default it to true
+			blkDeviceMapping.Ebs.DeleteOnTermination = aws.Bool(true)
+		}
+
+		if volumeType == "io1" {
+			blkDeviceMapping.Ebs.Iops = aws.Int64(disk.Ebs.Iops)
+		}
+
+		if snapshotID != nil {
+			blkDeviceMapping.Ebs.SnapshotId = snapshotID
+		}
+		blkDeviceMappings = append(blkDeviceMappings, &blkDeviceMapping)
+	}
+
+	return blkDeviceMappings, nil
+}
+
+func (d *Driver) generateTags(tags map[string]string, resourceType string, machineName string) (*ec2.TagSpecification, error) {
+
+	// Add tags to the created machine
+	tagList := []*ec2.Tag{}
+	for idx, element := range tags {
+		if idx == "Name" {
+			// Name tag cannot be set, as its used to identify backing machine object
+			continue
+		}
+		newTag := ec2.Tag{
+			Key:   aws.String(idx),
+			Value: aws.String(element),
+		}
+		tagList = append(tagList, &newTag)
+	}
+	nameTag := ec2.Tag{
+		Key:   aws.String("Name"),
+		Value: aws.String(machineName),
+	}
+	tagList = append(tagList, &nameTag)
+
+	tagInstance := &ec2.TagSpecification{
+		ResourceType: aws.String(resourceType),
+		Tags:         tagList,
+	}
+	return tagInstance, nil
+}
