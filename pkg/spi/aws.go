@@ -9,6 +9,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	corev1 "k8s.io/api/core/v1"
+
+	api "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
 )
 
 // PluginSPIImpl is the real implementation of SPI interface that makes the calls to the AWS SDK.
@@ -16,14 +18,12 @@ type PluginSPIImpl struct{}
 
 // NewSession starts a new AWS session
 func (ms *PluginSPIImpl) NewSession(secret *corev1.Secret, region string) (*session.Session, error) {
-	var (
-		err    error
-		sess   *session.Session
-		config *aws.Config
-	)
+	var config = &aws.Config{
+		Region: aws.String(region),
+	}
 
-	accessKeyID := strings.TrimSpace(string(secret.Data["providerAccessKeyId"]))
-	secretAccessKey := strings.TrimSpace(string(secret.Data["providerSecretAccessKey"]))
+	accessKeyID := extractCredentialsFromData(secret.Data, api.AWSAccessKeyID, api.AWSAlternativeAccessKeyID)
+	secretAccessKey := extractCredentialsFromData(secret.Data, api.AWSSecretAccessKey, api.AWSAlternativeSecretAccessKey)
 
 	if accessKeyID != "" && secretAccessKey != "" {
 		config = &aws.Config{
@@ -31,20 +31,26 @@ func (ms *PluginSPIImpl) NewSession(secret *corev1.Secret, region string) (*sess
 			Credentials: credentials.NewStaticCredentialsFromCreds(credentials.Value{
 				AccessKeyID:     accessKeyID,
 				SecretAccessKey: secretAccessKey,
-			},
-			),
-		}
-	} else {
-		config = &aws.Config{
-			Region: aws.String(region),
+			}),
 		}
 	}
-	sess, err = session.NewSession(config)
-	return sess, err
+
+	return session.NewSession(config)
 }
 
 // NewEC2API Returns a EC2API object
 func (ms *PluginSPIImpl) NewEC2API(session *session.Session) ec2iface.EC2API {
 	service := ec2.New(session)
 	return service
+}
+
+// extractCredentialsFromData extracts and trims a value from the given data map. The first key that exists is being
+// returned, otherwise, the next key is tried, etc. If no key exists then an empty string is returned.
+func extractCredentialsFromData(data map[string][]byte, keys ...string) string {
+	for _, key := range keys {
+		if val, ok := data[key]; ok {
+			return strings.TrimSpace(string(val))
+		}
+	}
+	return ""
 }
