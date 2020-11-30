@@ -380,7 +380,7 @@ func (d *Driver) GenerateMachineClassForMigration(ctx context.Context, req *driv
 	klog.V(1).Infof("Migrate request has been recieved for %v", req.MachineClass.Name)
 	defer klog.V(1).Infof("Migrate request has been processed for %v", req.MachineClass.Name)
 
-	gcpMachineClass := req.ProviderSpecificMachineClass.(*v1alpha1.AWSMachineClass)
+	awsMachineClass := req.ProviderSpecificMachineClass.(*v1alpha1.AWSMachineClass)
 
 	// Check if incoming CR is valid CR for migration
 	// In this case, the MachineClassKind to be matching
@@ -388,5 +388,5 @@ func (d *Driver) GenerateMachineClassForMigration(ctx context.Context, req *driv
 		return nil, status.Error(codes.Internal, "Migration cannot be done for this machineClass kind")
 	}
 
-	return &driver.GenerateMachineClassForMigrationResponse{}, fillUpMachineClass(gcpMachineClass, req.MachineClass)
+	return &driver.GenerateMachineClassForMigrationResponse{}, fillUpMachineClass(awsMachineClass, req.MachineClass)
 }

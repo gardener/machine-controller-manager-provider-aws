@@ -136,6 +136,10 @@ func (d *Driver) getInstancesFromMachineName(machineName string, providerSpec *a
 }
 
 func (d *Driver) generateBlockDevices(blockDevices []api.AWSBlockDeviceMappingSpec, rootDeviceName *string) ([]*ec2.BlockDeviceMapping, error) {
+	// If not blockDevices are passed, return an error.
+	if len(blockDevices) == 0 {
+		return nil, fmt.Errorf("No block devices passed")
+	}
 
 	var blkDeviceMappings []*ec2.BlockDeviceMapping
 	// if blockDevices is empty, AWS will automatically create a root partition

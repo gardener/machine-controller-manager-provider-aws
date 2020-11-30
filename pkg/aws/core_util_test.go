@@ -17,6 +17,8 @@ limitations under the License.
 package aws
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -195,7 +197,7 @@ var _ = Describe("CoreUtils", func() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 
-		It("should convert zero blockDevices successfully", func() {
+		It("Convert zero blockDevices should have errored", func() {
 			awsDriver := &Driver{}
 			disks := []api.AWSBlockDeviceMappingSpec{}
 
@@ -204,7 +206,8 @@ var _ = Describe("CoreUtils", func() {
 			var expectedDisks []*ec2.BlockDeviceMapping
 
 			Expect(disksGenerated).To(Equal(expectedDisks))
-			Expect(err).ToNot(HaveOccurred())
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(Equal(fmt.Errorf("No block devices passed")))
 		})
 
 		It("should not encrypt blockDevices by default", func() {
