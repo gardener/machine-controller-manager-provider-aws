@@ -16,9 +16,21 @@ package api
 const (
 	// V1alpha1 is the API version
 	V1alpha1 = "mcm.gardener.cloud/v1alpha1"
+
+	// AWSAccessKeyID is a constant for a key name that is part of the AWS cloud credentials.
+	AWSAccessKeyID string = "providerAccessKeyId"
+	// AWSSecretAccessKey is a constant for a key name that is part of the AWS cloud credentials.
+	AWSSecretAccessKey string = "providerSecretAccessKey"
+
+	// AWSAlternativeAccessKeyID is a constant for a key name of a secret containing the AWS credentials (access key
+	// id).
+	AWSAlternativeAccessKeyID = "accessKeyID"
+	// AWSAlternativeSecretAccessKey is a constant for a key name of a secret containing the AWS credentials (secret
+	// access key).
+	AWSAlternativeSecretAccessKey = "secretAccessKey"
 )
 
-// AWSProviderSpec is the spec to be used while parsing the calls.
+//AWSProviderSpec is the spec to be used while parsing the calls.
 type AWSProviderSpec struct {
 	// APIVersion determines the APIversion for the provider APIs
 	APIVersion string `json:"apiVersion,omitempty"`

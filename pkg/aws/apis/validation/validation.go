@@ -131,19 +131,20 @@ func validateNetworkInterfaces(networkInterfaces []awsapi.AWSNetworkInterfaceSpe
 // ValidateSecret makes sure that the supplied secrets contains the required fields
 func ValidateSecret(secret *corev1.Secret) []error {
 	var allErrs []error
+
 	if secret == nil {
 		allErrs = append(allErrs, fmt.Errorf("SecretReference is Nil"))
 	} else {
-		if "" == string(secret.Data["providerAccessKeyId"]) {
-			allErrs = append(allErrs, fmt.Errorf("Secret providerAccessKeyId is required field"))
+		if "" == string(secret.Data[awsapi.AWSAccessKeyID]) && "" == string(secret.Data[awsapi.AWSAlternativeAccessKeyID]) {
+			allErrs = append(allErrs, fmt.Errorf("secret %s or %s is required field", awsapi.AWSAccessKeyID, awsapi.AWSAlternativeAccessKeyID))
 		}
-		if "" == string(secret.Data["providerSecretAccessKey"]) {
-			allErrs = append(allErrs, fmt.Errorf("Secret providerSecretAccessKey is required field"))
+		if "" == string(secret.Data[awsapi.AWSSecretAccessKey]) && "" == string(secret.Data[awsapi.AWSAlternativeSecretAccessKey]) {
+			allErrs = append(allErrs, fmt.Errorf("secret %s or %s is required field", awsapi.AWSSecretAccessKey, awsapi.AWSAlternativeSecretAccessKey))
 		}
-
 		if "" == string(secret.Data["userData"]) {
-			allErrs = append(allErrs, fmt.Errorf("Secret userData is required field"))
+			allErrs = append(allErrs, fmt.Errorf("secret userData is required field"))
 		}
 	}
+
 	return allErrs
 }

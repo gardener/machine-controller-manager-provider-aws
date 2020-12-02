@@ -724,7 +724,7 @@ var _ = Describe("Validation", func() {
 				expect: expect{
 					errToHaveOccurred: true,
 					errList: []error{
-						fmt.Errorf("Secret providerAccessKeyId is required field"),
+						fmt.Errorf("secret providerAccessKeyId or accessKeyID is required field"),
 					},
 				},
 			}),
@@ -770,7 +770,7 @@ var _ = Describe("Validation", func() {
 				expect: expect{
 					errToHaveOccurred: true,
 					errList: []error{
-						fmt.Errorf("Secret providerSecretAccessKey is required field"),
+						fmt.Errorf("secret providerSecretAccessKey or secretAccessKey is required field"),
 					},
 				},
 			}),
@@ -816,7 +816,7 @@ var _ = Describe("Validation", func() {
 				expect: expect{
 					errToHaveOccurred: true,
 					errList: []error{
-						fmt.Errorf("Secret userData is required field"),
+						fmt.Errorf("secret userData is required field"),
 					},
 				},
 			}),
