@@ -1,14 +1,15 @@
 module github.com/gardener/machine-controller-manager-provider-aws
 
-go 1.13
+go 1.15
 
 require (
-	github.com/aws/aws-sdk-go v1.30.7
+	github.com/aws/aws-sdk-go v1.36.0
 	github.com/gardener/machine-controller-manager v0.35.0
 	github.com/onsi/ginkgo v1.12.0
 	github.com/onsi/gomega v1.9.0
 	github.com/prometheus/client_golang v1.5.1 // indirect
 	github.com/spf13/pflag v1.0.5
+	github.com/stretchr/testify v1.5.1 // indirect
 	k8s.io/api v0.0.0-20190918155943-95b840bb6a1f
 	k8s.io/apimachinery v0.0.0-20190913080033-27d36303b655
 	k8s.io/component-base v0.0.0-20190918160511-547f6c5d7090
