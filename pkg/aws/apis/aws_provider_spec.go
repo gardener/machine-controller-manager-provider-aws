@@ -13,25 +13,53 @@ limitations under the License.
 
 package api
 
-//AWSProviderSpec is the spec to be used while parsing the calls.
+const (
+	// V1alpha1 is the API version
+	V1alpha1 = "mcm.gardener.cloud/v1alpha1"
+)
+
+// AWSProviderSpec is the spec to be used while parsing the calls.
 type AWSProviderSpec struct {
-	//TODO: figure out a better way to present objectmeta and typemeta without importing k8s.io
-	APIVersion        string                      `json:"apiVersion,omitempty"`
-	AMI               string                      `json:"ami,omitempty"`
-	BlockDevices      []AWSBlockDeviceMappingSpec `json:"blockDevices,omitempty"`
-	EbsOptimized      bool                        `json:"ebsOptimized,omitempty"`
-	IAM               AWSIAMProfileSpec           `json:"iam,omitempty"`
-	MachineType       string                      `json:"machineType,omitempty"`
-	KeyName           string                      `json:"keyName,omitempty"`
-	Monitoring        bool                        `json:"monitoring,omitempty"`
-	NetworkInterfaces []AWSNetworkInterfaceSpec   `json:"networkInterfaces,omitempty"`
-	Region            string                      `json:"region,omitempty"`
-	Tags              map[string]string           `json:"tags,omitempty"`
+	// APIVersion determines the APIversion for the provider APIs
+	APIVersion string `json:"apiVersion,omitempty"`
+
+	// AMI is the disk image version
+	AMI string `json:"ami,omitempty"`
+
+	// BlockDevices is the list of block devices to be mapped to the instances
+	BlockDevices []AWSBlockDeviceMappingSpec `json:"blockDevices,omitempty"`
+
+	// EbsOptimized specifies that the EBS is optimized
+	EbsOptimized bool `json:"ebsOptimized,omitempty"`
+
+	// IAM details for the machine
+	IAM AWSIAMProfileSpec `json:"iam,omitempty"`
+
+	// MachineType contains the EC2 instance type
+	MachineType string `json:"machineType,omitempty"`
+
+	// KeyName contains the SSH keypair
+	KeyName string `json:"keyName,omitempty"`
+
+	// Monitoring specifies if monitoring is enabled
+	Monitoring bool `json:"monitoring,omitempty"`
+
+	// NetworkInterfaces contains a list of NetworkInterfaceSpecs
+	NetworkInterfaces []AWSNetworkInterfaceSpec `json:"networkInterfaces,omitempty"`
+
+	// Region contains the AWS region for the machine
+	Region string `json:"region,omitempty"`
+
+	// SpotPrice is an optional field that if set specifies to use spot instances
+	// When set to "" there is no maxPrice else, specifies the maxPrice
+	SpotPrice *string `json:"spotPrice,omitempty"`
+
+	// Tags to be specified on the EC2 instances
+	Tags map[string]string `json:"tags,omitempty"`
 }
 
 // AWSBlockDeviceMappingSpec stores info about AWS block device mappings
 type AWSBlockDeviceMappingSpec struct {
-
 	// The device name exposed to the machine (for example, /dev/sdh or xvdh).
 	DeviceName string `json:"deviceName,omitempty"`
 
@@ -59,9 +87,8 @@ type AWSBlockDeviceMappingSpec struct {
 // AWSEbsBlockDeviceSpec describes a block device for an EBS volume.
 // Please also see https://docs.aws.amazon.com/goto/WebAPI/ec2-2016-11-15/EbsBlockDevice
 type AWSEbsBlockDeviceSpec struct {
-
 	// Indicates whether the EBS volume is deleted on machine termination.
-	DeleteOnTermination bool `json:"deleteOnTermination,omitempty"`
+	DeleteOnTermination *bool `json:"deleteOnTermination,omitempty"`
 
 	// Indicates whether the EBS volume is encrypted. Encrypted Amazon EBS volumes
 	// may only be attached to machines that support Amazon EBS encryption.
@@ -81,6 +108,18 @@ type AWSEbsBlockDeviceSpec struct {
 	// Condition: This parameter is required for requests to create io1 volumes;
 	// it is not used in requests to create gp2, st1, sc1, or standard volumes.
 	Iops int64 `json:"iops,omitempty"`
+
+	// Identifier (key ID, key alias, ID ARN, or alias ARN) for a customer managed
+	// CMK under which the EBS volume is encrypted.
+	//
+	// This parameter is only supported on BlockDeviceMapping objects called by
+	// RunInstances (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_RunInstances.html),
+	// RequestSpotFleet (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_RequestSpotFleet.html),
+	// and RequestSpotInstances (https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_RequestSpotInstances.html).
+	KmsKeyID *string `json:"kmsKeyID,omitempty"`
+
+	// The ID of the snapshot.
+	SnapshotID *string `json:"snapshotID,omitempty"`
 
 	// The size of the volume, in GiB.
 	//
@@ -112,22 +151,21 @@ type AWSIAMProfileSpec struct {
 // AWSNetworkInterfaceSpec describes a network interface.
 // Please also see https://docs.aws.amazon.com/goto/WebAPI/ec2-2016-11-15/MachineAWSNetworkInterfaceSpecification
 type AWSNetworkInterfaceSpec struct {
-
 	// Indicates whether to assign a public IPv4 address to an machine you launch
 	// in a VPC. The public IP address can only be assigned to a network interface
 	// for eth0, and can only be assigned to a new network interface, not an existing
 	// one. You cannot specify more than one network interface in the request. If
 	// launching into a default subnet, the default value is true.
-	AssociatePublicIPAddress bool `json:"associatePublicIPAddress,omitempty"`
+	AssociatePublicIPAddress *bool `json:"associatePublicIPAddress,omitempty"`
 
 	// If set to true, the interface is deleted when the machine is terminated.
 	// You can specify true only if creating a new network interface when launching
 	// an machine.
-	DeleteOnTermination bool `json:"deleteOnTermination,omitempty"`
+	DeleteOnTermination *bool `json:"deleteOnTermination,omitempty"`
 
 	// The description of the network interface. Applies only if creating a network
 	// interface when launching an machine.
-	Description string `json:"description,omitempty"`
+	Description *string `json:"description,omitempty"`
 
 	// The IDs of the security groups for the network interface. Applies only if
 	// creating a network interface when launching an machine.

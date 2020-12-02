@@ -29,6 +29,14 @@ import (
 	"k8s.io/klog"
 )
 
+const (
+	// AWSMachineClassKind for AWSMachineClass
+	AWSMachineClassKind = "AWSMachineClass"
+
+	// MachineClassKind for MachineClass
+	MachineClassKind = "MachineClass"
+)
+
 // decodeProviderSpecAndSecret converts request parameters to api.ProviderSpec & api.Secrets
 func decodeProviderSpecAndSecret(machineClass *v1alpha1.MachineClass, secret *corev1.Secret) (*api.AWSProviderSpec, error) {
 	var (
@@ -36,12 +44,16 @@ func decodeProviderSpecAndSecret(machineClass *v1alpha1.MachineClass, secret *co
 	)
 
 	// Extract providerSpec
+	if machineClass == nil {
+		return nil, status.Error(codes.Internal, "MachineClass ProviderSpec is nil")
+	}
+
 	err := json.Unmarshal(machineClass.ProviderSpec.Raw, &providerSpec)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	//Validate the Spec and Secrets
+	// Validate the Spec and Secrets
 	ValidationErr := validation.ValidateAWSProviderSpec(providerSpec, secret)
 	if ValidationErr != nil {
 		err = fmt.Errorf("Error while validating ProviderSpec %v", ValidationErr)
@@ -74,25 +86,25 @@ func (d *Driver) getInstancesFromMachineName(machineName string, providerSpec *a
 
 	input := ec2.DescribeInstancesInput{
 		Filters: []*ec2.Filter{
-			&ec2.Filter{
+			{
 				Name: aws.String("tag:Name"),
 				Values: []*string{
 					aws.String(machineName),
 				},
 			},
-			&ec2.Filter{
+			{
 				Name: aws.String("tag-key"),
 				Values: []*string{
 					&clusterName,
 				},
 			},
-			&ec2.Filter{
+			{
 				Name: aws.String("tag-key"),
 				Values: []*string{
 					&nodeRole,
 				},
 			},
-			&ec2.Filter{
+			{
 				Name: aws.String("instance-state-name"),
 				Values: []*string{
 					aws.String("pending"),
@@ -121,4 +133,81 @@ func (d *Driver) getInstancesFromMachineName(machineName string, providerSpec *a
 	}
 
 	return instances, nil
+}
+
+func (d *Driver) generateBlockDevices(blockDevices []api.AWSBlockDeviceMappingSpec, rootDeviceName *string) ([]*ec2.BlockDeviceMapping, error) {
+	// If not blockDevices are passed, return an error.
+	if len(blockDevices) == 0 {
+		return nil, fmt.Errorf("No block devices passed")
+	}
+
+	var blkDeviceMappings []*ec2.BlockDeviceMapping
+	// if blockDevices is empty, AWS will automatically create a root partition
+	for _, disk := range blockDevices {
+
+		deviceName := disk.DeviceName
+		if disk.DeviceName == "/root" || len(blockDevices) == 1 {
+			deviceName = *rootDeviceName
+		}
+		deleteOnTermination := disk.Ebs.DeleteOnTermination
+		volumeSize := disk.Ebs.VolumeSize
+		volumeType := disk.Ebs.VolumeType
+		encrypted := disk.Ebs.Encrypted
+		snapshotID := disk.Ebs.SnapshotID
+
+		blkDeviceMapping := ec2.BlockDeviceMapping{
+			DeviceName: aws.String(deviceName),
+			Ebs: &ec2.EbsBlockDevice{
+				Encrypted:  aws.Bool(encrypted),
+				VolumeSize: aws.Int64(volumeSize),
+				VolumeType: aws.String(volumeType),
+			},
+		}
+
+		if deleteOnTermination != nil {
+			blkDeviceMapping.Ebs.DeleteOnTermination = deleteOnTermination
+		} else {
+			// If deletionOnTermination is not set, default it to true
+			blkDeviceMapping.Ebs.DeleteOnTermination = aws.Bool(true)
+		}
+
+		if volumeType == "io1" {
+			blkDeviceMapping.Ebs.Iops = aws.Int64(disk.Ebs.Iops)
+		}
+
+		if snapshotID != nil {
+			blkDeviceMapping.Ebs.SnapshotId = snapshotID
+		}
+		blkDeviceMappings = append(blkDeviceMappings, &blkDeviceMapping)
+	}
+
+	return blkDeviceMappings, nil
+}
+
+func (d *Driver) generateTags(tags map[string]string, resourceType string, machineName string) (*ec2.TagSpecification, error) {
+
+	// Add tags to the created machine
+	tagList := []*ec2.Tag{}
+	for idx, element := range tags {
+		if idx == "Name" {
+			// Name tag cannot be set, as its used to identify backing machine object
+			continue
+		}
+		newTag := ec2.Tag{
+			Key:   aws.String(idx),
+			Value: aws.String(element),
+		}
+		tagList = append(tagList, &newTag)
+	}
+	nameTag := ec2.Tag{
+		Key:   aws.String("Name"),
+		Value: aws.String(machineName),
+	}
+	tagList = append(tagList, &nameTag)
+
+	tagInstance := &ec2.TagSpecification{
+		ResourceType: aws.String(resourceType),
+		Tags:         tagList,
+	}
+	return tagInstance, nil
 }

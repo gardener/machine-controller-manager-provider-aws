@@ -32,7 +32,7 @@ const (
 	// FailQueryAtDescribeImages string to fail call at Describeimages call
 	FailQueryAtDescribeImages string = "fail-query-at-DescribeImages"
 	// FailQueryAtRunInstances string to fail call at RunInstances call
-	FailQueryAtRunInstances string = "fail-query-at-RunInstances"
+	FailQueryAtRunInstances string = "aws:///eu-west-1/i-fail-query-at-RunInstances"
 	// FailQueryAtTerminateInstances string to fail call at TerminateInstances call
 	FailQueryAtTerminateInstances string = "fail-query-at-TerminateInstances"
 	// InstanceTerminateError string returns instance terminated error
@@ -86,7 +86,7 @@ func (ms *MockEC2Client) DescribeImages(input *ec2.DescribeImagesInput) (*ec2.De
 
 	return &ec2.DescribeImagesOutput{
 		Images: []*ec2.Image{
-			&ec2.Image{
+			{
 				RootDeviceName: &rootDeviceName,
 			},
 		},
@@ -135,7 +135,7 @@ func (ms *MockEC2Client) DescribeInstances(input *ec2.DescribeInstancesInput) (*
 		if *input.InstanceIds[0] == ReturnEmptyListAtDescribeInstances {
 			return &ec2.DescribeInstancesOutput{
 				Reservations: []*ec2.Reservation{
-					&ec2.Reservation{
+					{
 						Instances: instanceList,
 					},
 				},
@@ -170,7 +170,7 @@ func (ms *MockEC2Client) DescribeInstances(input *ec2.DescribeInstancesInput) (*
 
 	return &ec2.DescribeInstancesOutput{
 		Reservations: []*ec2.Reservation{
-			&ec2.Reservation{
+			{
 				Instances: instanceList,
 			},
 		},
@@ -216,7 +216,7 @@ func (ms *MockEC2Client) TerminateInstances(input *ec2.TerminateInstancesInput) 
 
 	return &ec2.TerminateInstancesOutput{
 		TerminatingInstances: []*ec2.InstanceStateChange{
-			&ec2.InstanceStateChange{
+			{
 				PreviousState: desiredInstance.State,
 				InstanceId:    input.InstanceIds[0],
 				CurrentState: &ec2.InstanceState{
@@ -269,7 +269,7 @@ func (ms *MockEC2Client) StopInstances(input *ec2.StopInstancesInput) (*ec2.Stop
 
 	return &ec2.StopInstancesOutput{
 		StoppingInstances: []*ec2.InstanceStateChange{
-			&ec2.InstanceStateChange{
+			{
 				PreviousState: desiredInstance.State,
 				InstanceId:    input.InstanceIds[0],
 				CurrentState: &ec2.InstanceState{
