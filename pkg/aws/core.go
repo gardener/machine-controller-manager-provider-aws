@@ -140,7 +140,6 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 		IamInstanceProfile: &ec2.IamInstanceProfileSpecification{
 			Name: &(providerSpec.IAM.Name),
 		},
-		SecurityGroupIds:  []*string{aws.String(providerSpec.NetworkInterfaces[0].SecurityGroupIDs[0])},
 		NetworkInterfaces: networkInterfaceSpecs,
 		TagSpecifications: []*ec2.TagSpecification{tagInstance, tagVolume},
 	}
