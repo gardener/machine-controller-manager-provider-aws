@@ -10,17 +10,17 @@ Out of tree (controller based) implementation for `AWS` as a new provider.
 ## Fundamental Design Principles:
 Following are the basic principles kept in mind while developing the external plugin.
 * Communication between this Machine Controller (MC) and Machine Controller Manager (MCM) is achieved using the Kubernetes native declarative approach.
-* Machine Controller (MC) behaves as the controller used to interact with the cloud provider Microsoft Azure and manage the VMs corresponding to the machine objects.
+* Machine Controller (MC) behaves as the controller used to interact with the cloud provider AWS and manage the VMs corresponding to the machine objects.
 * Machine Controller Manager (MCM) deals with higher level objects such as machine-set and machine-deployment objects.
 
 ## Support for a new provider
 - Steps to be followed while implementing/testing a new provider are mentioned [here](https://github.com/gardener/machine-controller-manager/blob/master/docs/development/cp_support_new.md)
 
-## Testing the Azure OOT
+## Testing the AWS OOT
 
 1. Open terminal pointing to `$GOPATH/src/github.com/gardener`. Clone this repository. 
 
-2. Navigate to `$GOPATH/src/github.com/gardener/machine-controller-manager-provider-azure`. 
+2. Navigate to `$GOPATH/src/github.com/gardener/machine-controller-manager-provider-aws`. 
     - In the `MAKEFILE` make sure `$TARGET_KUBECONFIG` points to the cluster where you wish to manage machines. `$CONTROL_NAMESPACE` represents the namespaces where MCM is looking for machine CR objects, and `$CONTROL_KUBECONFIG` points to the cluster which holds these machine CRs. 
     - Run the machine controller (driver) using the command below.
         ```bash
