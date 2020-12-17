@@ -44,7 +44,7 @@ github.com/beorn7/perks/quantile
 github.com/davecgh/go-spew/spew
 # github.com/evanphx/json-patch v4.2.0+incompatible
 github.com/evanphx/json-patch
-# github.com/gardener/machine-controller-manager v0.35.0
+# github.com/gardener/machine-controller-manager v0.36.0
 ## explicit
 github.com/gardener/machine-controller-manager/pkg/apis/machine
 github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1
@@ -82,6 +82,7 @@ github.com/gardener/machine-controller-manager/pkg/util/provider/options
 github.com/gardener/machine-controller-manager/pkg/util/reflector/prometheus
 github.com/gardener/machine-controller-manager/pkg/util/strings
 github.com/gardener/machine-controller-manager/pkg/util/taints
+github.com/gardener/machine-controller-manager/pkg/util/time
 github.com/gardener/machine-controller-manager/pkg/util/workqueue/prometheus
 # github.com/gogo/protobuf v1.2.2-0.20190723190241-65acae22fc9d
 github.com/gogo/protobuf/proto

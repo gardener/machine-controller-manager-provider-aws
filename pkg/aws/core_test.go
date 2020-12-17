@@ -989,7 +989,7 @@ var _ = Describe("MachineServer", func() {
 
 				Expect(data.action.generateMachineClassForMigrationRequest.MachineClass).To(Equal(data.expect.machineClass))
 			},
-			Entry("GetVolumeIDs request for AWSEBS", &data{
+			Entry("Simple migration request with all fields set", &data{
 				action: action{
 					generateMachineClassForMigrationRequest: &driver.GenerateMachineClassForMigrationRequest{
 						ProviderSpecificMachineClass: &v1alpha1.AWSMachineClass{
@@ -1039,6 +1039,10 @@ var _ = Describe("MachineServer", func() {
 										NoDevice:    "bd-2",
 										VirtualName: "bd-2",
 									},
+								},
+								CredentialsSecretRef: &corev1.SecretReference{
+									Name:      "test-credentials",
+									Namespace: "test-namespace",
 								},
 								EbsOptimized: true,
 								IAM: v1alpha1.AWSIAMProfileSpec{
@@ -1102,6 +1106,10 @@ var _ = Describe("MachineServer", func() {
 						},
 						SecretRef: &corev1.SecretReference{
 							Name:      "test-secret",
+							Namespace: "test-namespace",
+						},
+						CredentialsSecretRef: &corev1.SecretReference{
+							Name:      "test-credentials",
 							Namespace: "test-namespace",
 						},
 						Provider: ProviderAWS,

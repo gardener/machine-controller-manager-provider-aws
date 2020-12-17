@@ -40,6 +40,7 @@ import (
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/status"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machineutils"
 	utilstrings "github.com/gardener/machine-controller-manager/pkg/util/strings"
+	utiltime "github.com/gardener/machine-controller-manager/pkg/util/time"
 
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
@@ -92,10 +93,9 @@ func UpdateMachineWithRetries(machineClient v1alpha1client.MachineInterface, mac
 */
 
 // ValidateMachineClass validates the machine class.
-func (c *controller) ValidateMachineClass(classSpec *v1alpha1.ClassSpec) (*v1alpha1.MachineClass, *v1.Secret, machineutils.RetryPeriod, error) {
+func (c *controller) ValidateMachineClass(classSpec *v1alpha1.ClassSpec) (*v1alpha1.MachineClass, map[string][]byte, machineutils.RetryPeriod, error) {
 	var (
 		machineClass *v1alpha1.MachineClass
-		secretRef    *v1.Secret
 		err          error
 		retry        = machineutils.LongRetry
 	)
@@ -117,16 +117,38 @@ func (c *controller) ValidateMachineClass(classSpec *v1alpha1.ClassSpec) (*v1alp
 		return nil, nil, retry, err
 	}
 
-	secretRef, err = c.getSecret(machineClass.SecretRef, machineClass.Name)
+	secretData, err := c.getSecretData(machineClass.Name, machineClass.SecretRef, machineClass.CredentialsSecretRef)
 	if err != nil {
-		klog.Errorf("Secret not found for %q", machineClass.SecretRef.Name)
+		klog.V(2).Infof("Could not compute secret data: %+v", err)
 		return nil, nil, retry, err
 	}
 
-	return machineClass, secretRef, retry, nil
+	return machineClass, secretData, retry, nil
 }
 
-// getSecret retrives the kubernetes secret if found
+func (c *controller) getSecretData(machineClassName string, secretRefs ...*v1.SecretReference) (map[string][]byte, error) {
+	var secretData map[string][]byte
+
+	for _, secretRef := range secretRefs {
+		if secretRef == nil {
+			continue
+		}
+
+		secretRef, err := c.getSecret(secretRef, machineClassName)
+		if err != nil {
+			klog.V(2).Infof("Secret reference %s/%s not found", secretRef.Namespace, secretRef.Name)
+			return nil, err
+		}
+
+		if secretRef != nil {
+			secretData = mergeDataMaps(secretData, secretRef.Data)
+		}
+	}
+
+	return secretData, nil
+}
+
+// getSecret retrieves the kubernetes secret if found
 func (c *controller) getSecret(ref *v1.SecretReference, MachineClassName string) (*v1.Secret, error) {
 	if ref == nil {
 		// If no secretRef, return nil
@@ -158,6 +180,18 @@ func nodeConditionsHaveChanged(machineConditions []v1.NodeCondition, nodeConditi
 	}
 
 	return false
+}
+
+func mergeDataMaps(in map[string][]byte, maps ...map[string][]byte) map[string][]byte {
+	out := make(map[string][]byte)
+
+	for _, m := range append([]map[string][]byte{in}, maps...) {
+		for k, v := range m {
+			out[k] = v
+		}
+	}
+
+	return out
 }
 
 // syncMachineNodeTemplate syncs nodeTemplates between machine and corresponding node-object.
@@ -912,9 +946,7 @@ func (c *controller) drainNode(deleteMachineRequest *driver.DeleteMachineRequest
 	if skipDrain {
 		state = v1alpha1.MachineStateProcessing
 	} else {
-		// Timeout value obtained by subtracting last operation with expected time out period
-		timeOut := metav1.Now().Add(-timeOutDuration).Sub(machine.Status.CurrentStatus.LastUpdateTime.Time)
-		timeOutOccurred = timeOut > 0
+		timeOutOccurred = utiltime.HasTimeOutOccurred(*machine.DeletionTimestamp, timeOutDuration)
 
 		if forceDeleteLabelPresent || timeOutOccurred {
 			// To perform forceful machine drain/delete either one of the below conditions must be satified

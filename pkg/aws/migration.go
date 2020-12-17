@@ -103,6 +103,7 @@ func fillUpMachineClass(awsMachineClass *v1alpha1.AWSMachineClass, machineClass 
 		Raw: providerSpecMarshal,
 	}
 	machineClass.SecretRef = awsMachineClass.Spec.SecretRef
+	machineClass.CredentialsSecretRef = awsMachineClass.Spec.CredentialsSecretRef
 	machineClass.Provider = ProviderAWS
 
 	return nil
