@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"regexp"
 	"strings"
 
 	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
 
+	"github.com/go-git/go-git/v5"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -124,5 +126,56 @@ func (c *Cluster) ApplyYamlFile(filePath string) error {
 	} else {
 		return err
 	}
+	return nil
+}
+
+// CloningRepo pulls down the specified git repo to the destination folder
+func CloningRepo() error {
+	/* TO-DO: This function clones the specified repo to a destination folder
+	if already exists, then it deletes the folder and tries to clone again
+	*/
+
+	dst := "../../../dstGit"
+	src := "https://github.com/gardener/machine-controller-manager.git"
+
+	// check for repository existing
+	_, err := os.Stat(dst)
+	if err == nil {
+		fmt.Println("Folder and contents do exist")
+		// delete folder and contents
+		err := os.RemoveAll(dst)
+		if err != nil {
+			return err
+		}
+	} else {
+		fmt.Println("Folder and contents do not exist")
+	}
+
+	// clone the given repository to the given directory
+	fmt.Printf("git clone %s %s --recursive", src, dst)
+
+	r, err := git.PlainClone(dst, false, &git.CloneOptions{
+		URL:               src,
+		RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
+	})
+	if err != nil {
+		fmt.Printf("\nFailed to clone repoistory to the destination folder; %s.\n", dst)
+		return err
+	}
+
+	// retrieving the branch being pointed by HEAD
+	ref, err := r.Head()
+	if err != nil {
+		panic(err)
+	}
+
+	// retrieving the commit object
+	commit, err := r.CommitObject(ref.Hash())
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(commit)
+
 	return nil
 }

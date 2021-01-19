@@ -33,7 +33,10 @@ package controller_test
 import (
 	"flag"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/gardener/machine-controller-manager-provider-aws/test/integration/controller/helpers"
@@ -127,26 +130,66 @@ func applyCrds() error {
 	- yaml files are available in kubernetes/crds directory of machine-controller-manager repo
 	- resources to be applied are machineclass, machines, machinesets and machinedeployment
 	*/
-	err := controlKubeCluster.ApplyYamlFile("../../../kubernetes/machine.sapcloud.io_machines.yaml")
+
+	var files []string
+	applyCrdsDirectory := "../../../dstGit/kubernetes/crds"
+
+	helpers.CloningRepo()
+
+	err := filepath.Walk(applyCrdsDirectory, func(path string, info os.FileInfo, err error) error {
+		files = append(files, path)
+		return nil
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	for _, file := range files {
+		fmt.Println(file)
+		fi, err := os.Stat(file)
+		if err != nil {
+			fmt.Println("\nError file does not exist!")
+			return err
+		}
+
+		switch mode := fi.Mode(); {
+		case mode.IsDir():
+			// do directory stuff
+			fmt.Printf("\n%s is a directory. Therefore nothing will happen!\n", file)
+		case mode.IsRegular():
+			// do file stuff
+			fmt.Printf("\n%s is a file. Therefore applying yaml ...", file)
+			err := controlKubeCluster.ApplyYamlFile(file)
+			if err != nil {
+				if strings.Contains(err.Error(), "already exists") {
+					fmt.Printf("\n%s already exists, so skipping ...\n", file)
+				} else {
+					fmt.Printf("\nFailed to create deployment %s, in the cluster.\n", file)
+					return err
+				}
+
+			}
+		}
+	}
 
 	return err
 }
 
 func startMachineControllerManager() error {
 	/*
-		TO-DO: startMachineControllerManager starts the machine controller manager
-			- if mcmContainerImage flag is non-empty then, start a pod in the control-cluster with specified image
-			- if mcmContainerImage is empty, runs machine controller manager locally
-				clone the required repo and then use make
+		 TO-DO: startMachineControllerManager starts the machine controller manager
+			 - if mcmContainerImage flag is non-empty then, start a pod in the control-cluster with specified image
+			 - if mcmContainerImage is empty, runs machine controller manager locally
+				 clone the required repo and then use make
 	*/
 	return nil
 }
 
 func startMachineController() error {
 	/*
-		TO-DO: startMachineController starts the machine controller
-			- if mcContainerImage flag is non-empty then, start a pod in the control-cluster with specified image
-			- if mcContainerImage is empty, runs machine controller locally
+		 TO-DO: startMachineController starts the machine controller
+			 - if mcContainerImage flag is non-empty then, start a pod in the control-cluster with specified image
+			 - if mcContainerImage is empty, runs machine controller locally
 	*/
 	// var wg sync.WaitGroup
 	// wg.Add(1)
