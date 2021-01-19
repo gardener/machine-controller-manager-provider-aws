@@ -7,13 +7,14 @@ import (
 	"regexp"
 	"strings"
 
+	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
+
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -84,7 +85,7 @@ func parseK8sYaml(filepath string) ([]runtime.Object, []*schema.GroupVersionKind
 			continue
 		}
 
-		decode := scheme.Codecs.UniversalDeserializer().Decode
+		decode := apiextensionsscheme.Codecs.UniversalDeserializer().Decode
 		obj, groupVersionKind, err := decode([]byte(f), nil, nil)
 
 		if err != nil {
@@ -109,7 +110,7 @@ func (c *Cluster) ApplyYamlFile(filePath string) error {
 	if available, then uses kubectl to perform kubectl apply on that file
 	*/
 	runtimeobj, kind, err := parseK8sYaml(filePath)
-	if err != nil {
+	if err == nil {
 		for key, obj := range runtimeobj {
 			switch kind[key].Kind {
 			case "CustomResourceDefinition":
@@ -120,6 +121,8 @@ func (c *Cluster) ApplyYamlFile(filePath string) error {
 				}
 			}
 		}
+	} else {
+		return err
 	}
 	return nil
 }
