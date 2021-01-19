@@ -1,0 +1,37 @@
+# SPDX-FileCopyrightText: 2020 SAP SE or an SAP affiliate company and Gardener contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: MachineClass
+metadata:
+  name: test-mc
+  namespace: default # Namespace where the controller would watch
+providerSpec:
+  # dummy-field: "provider-api based fields goes here"
+  ami: ami-0f32041348763f71c
+  blockDevices:
+  - ebs:
+      deleteOnTermination: true
+      encrypted: true
+      volumeSize: 50
+      volumeType: gp2
+  iam:
+    name: shoot--mcm-test--jakeer-aws-nodes
+  keyName: shoot--mcm-test--jakeer-aws-ssh-publickey
+  machineType: m5.large
+  networkInterfaces:
+  - securityGroupIDs:
+    - sg-02f710876d8570173
+    subnetID: subnet-0a6244ac588edc524
+  region: ap-south-1
+  tags:
+    kubernetes.io/cluster/shoot--mcm-test--jakeer-aws: "1"
+    kubernetes.io/role/mcm: "1"
+    node.kubernetes.io/role: mcm
+    worker.garden.sapcloud.io/group: worker-brisb
+    worker.gardener.cloud/pool: worker-brisb
+    worker.gardener.cloud/system-components: "true"
+secretRef: # If required
+  name: shoot--mcm-test--jakeer-aws-worker-brisb-z1-f94f9
+  namespace: default # Namespace where the controller would watch

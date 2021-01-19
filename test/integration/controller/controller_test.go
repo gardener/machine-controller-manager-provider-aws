@@ -1,0 +1,178 @@
+/**
+	Overview
+		- Tests the provider specific Machine Controller
+	Prerequisites
+		- secret yaml file for the hyperscaler/provider passed as input
+		- control cluster and target clusters kube-config passed as input (optional)
+	BeforeSuite
+		- Check and create control cluster and target clusters if required
+		- Check and create crds ( machineclass, machines, machinesets and machinedeployment ) if required
+		  using file available in kubernetes/crds directory of machine-controller-manager repo
+		- Start the Machine Controller manager ( as goroutine )
+		- apply secret resource for accesing the cloud provider service in the control cluster
+		- Create machineclass resource from file available in kubernetes directory of provider specific repo in control cluster
+	AfterSuite
+		- To-Do : Delete the control and target clusters // As of now we are reusing the cluster
+
+	Test: differentRegion Scheduling Strategy Test
+        1) Create machine in region other than where the target cluster exists. (e.g machine in eu-west-1 and target cluster exists in us-east-1)
+           Expected Output
+			 - should fail because no cluster in same region exists)
+
+    Test: sameRegion Scheduling Strategy Test
+        1) Create machine in same region/zone as target cluster and attach it to the cluster
+           Expected Output
+			 - should successfully attach the machine to the target cluster (new node added)
+		2) Delete machine
+			Expected Output
+			 - should successfully delete the machine from the target cluster (less one node)
+ **/
+
+package controller_test
+
+import (
+	"flag"
+	"fmt"
+	"os/exec"
+	"sync"
+
+	"github.com/gardener/machine-controller-manager-provider-aws/test/integration/controller/helpers"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+)
+
+var (
+	cloudProviderSecret   = flag.String("cloud-provider-secret", "", "the path to the cloud provider secret for using to interact with the cloud provider")
+	controlKubeConfigPath = flag.String("control-kubeconfig", "", "the path to the kubeconfig  of the control cluster for managing machines")
+	targetKubeConfigPath  = flag.String("target-kubeconfig", "", "the path to the kubeconfig  of the target cluster where the nodes are added or removed")
+	controlKubeCluster    *helpers.Cluster
+	targetKubeCluster     *helpers.Cluster
+)
+
+var _ = Describe("Machine Resource", func() {
+	BeforeSuite(func() {
+		/*Check and create control cluster and target clusters if required
+		- Check and create crds ( machineclass, machines, machinesets and machinedeployment ) if required
+		  using file available in kubernetes/crds directory of machine-controller-manager repo
+		- Start the Machine Controller manager and machine controller (provider-specific)
+		- apply secret resource for accesing the cloud provider service in the control cluster
+		- Create machineclass resource from file available in kubernetes directory of provider specific repo in control cluster
+		*/
+		By("Checking for the clusters if provided are available or creating one if not provided ")
+		Expect(prepareClusters()).To(BeNil())
+		By("Fetching kubernetes/crds and applying them into control cluster")
+		Expect(applyCrds()).To(BeNil())
+		By("Starting Machine Controller Manager")
+		Expect(startMachineControllerManager()).To(BeNil())
+		By("Starting Machine Controller")
+		Expect(startMachineController()).To(BeNil())
+		By("Parsing cloud-provider-secret file and applying")
+		Expect(applyCloudProviderSecret()).To(BeNil())
+		By("Applying MachineClass")
+		Expect(applyMachineClass()).To(BeNil())
+	})
+})
+
+func prepareClusters() error {
+	/* TO-DO: prepareClusters checks for
+	- the validity of controlKubeConfig and targetKubeConfig flags
+	- if required then creates the cluster using cloudProviderSecret
+	- It should return an error if thre is a error
+	*/
+
+	if *controlKubeConfigPath != "" {
+		// if control cluster config is available but not the target, then set control and target clusters as same
+		if *targetKubeConfigPath == "" {
+			*targetKubeConfigPath = *controlKubeConfigPath
+			fmt.Println("Missing targetKubeConfig. control cluster will be set as target too")
+		}
+
+		// use the current context in controlkubeconfig
+		var err error
+		controlKubeCluster, err = helpers.NewCluster(*controlKubeConfigPath)
+		if err != nil {
+			return err
+		}
+		targetKubeCluster, err = helpers.NewCluster(*targetKubeConfigPath)
+		if err != nil {
+			return err
+		}
+
+		// update clientset and check whether the cluster is accessible
+		err = controlKubeCluster.FillClientSets()
+		if err != nil {
+			fmt.Println("Failed to check nodes in the cluster")
+			return err
+		}
+
+		err = targetKubeCluster.FillClientSets()
+		if err != nil {
+			fmt.Println("Failed to check nodes in the cluster")
+			return err
+		}
+	} else if *targetKubeConfigPath != "" {
+		return fmt.Errorf("controlKubeconfig path is mandatory if using targetKubeConfigPath. Aborting!!!")
+	} else if *cloudProviderSecret != "" {
+		// TO-DO: validate cloudProviderSecret yaml file and Create cluster using the secrets in it.
+		// Also set controlKubeCluster and targetKubeCluster
+	} else {
+		return fmt.Errorf("missing mandatory flag cloudProviderSecret. Aborting!!!")
+	}
+	return nil
+}
+
+func applyCrds() error {
+	/* TO-DO: applyCrds will
+	- create the custom resources in the controlKubeConfig
+	- yaml files are available in kubernetes/crds directory of machine-controller-manager repo
+	- resources to be applied are machineclass, machines, machinesets and machinedeployment
+	*/
+	err := controlKubeCluster.ApplyYamlFile("../../../kubernetes/machine.sapcloud.io_machines.yaml")
+
+	return err
+}
+
+func startMachineControllerManager() error {
+	/*
+		TO-DO: startMachineControllerManager starts the machine controller manager
+			- if mcmContainerImage flag is non-empty then, start a pod in the control-cluster with specified image
+			- if mcmContainerImage is empty, runs machine controller manager locally
+				clone the required repo and then use make
+	*/
+	return nil
+}
+
+func startMachineController() error {
+	/*
+		TO-DO: startMachineController starts the machine controller
+			- if mcContainerImage flag is non-empty then, start a pod in the control-cluster with specified image
+			- if mcContainerImage is empty, runs machine controller locally
+	*/
+	// var wg sync.WaitGroup
+	// wg.Add(1)
+	// execCommandAsRoutine("hostname", &wg)
+	// wg.Wait()
+	return nil
+}
+
+func applyCloudProviderSecret() error {
+	/* TO-DO: applyCloudProviderSecret
+	- load the yaml file
+	- check if there is a  secret alredy with the same name in the controlCluster then validate for using it to interact with the hyperscaler
+	- create the secret if not existing
+	*/
+	return nil
+}
+
+func applyMachineClass() error {
+	/* TO-DO: applyMachineClass creates machineclass using
+	- the file available in kubernetes directory of provider specific repo in control cluster
+	*/
+	return nil
+}
+
+func execCommandAsRoutine(cmd string, wg *sync.WaitGroup) {
+	defer wg.Done()
+	exec.Command(cmd)
+	// inprogress
+}
