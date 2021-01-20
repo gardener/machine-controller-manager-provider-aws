@@ -39,7 +39,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/gardener/machine-controller-manager-provider-aws/test/integration/controller/helpers"
+	"github.com/gardener/machine-controller-manager-provider-aws/test/integration/helpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -132,9 +132,12 @@ func applyCrds() error {
 	*/
 
 	var files []string
-	applyCrdsDirectory := "../../../dstGit/kubernetes/crds"
+	dst := "github.com/gardener/machine-controller-manager-provider-aws/dstGit"
+	src := "https://github.com/gardener/machine-controller-manager.git"
+	applyCrdsDirectory := fmt.Sprintf("%s/kubernetes/crds", dst)
 
-	helpers.CloningRepo()
+	helpers.CheckDst(dst)
+	helpers.CloningRepo(dst, src)
 
 	err := filepath.Walk(applyCrdsDirectory, func(path string, info os.FileInfo, err error) error {
 		files = append(files, path)
