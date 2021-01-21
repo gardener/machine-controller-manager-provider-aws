@@ -37,7 +37,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"sync"
+	"time"
 
 	"github.com/gardener/machine-controller-manager-provider-aws/test/integration/helpers"
 	. "github.com/onsi/ginkgo"
@@ -73,6 +73,40 @@ var _ = Describe("Machine Resource", func() {
 		Expect(applyCloudProviderSecret()).To(BeNil())
 		By("Applying MachineClass")
 		Expect(applyMachineClass()).To(BeNil())
+
+	})
+
+	Describe("Creating one machine resource", func() {
+		Context("In Control cluster", func() {
+			Context("when the nodes in target cluster are listed", func() {
+				It("should correctly list existing nodes +1", func() {
+					// Pobe nodes currently available
+					// apply machine resource yaml file
+					fmt.Println("Sleep for 30 sec")
+					time.Sleep(300) // probe nodes again after some wait
+					// check whether there is one node more
+				})
+			})
+		})
+	})
+
+	Describe("Deleting one machine resource", func() {
+		Context("When there are machine resources available in control cluster", func() {
+			// check for machine resources
+			Context("When one machine is deleted randomly", func() {
+				// Keep count of nodes available
+				//delete machine resource
+				It("should list existing nodes -1 in target cluster", func() {
+					// check there are n-1 nodes
+				})
+			})
+		})
+		Context("when there are no machines available", func() {
+			// delete one machine (non-existent) by random text as name of resource
+			It("should list existing nodes ", func() {
+				// check there are no changes to nodes
+			})
+		})
 	})
 })
 
@@ -84,12 +118,13 @@ func prepareClusters() error {
 	*/
 
 	if *controlKubeConfigPath != "" {
+		*controlKubeConfigPath, _ = filepath.Abs(*controlKubeConfigPath)
 		// if control cluster config is available but not the target, then set control and target clusters as same
 		if *targetKubeConfigPath == "" {
 			*targetKubeConfigPath = *controlKubeConfigPath
 			fmt.Println("Missing targetKubeConfig. control cluster will be set as target too")
 		}
-
+		*targetKubeConfigPath, _ = filepath.Abs(*targetKubeConfigPath)
 		// use the current context in controlkubeconfig
 		var err error
 		controlKubeCluster, err = helpers.NewCluster(*controlKubeConfigPath)
@@ -116,6 +151,7 @@ func prepareClusters() error {
 	} else if *targetKubeConfigPath != "" {
 		return fmt.Errorf("controlKubeconfig path is mandatory if using targetKubeConfigPath. Aborting!!!")
 	} else if *cloudProviderSecret != "" {
+		*cloudProviderSecret, _ = filepath.Abs(*cloudProviderSecret)
 		// TO-DO: validate cloudProviderSecret yaml file and Create cluster using the secrets in it.
 		// Also set controlKubeCluster and targetKubeCluster
 	} else {
@@ -185,6 +221,10 @@ func startMachineControllerManager() error {
 			 - if mcmContainerImage is empty, runs machine controller manager locally
 				 clone the required repo and then use make
 	*/
+	command := fmt.Sprintf("make start CONTROL_KUBECONFIG=%s TARGET_KUBECONFIG=%s", *controlKubeConfigPath, *targetKubeConfigPath)
+	fmt.Println("starting MachineControllerManager with command: ", command)
+	go execCommandAsRoutine(command, "../../../dstGit/")
+	time.Sleep(5) //wait sometime before continuing
 	return nil
 }
 
@@ -194,10 +234,10 @@ func startMachineController() error {
 			 - if mcContainerImage flag is non-empty then, start a pod in the control-cluster with specified image
 			 - if mcContainerImage is empty, runs machine controller locally
 	*/
-	// var wg sync.WaitGroup
-	// wg.Add(1)
-	// execCommandAsRoutine("hostname", &wg)
-	// wg.Wait()
+	command := fmt.Sprintf("make start CONTROL_KUBECONFIG=%s TARGET_KUBECONFIG=%s", *controlKubeConfigPath, *targetKubeConfigPath)
+	fmt.Println("starting MachineController with command: ", command)
+	go execCommandAsRoutine(command, ".../../..")
+	time.Sleep(5) //wait sometime before continuing
 	return nil
 }
 
@@ -217,8 +257,15 @@ func applyMachineClass() error {
 	return nil
 }
 
-func execCommandAsRoutine(cmd string, wg *sync.WaitGroup) {
-	defer wg.Done()
-	exec.Command(cmd)
-	// inprogress
+func execCommandAsRoutine(cmd string, dir string) {
+	args := strings.Fields(cmd)
+	command := exec.Command(args[0], args[1:]...)
+	command.Dir = dir
+	out, err := command.CombinedOutput()
+	if err != nil {
+		fmt.Println("Error is ", err)
+		fmt.Printf("output is %s\n ", out)
+	} else {
+		fmt.Printf("output is %s\n ", out)
+	}
 }
