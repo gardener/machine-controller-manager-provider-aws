@@ -50,18 +50,20 @@ var (
 	targetKubeConfigPath  = flag.String("target-kubeconfig", "", "the path to the kubeconfig  of the target cluster where the nodes are added or removed")
 	controlKubeCluster    *helpers.Cluster
 	targetKubeCluster     *helpers.Cluster
+	numberOfBgProcesses   int16
+	mcmRepoPath           = "../../../dev/mcm"
 )
 
 var _ = Describe("Machine Resource", func() {
 	BeforeSuite(func() {
-		/*Check and create control cluster and target clusters if required
+		/*Check control cluster and target clusters are accessible
 		- Check and create crds ( machineclass, machines, machinesets and machinedeployment ) if required
 		  using file available in kubernetes/crds directory of machine-controller-manager repo
 		- Start the Machine Controller manager and machine controller (provider-specific)
 		- apply secret resource for accesing the cloud provider service in the control cluster
 		- Create machineclass resource from file available in kubernetes directory of provider specific repo in control cluster
 		*/
-		By("Checking for the clusters if provided are available or creating one if not provided ")
+		By("Checking for the clusters if provided are available")
 		Expect(prepareClusters()).To(BeNil())
 		By("Fetching kubernetes/crds and applying them into control cluster")
 		Expect(applyCrds()).To(BeNil())
@@ -73,17 +75,21 @@ var _ = Describe("Machine Resource", func() {
 		Expect(applyCloudProviderSecret()).To(BeNil())
 		By("Applying MachineClass")
 		Expect(applyMachineClass()).To(BeNil())
-
+	})
+	BeforeEach(func() {
+		By("Check the number of goroutines running are 2")
+		Expect(numberOfBgProcesses).To(BeEquivalentTo(2))
+		// Nodes are healthy
 	})
 
 	Describe("Creating one machine resource", func() {
 		Context("In Control cluster", func() {
 			Context("when the nodes in target cluster are listed", func() {
 				It("should correctly list existing nodes +1", func() {
-					// Pobe nodes currently available
+					// Probe nodes currently available in target cluster
 					// apply machine resource yaml file
-					fmt.Println("Sleep for 30 sec")
-					time.Sleep(300) // probe nodes again after some wait
+					fmt.Println("wait for 30 sec before probing for nodes")
+					time.Sleep(30 * time.Second) // probe nodes again after some wait
 					// check whether there is one node more
 				})
 			})
@@ -91,6 +97,10 @@ var _ = Describe("Machine Resource", func() {
 	})
 
 	Describe("Deleting one machine resource", func() {
+		BeforeEach(func() {
+			// Check there are no machine deployment and machinesets resources existing
+			// Nodes are healthy in target cluster
+		})
 		Context("When there are machine resources available in control cluster", func() {
 			// check for machine resources
 			Context("When one machine is deleted randomly", func() {
@@ -168,7 +178,7 @@ func applyCrds() error {
 	*/
 
 	var files []string
-	dst := "github.com/gardener/machine-controller-manager-provider-aws/dstGit"
+	dst := mcmRepoPath
 	src := "https://github.com/gardener/machine-controller-manager.git"
 	applyCrdsDirectory := fmt.Sprintf("%s/kubernetes/crds", dst)
 
@@ -223,8 +233,8 @@ func startMachineControllerManager() error {
 	*/
 	command := fmt.Sprintf("make start CONTROL_KUBECONFIG=%s TARGET_KUBECONFIG=%s", *controlKubeConfigPath, *targetKubeConfigPath)
 	fmt.Println("starting MachineControllerManager with command: ", command)
-	go execCommandAsRoutine(command, "../../../dstGit/")
-	time.Sleep(5) //wait sometime before continuing
+	dst_path := fmt.Sprintf("%s", mcmRepoPath)
+	go execCommandAsRoutine(command, dst_path)
 	return nil
 }
 
@@ -236,8 +246,7 @@ func startMachineController() error {
 	*/
 	command := fmt.Sprintf("make start CONTROL_KUBECONFIG=%s TARGET_KUBECONFIG=%s", *controlKubeConfigPath, *targetKubeConfigPath)
 	fmt.Println("starting MachineController with command: ", command)
-	go execCommandAsRoutine(command, ".../../..")
-	time.Sleep(5) //wait sometime before continuing
+	go execCommandAsRoutine(command, "../../..")
 	return nil
 }
 
@@ -258,6 +267,11 @@ func applyMachineClass() error {
 }
 
 func execCommandAsRoutine(cmd string, dir string) {
+	defer func() {
+		numberOfBgProcesses = numberOfBgProcesses - 1
+	}()
+	numberOfBgProcesses++
+	fmt.Println("Goroutine started")
 	args := strings.Fields(cmd)
 	command := exec.Command(args[0], args[1:]...)
 	command.Dir = dir

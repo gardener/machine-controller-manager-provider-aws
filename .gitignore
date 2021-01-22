@@ -6,3 +6,5 @@ cmi-plugin
 bin/
 .idea
 dev/
+.test
+test/integration/controller/github*
