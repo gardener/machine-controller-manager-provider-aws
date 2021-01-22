@@ -30,6 +30,10 @@ func (c *Cluster) FillClientSets() error {
 		if err == nil {
 			c.apiextensionsClient = apiextensionsClient
 		}
+		mcmClient, err := mcmClientset.NewForConfig(c.restConfig)
+		if err == nil {
+			c.mcmClient = mcmClient
+		}
 	}
 	return err
 }
