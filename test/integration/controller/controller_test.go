@@ -166,8 +166,6 @@ func applyCrds() error {
 	- yaml files are available in kubernetes/crds directory of machine-controller-manager repo
 	- resources to be applied are machineclass, machines, machinesets and machinedeployment
 	*/
-
-	var files []string
 	dst := "github.com/gardener/machine-controller-manager-provider-aws/dstGit"
 	src := "https://github.com/gardener/machine-controller-manager.git"
 	applyCrdsDirectory := fmt.Sprintf("%s/kubernetes/crds", dst)
@@ -175,7 +173,65 @@ func applyCrds() error {
 	helpers.CheckDst(dst)
 	helpers.CloningRepo(dst, src)
 
-	err := filepath.Walk(applyCrdsDirectory, func(path string, info os.FileInfo, err error) error {
+	err := applyFiles(applyCrdsDirectory)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func startMachineControllerManager() error {
+	/*
+		 TO-DO: startMachineControllerManager starts the machine controller manager
+			 - if mcmContainerImage flag is non-empty then, start a pod in the control-cluster with specified image
+			 - if mcmContainerImage is empty, runs machine controller manager locally
+				 clone the required repo and then use make
+	*/
+	command := fmt.Sprintf("make start CONTROL_KUBECONFIG=%s TARGET_KUBECONFIG=%s", *controlKubeConfigPath, *targetKubeConfigPath)
+	fmt.Println("starting MachineControllerManager with command: ", command)
+	go execCommandAsRoutine(command, "../../../dstGit/")
+	time.Sleep(5) //wait sometime before continuing
+	return nil
+}
+
+func startMachineController() error {
+	/*
+		 TO-DO: startMachineController starts the machine controller
+			 - if mcContainerImage flag is non-empty then, start a pod in the control-cluster with specified image
+			 - if mcContainerImage is empty, runs machine controller locally
+	*/
+	command := fmt.Sprintf("make start CONTROL_KUBECONFIG=%s TARGET_KUBECONFIG=%s", *controlKubeConfigPath, *targetKubeConfigPath)
+	fmt.Println("starting MachineController with command: ", command)
+	go execCommandAsRoutine(command, "../../..")
+	time.Sleep(5) //wait sometime before continuing
+	return nil
+}
+
+func applyCloudProviderSecret() error {
+	/* TO-DO: applyCloudProviderSecret
+	- load the yaml file
+	- check if there is a  secret alredy with the same name in the controlCluster then validate for using it to interact with the hyperscaler
+	- create the secret if not existing
+	*/
+	return nil
+}
+
+func applyMachineClass() error {
+	/* TO-DO: applyMachineClass creates machineclass using
+	- the file available in kubernetes directory of provider specific repo in control cluster
+	*/
+	applyMC := "../../../kubernetes"
+
+	err := applyFiles(applyMC)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func applyFiles(filePath string) error {
+	var files []string
+	err := filepath.Walk(filePath, func(path string, info os.FileInfo, err error) error {
 		files = append(files, path)
 		return nil
 	})
@@ -203,7 +259,7 @@ func applyCrds() error {
 				if strings.Contains(err.Error(), "already exists") {
 					fmt.Printf("\n%s already exists, so skipping ...\n", file)
 				} else {
-					fmt.Printf("\nFailed to create deployment %s, in the cluster.\n", file)
+					fmt.Printf("\nFailed to create machine class %s, in the cluster.\n", file)
 					return err
 				}
 
@@ -211,49 +267,6 @@ func applyCrds() error {
 		}
 	}
 
-	return err
-}
-
-func startMachineControllerManager() error {
-	/*
-		 TO-DO: startMachineControllerManager starts the machine controller manager
-			 - if mcmContainerImage flag is non-empty then, start a pod in the control-cluster with specified image
-			 - if mcmContainerImage is empty, runs machine controller manager locally
-				 clone the required repo and then use make
-	*/
-	command := fmt.Sprintf("make start CONTROL_KUBECONFIG=%s TARGET_KUBECONFIG=%s", *controlKubeConfigPath, *targetKubeConfigPath)
-	fmt.Println("starting MachineControllerManager with command: ", command)
-	go execCommandAsRoutine(command, "../../../dstGit/")
-	time.Sleep(5) //wait sometime before continuing
-	return nil
-}
-
-func startMachineController() error {
-	/*
-		 TO-DO: startMachineController starts the machine controller
-			 - if mcContainerImage flag is non-empty then, start a pod in the control-cluster with specified image
-			 - if mcContainerImage is empty, runs machine controller locally
-	*/
-	command := fmt.Sprintf("make start CONTROL_KUBECONFIG=%s TARGET_KUBECONFIG=%s", *controlKubeConfigPath, *targetKubeConfigPath)
-	fmt.Println("starting MachineController with command: ", command)
-	go execCommandAsRoutine(command, ".../../..")
-	time.Sleep(5) //wait sometime before continuing
-	return nil
-}
-
-func applyCloudProviderSecret() error {
-	/* TO-DO: applyCloudProviderSecret
-	- load the yaml file
-	- check if there is a  secret alredy with the same name in the controlCluster then validate for using it to interact with the hyperscaler
-	- create the secret if not existing
-	*/
-	return nil
-}
-
-func applyMachineClass() error {
-	/* TO-DO: applyMachineClass creates machineclass using
-	- the file available in kubernetes directory of provider specific repo in control cluster
-	*/
 	return nil
 }
 
