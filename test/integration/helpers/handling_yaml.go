@@ -6,15 +6,24 @@ import (
 	"log"
 	"regexp"
 	"strings"
+	"time"
 
 	v1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	mcmscheme "github.com/gardener/machine-controller-manager/pkg/client/clientset/versioned/scheme"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
+var (
+	crdCreated []string
+)
+
+// parsek8sYaml reads a yaml file and parses it based on the scheme
 func parseK8sYaml(filepath string) ([]runtime.Object, []*schema.GroupVersionKind, error) {
 	fileR, err := ioutil.ReadFile(filepath)
 	if err != nil {
@@ -78,8 +87,10 @@ func (c *Cluster) ApplyYamlFile(filePath string) error {
 		for key, obj := range runtimeobj {
 			switch kind[key].Kind {
 			case "CustomResourceDefinition":
+				crdName := obj.(*v1beta1.CustomResourceDefinition).Name
 				crd := obj.(*v1beta1.CustomResourceDefinition)
 				_, err := c.apiextensionsClient.ApiextensionsV1beta1().CustomResourceDefinitions().Create(crd)
+				crdCreated = append(crdCreated, crdName)
 				if err != nil {
 					return err
 				}
@@ -100,5 +111,44 @@ func (c *Cluster) ApplyYamlFile(filePath string) error {
 	} else {
 		return err
 	}
+
+	return nil
+}
+
+// CheckEstablished uses the specified name to check if it is established
+func (c *Cluster) CheckEstablished() error {
+	/* TO-DO: This function checks the CRD for an established status
+	if established status is not met, it will sleep until it meets
+	*/
+
+	for i, crdCreatedName := range crdCreated {
+		fmt.Printf("%d Created CRD with given name %s, waiting till its established\n", i, crdCreatedName)
+
+		err := wait.Poll(500*time.Millisecond, 60*time.Second, func() (bool, error) {
+			crd, err := c.apiextensionsClient.ApiextensionsV1beta1().CustomResourceDefinitions().Get(crdCreatedName, metav1.GetOptions{})
+			if err != nil {
+				return false, err
+			}
+			for _, cond := range crd.Status.Conditions {
+				switch cond.Type {
+				case apiextensionsv1beta1.Established:
+					if cond.Status == apiextensionsv1beta1.ConditionTrue {
+						fmt.Printf("%d - %s, is established\n", i, crdCreatedName)
+						return true, err
+					}
+				case apiextensionsv1beta1.NamesAccepted:
+					if cond.Status == apiextensionsv1beta1.ConditionFalse {
+						fmt.Printf("Name conflict: %v\n", cond.Reason)
+						fmt.Printf("Naming Conflict with created CRD %s\n", crdCreatedName)
+					}
+				}
+			}
+			return false, err
+		})
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }

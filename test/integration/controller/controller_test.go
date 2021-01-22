@@ -266,7 +266,10 @@ func applyFiles(filePath string) error {
 			}
 		}
 	}
-
+	err = controlKubeCluster.CheckEstablished()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
