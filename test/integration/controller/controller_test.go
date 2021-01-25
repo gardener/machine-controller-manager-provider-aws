@@ -176,8 +176,7 @@ func applyCrds() error {
 	- yaml files are available in kubernetes/crds directory of machine-controller-manager repo
 	- resources to be applied are machineclass, machines, machinesets and machinedeployment
 	*/
-
-	var files []string
+  
 	dst := mcmRepoPath
 	src := "https://github.com/gardener/machine-controller-manager.git"
 	applyCrdsDirectory := fmt.Sprintf("%s/kubernetes/crds", dst)
@@ -185,43 +184,11 @@ func applyCrds() error {
 	helpers.CheckDst(dst)
 	helpers.CloningRepo(dst, src)
 
-	err := filepath.Walk(applyCrdsDirectory, func(path string, info os.FileInfo, err error) error {
-		files = append(files, path)
-		return nil
-	})
+	err := applyFiles(applyCrdsDirectory)
 	if err != nil {
-		panic(err)
+		return err
 	}
-
-	for _, file := range files {
-		fmt.Println(file)
-		fi, err := os.Stat(file)
-		if err != nil {
-			fmt.Println("\nError file does not exist!")
-			return err
-		}
-
-		switch mode := fi.Mode(); {
-		case mode.IsDir():
-			// do directory stuff
-			fmt.Printf("\n%s is a directory. Therefore nothing will happen!\n", file)
-		case mode.IsRegular():
-			// do file stuff
-			fmt.Printf("\n%s is a file. Therefore applying yaml ...", file)
-			err := controlKubeCluster.ApplyYamlFile(file)
-			if err != nil {
-				if strings.Contains(err.Error(), "already exists") {
-					fmt.Printf("\n%s already exists, so skipping ...\n", file)
-				} else {
-					fmt.Printf("\nFailed to create deployment %s, in the cluster.\n", file)
-					return err
-				}
-
-			}
-		}
-	}
-
-	return err
+	return nil
 }
 
 func startMachineControllerManager() error {
@@ -263,6 +230,56 @@ func applyMachineClass() error {
 	/* TO-DO: applyMachineClass creates machineclass using
 	- the file available in kubernetes directory of provider specific repo in control cluster
 	*/
+	applyMC := "../../../kubernetes"
+
+	err := applyFiles(applyMC)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func applyFiles(filePath string) error {
+	var files []string
+	err := filepath.Walk(filePath, func(path string, info os.FileInfo, err error) error {
+		files = append(files, path)
+		return nil
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	for _, file := range files {
+		fmt.Println(file)
+		fi, err := os.Stat(file)
+		if err != nil {
+			fmt.Println("\nError file does not exist!")
+			return err
+		}
+
+		switch mode := fi.Mode(); {
+		case mode.IsDir():
+			// do directory stuff
+			fmt.Printf("\n%s is a directory. Therefore nothing will happen!\n", file)
+		case mode.IsRegular():
+			// do file stuff
+			fmt.Printf("\n%s is a file. Therefore applying yaml ...", file)
+			err := controlKubeCluster.ApplyYamlFile(file)
+			if err != nil {
+				if strings.Contains(err.Error(), "already exists") {
+					fmt.Printf("\n%s already exists, so skipping ...\n", file)
+				} else {
+					fmt.Printf("\nFailed to create machine class %s, in the cluster.\n", file)
+					return err
+				}
+
+			}
+		}
+	}
+	err = controlKubeCluster.CheckEstablished()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

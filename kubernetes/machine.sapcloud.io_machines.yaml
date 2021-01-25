@@ -5,13 +5,13 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.3.0
-  name: jmachines.machine.sapcloud.io
+  name: machines.machine.sapcloud.io
 spec:
   group: machine.sapcloud.io
   names:
     kind: Machine
     listKind: MachineList
-    plural: jmachines
+    plural: machines
     singular: machine
   scope: Namespaced
   subresources:
