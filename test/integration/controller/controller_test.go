@@ -31,7 +31,6 @@
 package controller_test
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"os/exec"
@@ -45,9 +44,9 @@ import (
 )
 
 var (
-	cloudProviderSecret   = flag.String("cloud-provider-secret", "", "the path to the cloud provider secret for using to interact with the cloud provider")
-	controlKubeConfigPath = flag.String("control-kubeconfig", "", "the path to the kubeconfig  of the control cluster for managing machines")
-	targetKubeConfigPath  = flag.String("target-kubeconfig", "", "the path to the kubeconfig  of the target cluster where the nodes are added or removed")
+	cloudProviderSecret   = os.Getenv("cloudProviderSecret")
+	controlKubeConfigPath = os.Getenv("controlKubeconfig")
+	targetKubeConfigPath  = os.Getenv("targetKubeconfig")
 	controlKubeCluster    *helpers.Cluster
 	targetKubeCluster     *helpers.Cluster
 	numberOfBgProcesses   int16
@@ -127,21 +126,24 @@ func prepareClusters() error {
 	- It should return an error if thre is a error
 	*/
 
-	if *controlKubeConfigPath != "" {
-		*controlKubeConfigPath, _ = filepath.Abs(*controlKubeConfigPath)
+	fmt.Printf("Secret is %s\n", cloudProviderSecret)
+	fmt.Printf("Control path is %s\n", controlKubeConfigPath)
+	fmt.Printf("Target path is %s\n", targetKubeConfigPath)
+	if controlKubeConfigPath != "" {
+		controlKubeConfigPath, _ = filepath.Abs(controlKubeConfigPath)
 		// if control cluster config is available but not the target, then set control and target clusters as same
-		if *targetKubeConfigPath == "" {
-			*targetKubeConfigPath = *controlKubeConfigPath
+		if targetKubeConfigPath == "" {
+			targetKubeConfigPath = controlKubeConfigPath
 			fmt.Println("Missing targetKubeConfig. control cluster will be set as target too")
 		}
-		*targetKubeConfigPath, _ = filepath.Abs(*targetKubeConfigPath)
+		targetKubeConfigPath, _ = filepath.Abs(targetKubeConfigPath)
 		// use the current context in controlkubeconfig
 		var err error
-		controlKubeCluster, err = helpers.NewCluster(*controlKubeConfigPath)
+		controlKubeCluster, err = helpers.NewCluster(controlKubeConfigPath)
 		if err != nil {
 			return err
 		}
-		targetKubeCluster, err = helpers.NewCluster(*targetKubeConfigPath)
+		targetKubeCluster, err = helpers.NewCluster(targetKubeConfigPath)
 		if err != nil {
 			return err
 		}
@@ -158,10 +160,10 @@ func prepareClusters() error {
 			fmt.Println("Failed to check nodes in the cluster")
 			return err
 		}
-	} else if *targetKubeConfigPath != "" {
+	} else if targetKubeConfigPath != "" {
 		return fmt.Errorf("controlKubeconfig path is mandatory if using targetKubeConfigPath. Aborting!!!")
-	} else if *cloudProviderSecret != "" {
-		*cloudProviderSecret, _ = filepath.Abs(*cloudProviderSecret)
+	} else if cloudProviderSecret != "" {
+		cloudProviderSecret, _ = filepath.Abs(cloudProviderSecret)
 		// TO-DO: validate cloudProviderSecret yaml file and Create cluster using the secrets in it.
 		// Also set controlKubeCluster and targetKubeCluster
 	} else {
@@ -176,7 +178,7 @@ func applyCrds() error {
 	- yaml files are available in kubernetes/crds directory of machine-controller-manager repo
 	- resources to be applied are machineclass, machines, machinesets and machinedeployment
 	*/
-  
+
 	dst := mcmRepoPath
 	src := "https://github.com/gardener/machine-controller-manager.git"
 	applyCrdsDirectory := fmt.Sprintf("%s/kubernetes/crds", dst)
@@ -198,7 +200,7 @@ func startMachineControllerManager() error {
 			 - if mcmContainerImage is empty, runs machine controller manager locally
 				 clone the required repo and then use make
 	*/
-	command := fmt.Sprintf("make start CONTROL_KUBECONFIG=%s TARGET_KUBECONFIG=%s", *controlKubeConfigPath, *targetKubeConfigPath)
+	command := fmt.Sprintf("make start CONTROL_KUBECONFIG=%s TARGET_KUBECONFIG=%s", controlKubeConfigPath, targetKubeConfigPath)
 	fmt.Println("starting MachineControllerManager with command: ", command)
 	dst_path := fmt.Sprintf("%s", mcmRepoPath)
 	go execCommandAsRoutine(command, dst_path)
@@ -211,7 +213,7 @@ func startMachineController() error {
 			 - if mcContainerImage flag is non-empty then, start a pod in the control-cluster with specified image
 			 - if mcContainerImage is empty, runs machine controller locally
 	*/
-	command := fmt.Sprintf("make start CONTROL_KUBECONFIG=%s TARGET_KUBECONFIG=%s", *controlKubeConfigPath, *targetKubeConfigPath)
+	command := fmt.Sprintf("make start CONTROL_KUBECONFIG=%s TARGET_KUBECONFIG=%s", controlKubeConfigPath, targetKubeConfigPath)
 	fmt.Println("starting MachineController with command: ", command)
 	go execCommandAsRoutine(command, "../../..")
 	return nil
