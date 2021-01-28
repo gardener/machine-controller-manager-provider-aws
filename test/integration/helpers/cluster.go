@@ -11,7 +11,6 @@ import (
 
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
@@ -43,13 +42,6 @@ func (c *Cluster) FillClientSets() error {
 	return err
 }
 
-//ProbeNodes tries to probe for nodes. Indirectly it checks whether the cluster is accessible.
-// If not accessible, then it returns an error
-func (c *Cluster) ProbeNodes() error {
-	_, err := c.clientset.CoreV1().Nodes().List(metav1.ListOptions{})
-	return err
-}
-
 // NewCluster returns a Cluster struct
 func NewCluster(kubeConfigPath string) (c *Cluster, e error) {
 	config, err := clientcmd.BuildConfigFromFlags("", kubeConfigPath)
@@ -62,11 +54,6 @@ func NewCluster(kubeConfigPath string) (c *Cluster, e error) {
 	}
 
 	return c, err
-}
-
-// GetClientset returns a Clientset
-func (c *Cluster) GetClientset() (k *kubernetes.Clientset) {
-	return c.clientset
 }
 
 func parseK8sYaml(filepath string) ([]runtime.Object, []*schema.GroupVersionKind, error) {
@@ -125,4 +112,13 @@ func (c *Cluster) ApplyYamlFile(filePath string) error {
 		return err
 	}
 	return nil
+}
+
+//GetCustomResource performs get operation and returns runtime object
+// Kind is mandatory and name is optional
+func (c *Cluster) GetCustomResource(kind string, arg ...string) ([]runtime.Object, error) {
+	if kind == "MachineDeployment" {
+		// To-Do: Retrives custom resource using the resource kind
+	}
+	return nil, nil
 }

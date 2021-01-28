@@ -66,20 +66,21 @@ var _ = Describe("Machine Resource", func() {
 		By("Checking for the clusters if provided are available")
 		Expect(prepareClusters()).To(BeNil())
 		By("Fetching kubernetes/crds and applying them into control cluster")
-		Expect(applyCrds()).To(BeNil())
+		//Expect(applyCrds()).To(BeNil())
 		By("Starting Machine Controller Manager")
-		Expect(startMachineControllerManager()).To(BeNil())
+		//Expect(startMachineControllerManager()).To(BeNil())
 		By("Starting Machine Controller")
-		Expect(startMachineController()).To(BeNil())
+		//Expect(startMachineController()).To(BeNil())
 		By("Parsing cloud-provider-secret file and applying")
-		Expect(applyCloudProviderSecret()).To(BeNil())
+		//Expect(applyCloudProviderSecret()).To(BeNil())
 		By("Applying MachineClass")
-		Expect(applyMachineClass()).To(BeNil())
+		//Expect(applyMachineClass()).To(BeNil())
 	})
 	BeforeEach(func() {
 		By("Check the number of goroutines running are 2")
-		Expect(numberOfBgProcesses).To(BeEquivalentTo(2))
+		Expect(numberOfBgProcesses).To(BeEquivalentTo(0))
 		// Nodes are healthy
+		Expect(targetKubeCluster.NumberOfReadyNodes()).To(BeEquivalentTo(targetKubeCluster.NumberOfNodes()))
 	})
 
 	Describe("Creating one machine resource", func() {
@@ -87,10 +88,16 @@ var _ = Describe("Machine Resource", func() {
 			Context("when the nodes in target cluster are listed", func() {
 				It("should correctly list existing nodes +1", func() {
 					// Probe nodes currently available in target cluster
+					initialNodes := targetKubeCluster.NumberOfNodes()
 					// apply machine resource yaml file
-					fmt.Println("wait for 30 sec before probing for nodes")
-					time.Sleep(30 * time.Second) // probe nodes again after some wait
+					Expect(controlKubeCluster.ApplyYamlFile("../../../kubernetes/machine.yaml")).To(BeNil())
+					//fmt.Println("wait for 30 sec before probing for nodes")
+					time.Sleep(30 * time.Second)
+					// watch for new events node ready
+					fmt.Println("Wait until a new node is added")
+					//Expect(targetKubeCluster.WaitForNodeEvent("Added", 300)).To(BeNil())
 					// check whether there is one node more
+					Expect(targetKubeCluster.NumberOfReadyNodes()).To(BeEquivalentTo(initialNodes + 1))
 				})
 			})
 		})
@@ -99,7 +106,7 @@ var _ = Describe("Machine Resource", func() {
 	Describe("Deleting one machine resource", func() {
 		BeforeEach(func() {
 			// Check there are no machine deployment and machinesets resources existing
-			// Nodes are healthy in target cluster
+
 		})
 		Context("When there are machine resources available in control cluster", func() {
 			// check for machine resources
