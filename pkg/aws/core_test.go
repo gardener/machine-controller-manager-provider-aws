@@ -30,6 +30,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+const (
+	awsAccessKeyIDIsMissing     = "machine codes error: code = [Internal] message = [Error while validating ProviderSpec secretRef.AWSAccessKeyID: Required value: Mention atleast providerAccessKeyId or accessKeyID]"
+	awsSecretAccessKeyIsMissing = "machine codes error: code = [Internal] message = [Error while validating ProviderSpec secretRef.AWSSecretAccessKey: Required value: Mention atleast providerSecretAccessKey or secretAccessKey]"
+	regionNAMIMissing           = "machine codes error: code = [Internal] message = [Error while validating ProviderSpec [providerSpec.ami: Required value: AMI is required, providerSpec.region: Required value: Region is required]]"
+	userDataIsMissing           = "machine codes error: code = [Internal] message = [Error while validating ProviderSpec secretRef.userData: Required value: Mention userData]"
+)
+
 var _ = Describe("MachineServer", func() {
 
 	// Some initializations
@@ -170,7 +177,7 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        "machine codes error: code = [Internal] message = [Error while validating ProviderSpec [secret providerAccessKeyId or accessKeyID is required field]]",
+					errMessage:        awsAccessKeyIDIsMissing,
 				},
 			}),
 			Entry("providerSecretAccessKey missing for provider secret", &data{
@@ -188,7 +195,7 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        "machine codes error: code = [Internal] message = [Error while validating ProviderSpec [secret providerSecretAccessKey or secretAccessKey is required field]]",
+					errMessage:        awsSecretAccessKeyIsMissing,
 				},
 			}),
 			Entry("userData missing for provider secret", &data{
@@ -206,7 +213,7 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        "machine codes error: code = [Internal] message = [Error while validating ProviderSpec [secret userData is required field]]",
+					errMessage:        userDataIsMissing,
 				},
 			}),
 			Entry("Validation for providerSpec fails. Missing AMI & Region.", &data{
@@ -219,7 +226,7 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        "machine codes error: code = [Internal] message = [Error while validating ProviderSpec [AMI is required field Region is required field]]",
+					errMessage:        regionNAMIMissing,
 				},
 			}),
 			Entry("Invalid region that doesn't exist", &data{
@@ -360,7 +367,7 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        "machine codes error: code = [Internal] message = [[secret providerAccessKeyId or accessKeyID is required field]]",
+					errMessage:        "machine codes error: code = [Internal] message = [Error while validating secret secretRef.AWSAccessKeyID: Required value: Mention atleast providerAccessKeyId or accessKeyID]",
 				},
 			}),
 			Entry("providerSecretAccessKey & userData missing for secret", &data{
@@ -384,7 +391,7 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        "machine codes error: code = [Internal] message = [[secret providerSecretAccessKey or secretAccessKey is required field secret userData is required field]]",
+					errMessage:        "machine codes error: code = [Internal] message = [Error while validating secret [secretRef.AWSSecretAccessKey: Required value: Mention atleast providerSecretAccessKey or secretAccessKey, secretRef.userData: Required value: Mention userData]]",
 				},
 			}),
 			Entry("Termination of instance that doesn't exist on provider", &data{
@@ -501,7 +508,7 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        "machine codes error: code = [Internal] message = [Error while validating ProviderSpec [secret providerAccessKeyId or accessKeyID is required field]]",
+					errMessage:        awsAccessKeyIDIsMissing,
 				},
 			}),
 			Entry("providerSecretAccessKey missing for secret", &data{
@@ -526,7 +533,7 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        "machine codes error: code = [Internal] message = [Error while validating ProviderSpec [secret providerSecretAccessKey or secretAccessKey is required field]]",
+					errMessage:        awsSecretAccessKeyIsMissing,
 				},
 			}),
 			Entry("userData missing for secret", &data{
@@ -551,7 +558,7 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        "machine codes error: code = [Internal] message = [Error while validating ProviderSpec [secret userData is required field]]",
+					errMessage:        userDataIsMissing,
 				},
 			}),
 			Entry("Machine deletion where provider-ID is missing", &data{
@@ -695,7 +702,7 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        "machine codes error: code = [Internal] message = [Error while validating ProviderSpec [secret providerAccessKeyId or accessKeyID is required field]]",
+					errMessage:        awsAccessKeyIDIsMissing,
 				},
 			}),
 			Entry("providerSecretAccessKey missing for secret", &data{
@@ -713,7 +720,7 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        "machine codes error: code = [Internal] message = [Error while validating ProviderSpec [secret providerSecretAccessKey or secretAccessKey is required field]]",
+					errMessage:        awsSecretAccessKeyIsMissing,
 				},
 			}),
 			Entry("userData missing for secret", &data{
@@ -731,7 +738,7 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        "machine codes error: code = [Internal] message = [Error while validating ProviderSpec [secret userData is required field]]",
+					errMessage:        userDataIsMissing,
 				},
 			}),
 
@@ -744,7 +751,7 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        "machine codes error: code = [Internal] message = [Error while validating ProviderSpec [AMI is required field Region is required field]]",
+					errMessage:        regionNAMIMissing,
 				},
 			}),
 
@@ -769,7 +776,7 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        "machine codes error: code = [Internal] message = [Error while validating ProviderSpec [Tag is required of the form kubernetes.io/cluster/****]]",
+					errMessage:        "machine codes error: code = [Internal] message = [Error while validating ProviderSpec providerSpec.tags[]: Required value: Tag required of the form kubernetes.io/cluster/****]",
 				},
 			}),
 			Entry("Cloud provider returned error while describing instance", &data{

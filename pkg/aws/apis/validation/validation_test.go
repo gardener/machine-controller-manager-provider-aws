@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 var _ = Describe("Validation", func() {
@@ -29,7 +30,7 @@ var _ = Describe("Validation", func() {
 		}
 		type expect struct {
 			errToHaveOccurred bool
-			errList           []error
+			errList           field.ErrorList
 		}
 		type data struct {
 			setup  setup
@@ -38,11 +39,13 @@ var _ = Describe("Validation", func() {
 		}
 		DescribeTable("##table",
 			func(data *data) {
-				validationErr := ValidateAWSProviderSpec(data.action.spec, data.action.secret)
+				validationErr := ValidateAWSProviderSpec(data.action.spec, data.action.secret, field.NewPath("providerSpec"))
 
 				if data.expect.errToHaveOccurred {
-					Expect(validationErr).NotTo(Equal(nil))
+					Expect(validationErr).NotTo(Equal(field.ErrorList{}))
 					Expect(validationErr).To(Equal(data.expect.errList))
+				} else {
+					Expect(validationErr).To(Equal(field.ErrorList{}))
 				}
 
 			},
@@ -123,7 +126,6 @@ var _ = Describe("Validation", func() {
 					errToHaveOccurred: false,
 				},
 			}),
-
 			Entry("AMI field missing", &data{
 				setup: setup{},
 				action: action{
@@ -159,8 +161,13 @@ var _ = Describe("Validation", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errList: []error{
-						fmt.Errorf("AMI is required field"),
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueRequired",
+							Field:    "providerSpec.ami",
+							BadValue: "",
+							Detail:   "AMI is required",
+						},
 					},
 				},
 			}),
@@ -199,8 +206,13 @@ var _ = Describe("Validation", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errList: []error{
-						fmt.Errorf("Region is required field"),
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueRequired",
+							Field:    "providerSpec.region",
+							BadValue: "",
+							Detail:   "Region is required",
+						},
 					},
 				},
 			}),
@@ -239,8 +251,13 @@ var _ = Describe("Validation", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errList: []error{
-						fmt.Errorf("MachineType is required field"),
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueRequired",
+							Field:    "providerSpec.machineType",
+							BadValue: "",
+							Detail:   "MachineType is required",
+						},
 					},
 				},
 			}),
@@ -277,8 +294,13 @@ var _ = Describe("Validation", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errList: []error{
-						fmt.Errorf("IAM Name is required field"),
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueRequired",
+							Field:    "providerSpec.iam.name",
+							BadValue: "",
+							Detail:   "IAM Name is required",
+						},
 					},
 				},
 			}),
@@ -317,8 +339,13 @@ var _ = Describe("Validation", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errList: []error{
-						fmt.Errorf("KeyName is required field"),
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueRequired",
+							Field:    "providerSpec.keyName",
+							BadValue: "",
+							Detail:   "KeyName is required",
+						},
 					},
 				},
 			}),
@@ -357,8 +384,13 @@ var _ = Describe("Validation", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errList: []error{
-						fmt.Errorf("Tag is required of the form kubernetes.io/cluster/****"),
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueRequired",
+							Field:    "providerSpec.tags[]",
+							BadValue: "",
+							Detail:   "Tag required of the form kubernetes.io/cluster/****",
+						},
 					},
 				},
 			}),
@@ -397,8 +429,13 @@ var _ = Describe("Validation", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errList: []error{
-						fmt.Errorf("Tag is required of the form kubernetes.io/role/****"),
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueRequired",
+							Field:    "providerSpec.tags[]",
+							BadValue: "",
+							Detail:   "Tag required of the form kubernetes.io/role/****",
+						},
 					},
 				},
 			}),
@@ -409,12 +446,60 @@ var _ = Describe("Validation", func() {
 						AMI: "ami-123456789",
 						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
 							{
+								DeviceName: "/dev/sda",
 								Ebs: awsapi.AWSEbsBlockDeviceSpec{
 									VolumeSize: 50,
 									VolumeType: "gp2",
 								},
 							},
 							{
+								DeviceName: "/root",
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
+									VolumeSize: 50,
+									VolumeType: "gp2",
+								},
+							},
+						},
+						IAM: awsapi.AWSIAMProfileSpec{
+							Name: "test-iam",
+						},
+						Region:      "eu-west-1",
+						MachineType: "m4.large",
+						KeyName:     "test-ssh-publickey",
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
+								SecurityGroupIDs: []string{
+									"sg-00002132323",
+								},
+								SubnetID: "subnet-123456",
+							},
+						},
+						Tags: map[string]string{
+							"kubernetes.io/cluster/shoot--test": "1",
+							"kubernetes.io/role/test":           "1",
+						},
+					},
+					secret: providerSecret,
+				},
+				expect: expect{
+					errToHaveOccurred: false,
+				},
+			}),
+			Entry("Multiple root block devices specified", &data{
+				setup: setup{},
+				action: action{
+					spec: &awsapi.AWSProviderSpec{
+						AMI: "ami-123456789",
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								DeviceName: "/root",
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
+									VolumeSize: 50,
+									VolumeType: "gp2",
+								},
+							},
+							{
+								DeviceName: "/root",
 								Ebs: awsapi.AWSEbsBlockDeviceSpec{
 									VolumeSize: 50,
 									VolumeType: "gp2",
@@ -444,8 +529,74 @@ var _ = Describe("Validation", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errList: []error{
-						fmt.Errorf("Can only specify one (root) block device"),
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueRequired",
+							Field:    "providerSpec.blockDevices",
+							BadValue: "",
+							Detail:   "Only one device can be specified as root",
+						},
+						{
+							Type:     "FieldValueRequired",
+							Field:    "providerSpec.blockDevices",
+							BadValue: "",
+							Detail:   "Device name '/root' duplicated 2 times, DeviceName must be unique",
+						},
+					},
+				},
+			}),
+			Entry("Multiple block devices specified, one with invalid data", &data{
+				setup: setup{},
+				action: action{
+					spec: &awsapi.AWSProviderSpec{
+						AMI: "ami-123456789",
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								DeviceName: "/root",
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
+									VolumeSize: 50,
+									VolumeType: "gp2",
+								},
+							},
+							{
+								VirtualName: "kubelet-dir",
+								DeviceName:  "/dev/sda",
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
+									VolumeSize: -50,
+									VolumeType: "gp2",
+								},
+							},
+						},
+						IAM: awsapi.AWSIAMProfileSpec{
+							Name: "test-iam",
+						},
+						Region:      "eu-west-1",
+						MachineType: "m4.large",
+						KeyName:     "test-ssh-publickey",
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
+								SecurityGroupIDs: []string{
+									"sg-00002132323",
+								},
+								SubnetID: "subnet-123456",
+							},
+						},
+						Tags: map[string]string{
+							"kubernetes.io/cluster/shoot--test": "1",
+							"kubernetes.io/role/test":           "1",
+						},
+					},
+					secret: providerSecret,
+				},
+				expect: expect{
+					errToHaveOccurred: true,
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueRequired",
+							Field:    "providerSpec.blockDevices[1].ebs.volumeSize",
+							BadValue: "",
+							Detail:   "Please mention a valid EBS volume size",
+						},
 					},
 				},
 			}),
@@ -485,8 +636,13 @@ var _ = Describe("Validation", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errList: []error{
-						fmt.Errorf("Please mention a valid ebs volume size"),
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueRequired",
+							Field:    "providerSpec.blockDevices[0].ebs.volumeSize",
+							BadValue: "",
+							Detail:   "Please mention a valid EBS volume size",
+						},
 					},
 				},
 			}),
@@ -525,8 +681,59 @@ var _ = Describe("Validation", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errList: []error{
-						fmt.Errorf("Please mention a valid ebs volume type"),
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueRequired",
+							Field:    "providerSpec.blockDevices[0].ebs.volumeType",
+							BadValue: "",
+							Detail:   fmt.Sprintf("Please mention a valid EBS volume type: %v", awsapi.ValidVolumeTypes),
+						},
+					},
+				},
+			}),
+			Entry("EBS volume type is of not mentioned type", &data{
+				setup: setup{},
+				action: action{
+					spec: &awsapi.AWSProviderSpec{
+						AMI: "ami-123456789",
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
+									VolumeSize: 50,
+									VolumeType: "gp4",
+								},
+							},
+						},
+						IAM: awsapi.AWSIAMProfileSpec{
+							Name: "test-iam",
+						},
+						Region:      "eu-west-1",
+						MachineType: "m4.large",
+						KeyName:     "test-ssh-publickey",
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
+								SecurityGroupIDs: []string{
+									"sg-00002132323",
+								},
+								SubnetID: "subnet-123456",
+							},
+						},
+						Tags: map[string]string{
+							"kubernetes.io/cluster/shoot--test": "1",
+							"kubernetes.io/role/test":           "1",
+						},
+					},
+					secret: providerSecret,
+				},
+				expect: expect{
+					errToHaveOccurred: true,
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueRequired",
+							Field:    "providerSpec.blockDevices[0].ebs.volumeType",
+							BadValue: "",
+							Detail:   fmt.Sprintf("Please mention a valid EBS volume type: %v", awsapi.ValidVolumeTypes),
+						},
 					},
 				},
 			}),
@@ -566,12 +773,17 @@ var _ = Describe("Validation", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errList: []error{
-						fmt.Errorf("Please mention a valid ebs volume iops"),
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueRequired",
+							Field:    "providerSpec.blockDevices[0].ebs.iops",
+							BadValue: "",
+							Detail:   "Please mention a valid EBS volume iops",
+						},
 					},
 				},
 			}),
-			Entry("NICs are missing", &data{
+			Entry("Network Interfaces are missing", &data{
 				setup: setup{},
 				action: action{
 					spec: &awsapi.AWSProviderSpec{
@@ -599,8 +811,13 @@ var _ = Describe("Validation", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errList: []error{
-						fmt.Errorf("Mention at least one NetworkInterface"),
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueRequired",
+							Field:    "providerSpec.networkInterfaces[]",
+							BadValue: "",
+							Detail:   "Mention at least one NetworkInterface",
+						},
 					},
 				},
 			}),
@@ -639,8 +856,13 @@ var _ = Describe("Validation", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errList: []error{
-						fmt.Errorf("SubnetID is required"),
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueRequired",
+							Field:    "providerSpec.networkInterfaces.subnetID",
+							BadValue: "",
+							Detail:   "SubnetID is required",
+						},
 					},
 				},
 			}),
@@ -677,8 +899,13 @@ var _ = Describe("Validation", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errList: []error{
-						fmt.Errorf("Mention at least one securityGroupID"),
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueRequired",
+							Field:    "providerSpec.networkInterfaces.securityGroupIDs",
+							BadValue: "",
+							Detail:   "Mention at least one securityGroupID",
+						},
 					},
 				},
 			}),
@@ -723,12 +950,17 @@ var _ = Describe("Validation", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errList: []error{
-						fmt.Errorf("secret providerAccessKeyId or accessKeyID is required field"),
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueRequired",
+							Field:    "secretRef.AWSAccessKeyID",
+							BadValue: "",
+							Detail:   "Mention atleast providerAccessKeyId or accessKeyID",
+						},
 					},
 				},
 			}),
-			Entry("Secret ProviderSecretAccessKey is required field", &data{
+			Entry("Mention atleast AWSSecretAccessKey or AWSAlternativeSecretAccessKey", &data{
 				setup: setup{},
 				action: action{
 					spec: &awsapi.AWSProviderSpec{
@@ -769,9 +1001,58 @@ var _ = Describe("Validation", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errList: []error{
-						fmt.Errorf("secret providerSecretAccessKey or secretAccessKey is required field"),
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueRequired",
+							Field:    "secretRef.AWSSecretAccessKey",
+							BadValue: "",
+							Detail:   "Mention atleast providerSecretAccessKey or secretAccessKey",
+						},
 					},
+				},
+			}),
+			Entry("secretAccessKey is mentioned", &data{
+				setup: setup{},
+				action: action{
+					spec: &awsapi.AWSProviderSpec{
+						AMI: "ami-123456789",
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
+									VolumeSize: 50,
+									VolumeType: "gp2",
+								},
+							},
+						},
+						IAM: awsapi.AWSIAMProfileSpec{
+							Name: "test-iam",
+						},
+						Region:      "eu-west-1",
+						MachineType: "m4.large",
+						KeyName:     "test-ssh-publickey",
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
+								SecurityGroupIDs: []string{
+									"sg-00002132323",
+								},
+								SubnetID: "subnet-123456",
+							},
+						},
+						Tags: map[string]string{
+							"kubernetes.io/cluster/shoot--test": "1",
+							"kubernetes.io/role/test":           "1",
+						},
+					},
+					secret: &corev1.Secret{
+						Data: map[string][]byte{
+							"providerAccessKeyId": []byte("dummy-id"),
+							"userData":            []byte("dummy-user-data"),
+							"secretAccessKey":     []byte("dummy-user-data"),
+						},
+					},
+				},
+				expect: expect{
+					errToHaveOccurred: false,
 				},
 			}),
 			Entry("Secret UserData is required field", &data{
@@ -815,12 +1096,17 @@ var _ = Describe("Validation", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errList: []error{
-						fmt.Errorf("secret userData is required field"),
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueRequired",
+							Field:    "secretRef.userData",
+							BadValue: "",
+							Detail:   "Mention userData",
+						},
 					},
 				},
 			}),
-			Entry("Security group ID left blank for NIC", &data{
+			Entry("Security group ID left blank for network interface", &data{
 				setup: setup{},
 				action: action{
 					spec: &awsapi.AWSProviderSpec{
@@ -856,8 +1142,13 @@ var _ = Describe("Validation", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errList: []error{
-						fmt.Errorf("securityGroupIDs cannot be blank for networkInterface:0 securityGroupID:0"),
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueRequired",
+							Field:    "providerSpec.networkInterfaces.securityGroupIDs",
+							BadValue: "",
+							Detail:   "securityGroupIDs cannot be blank for networkInterface:0 securityGroupID:0",
+						},
 					},
 				},
 			}),
