@@ -31,6 +31,7 @@ import (
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/driver"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/codes"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/status"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/klog"
 )
 
@@ -183,9 +184,11 @@ func (d *Driver) DeleteMachine(ctx context.Context, req *driver.DeleteMachineReq
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	validationErr := validation.ValidateSecret(req.Secret)
-	if validationErr != nil {
-		err = fmt.Errorf("%v", validationErr)
+	validationErr := validation.ValidateSecret(req.Secret, field.NewPath("secretRef"))
+	if validationErr.ToAggregate() != nil && len(validationErr.ToAggregate().Errors()) > 0 {
+		err = fmt.Errorf("Error while validating secret %v", validationErr.ToAggregate().Error())
+		klog.V(2).Infof("Validation of AWSMachineClass failed %s", err)
+
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 

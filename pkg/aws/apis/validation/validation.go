@@ -25,6 +25,8 @@ import (
 
 	awsapi "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
 	corev1 "k8s.io/api/core/v1"
+	utilvalidation "k8s.io/apimachinery/pkg/util/validation"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 const nameFmt string = `[-a-z0-9]+`
@@ -33,93 +35,135 @@ const nameMaxLength int = 63
 var nameRegexp = regexp.MustCompile("^" + nameFmt + "$")
 
 // ValidateAWSProviderSpec validates AWS provider spec
-func ValidateAWSProviderSpec(spec *awsapi.AWSProviderSpec, secret *corev1.Secret) []error {
-	var allErrs []error
+func ValidateAWSProviderSpec(spec *awsapi.AWSProviderSpec, secret *corev1.Secret, fldPath *field.Path) field.ErrorList {
+	var (
+		allErrs = field.ErrorList{}
+	)
 
 	if "" == spec.AMI {
-		allErrs = append(allErrs, fmt.Errorf("AMI is required field"))
+		allErrs = append(allErrs, field.Required(fldPath.Child("ami"), "AMI is required"))
 	}
 	if "" == spec.Region {
-		allErrs = append(allErrs, fmt.Errorf("Region is required field"))
+		allErrs = append(allErrs, field.Required(fldPath.Child("region"), "Region is required"))
 	}
 	if "" == spec.MachineType {
-		allErrs = append(allErrs, fmt.Errorf("MachineType is required field"))
+		allErrs = append(allErrs, field.Required(fldPath.Child("machineType"), "MachineType is required"))
 	}
 	if "" == spec.IAM.Name {
-		allErrs = append(allErrs, fmt.Errorf("IAM Name is required field"))
+		allErrs = append(allErrs, field.Required(fldPath.Child("iam.name"), "IAM Name is required"))
 	}
 	if "" == spec.KeyName {
-		allErrs = append(allErrs, fmt.Errorf("KeyName is required field"))
+		allErrs = append(allErrs, field.Required(fldPath.Child("keyName"), "KeyName is required"))
 	}
 
-	allErrs = append(allErrs, validateBlockDevices(spec.BlockDevices)...)
-	allErrs = append(allErrs, validateNetworkInterfaces(spec.NetworkInterfaces)...)
-	allErrs = append(allErrs, ValidateSecret(secret)...)
-	allErrs = append(allErrs, validateSpecTags(spec.Tags)...)
+	allErrs = append(allErrs, validateBlockDevices(spec.BlockDevices, fldPath.Child("blockDevices"))...)
+	allErrs = append(allErrs, validateNetworkInterfaces(spec.NetworkInterfaces, fldPath.Child("networkInterfaces"))...)
+	allErrs = append(allErrs, ValidateSecret(secret, field.NewPath("secretRef"))...)
+	allErrs = append(allErrs, validateSpecTags(spec.Tags, fldPath.Child("tags"))...)
 
 	return allErrs
 }
 
-func validateSpecTags(tags map[string]string) []error {
-	var allErrs []error
-	clusterName := ""
-	nodeRole := ""
+func validateSpecTags(tags map[string]string, fldPath *field.Path) field.ErrorList {
+	var (
+		allErrs     = field.ErrorList{}
+		clusterName = ""
+		nodeRole    = ""
+	)
 
 	for key := range tags {
-		if strings.Contains(key, "kubernetes.io/cluster/") {
+		if strings.Contains(key, awsapi.ClusterTagPrefix) {
 			clusterName = key
-		} else if strings.Contains(key, "kubernetes.io/role/") {
+		} else if strings.Contains(key, awsapi.RoleTagPrefix) {
 			nodeRole = key
 		}
 	}
 
 	if clusterName == "" {
-		allErrs = append(allErrs, fmt.Errorf("Tag is required of the form kubernetes.io/cluster/****"))
+		allErrs = append(allErrs, field.Required(fldPath.Child(""), "Tag required of the form "+awsapi.ClusterTagPrefix+"****"))
 	}
 	if nodeRole == "" {
-		allErrs = append(allErrs, fmt.Errorf("Tag is required of the form kubernetes.io/role/****"))
+		allErrs = append(allErrs, field.Required(fldPath.Child(""), "Tag required of the form "+awsapi.RoleTagPrefix+"****"))
 	}
+
 	return allErrs
 }
 
-func validateBlockDevices(blockDevices []awsapi.AWSBlockDeviceMappingSpec) []error {
+func validateBlockDevices(blockDevices []awsapi.AWSBlockDeviceMappingSpec, fldPath *field.Path) field.ErrorList {
+	var (
+		allErrs              = field.ErrorList{}
+		rootPartitionCount   = 0
+		deviceNames          = make(map[string]int)
+		dataDeviceNameRegexp = regexp.MustCompile(awsapi.DataDeviceNameFormat)
+	)
 
-	var allErrs []error
+	// if blockDevices is empty, AWS will automatically create a root partition
+	for i, disk := range blockDevices {
+		idxPath := fldPath.Index(i)
 
-	if len(blockDevices) > 1 {
-		allErrs = append(allErrs, fmt.Errorf("Can only specify one (root) block device"))
-	} else if len(blockDevices) == 1 {
-		if blockDevices[0].Ebs.VolumeSize <= 0 {
-			allErrs = append(allErrs, fmt.Errorf("Please mention a valid ebs volume size"))
+		if disk.DeviceName == awsapi.RootDeviceName {
+			rootPartitionCount++
+		} else if len(blockDevices) > 1 && !dataDeviceNameRegexp.MatchString(disk.DeviceName) {
+			// if there are multiple devices, non-root devices are expected to adhere to AWS naming conventions
+			allErrs = append(allErrs, field.Invalid(idxPath.Child("deviceName"), disk.DeviceName, utilvalidation.RegexError(fmt.Sprintf("Device name given: %s does not match the expected pattern", disk.DeviceName), awsapi.DataDeviceNameFormat)))
 		}
-		if blockDevices[0].Ebs.VolumeType == "" {
-			allErrs = append(allErrs, fmt.Errorf("Please mention a valid ebs volume type"))
-		} else if blockDevices[0].Ebs.VolumeType == "io1" && blockDevices[0].Ebs.Iops <= 0 {
-			allErrs = append(allErrs, fmt.Errorf("Please mention a valid ebs volume iops"))
+
+		if _, keyExist := deviceNames[disk.DeviceName]; keyExist {
+			deviceNames[disk.DeviceName]++
+		} else {
+			deviceNames[disk.DeviceName] = 1
+		}
+
+		if !contains(awsapi.ValidVolumeTypes, disk.Ebs.VolumeType) {
+			allErrs = append(allErrs, field.Required(idxPath.Child("ebs.volumeType"), fmt.Sprintf("Please mention a valid EBS volume type: %v", awsapi.ValidVolumeTypes)))
+		}
+
+		if disk.Ebs.VolumeSize <= 0 {
+			allErrs = append(allErrs, field.Required(idxPath.Child("ebs.volumeSize"), "Please mention a valid EBS volume size"))
+		}
+
+		if disk.Ebs.VolumeType == awsapi.VolumeTypeIO1 && disk.Ebs.Iops <= 0 {
+			allErrs = append(allErrs, field.Required(idxPath.Child("ebs.iops"), "Please mention a valid EBS volume iops"))
+		}
+
+	}
+
+	if rootPartitionCount > 1 {
+		allErrs = append(allErrs, field.Required(fldPath, "Only one device can be specified as root"))
+		// len(blockDevices) > 1 allow backward compatibility when a single disk is provided without DeviceName
+	} else if rootPartitionCount == 0 && len(blockDevices) > 1 {
+		allErrs = append(allErrs, field.Required(fldPath, "Only one device can be specified as root"))
+	}
+
+	for device, number := range deviceNames {
+		if number > 1 {
+			allErrs = append(allErrs, field.Required(fldPath, fmt.Sprintf("Device name '%s' duplicated %d times, DeviceName must be unique", device, number)))
 		}
 	}
+
 	return allErrs
 }
 
-func validateNetworkInterfaces(networkInterfaces []awsapi.AWSNetworkInterfaceSpec) []error {
-	var allErrs []error
+func validateNetworkInterfaces(networkInterfaces []awsapi.AWSNetworkInterfaceSpec, fldPath *field.Path) field.ErrorList {
+	var (
+		allErrs = field.ErrorList{}
+	)
+
 	if len(networkInterfaces) == 0 {
-		allErrs = append(allErrs, fmt.Errorf("Mention at least one NetworkInterface"))
+		allErrs = append(allErrs, field.Required(fldPath.Child(""), "Mention at least one NetworkInterface"))
 	} else {
 		for i := range networkInterfaces {
 			if "" == networkInterfaces[i].SubnetID {
-				allErrs = append(allErrs, fmt.Errorf("SubnetID is required"))
+				allErrs = append(allErrs, field.Required(fldPath.Child("subnetID"), "SubnetID is required"))
 			}
 
 			if 0 == len(networkInterfaces[i].SecurityGroupIDs) {
-				allErrs = append(allErrs, fmt.Errorf("Mention at least one securityGroupID"))
+				allErrs = append(allErrs, field.Required(fldPath.Child("securityGroupIDs"), "Mention at least one securityGroupID"))
 			} else {
 				for j := range networkInterfaces[i].SecurityGroupIDs {
 					if "" == networkInterfaces[i].SecurityGroupIDs[j] {
 						output := strings.Join([]string{"securityGroupIDs cannot be blank for networkInterface:", strconv.Itoa(i), " securityGroupID:", strconv.Itoa(j)}, "")
-
-						allErrs = append(allErrs, fmt.Errorf(output))
-
+						allErrs = append(allErrs, field.Required(fldPath.Child("securityGroupIDs"), output))
 					}
 				}
 			}
@@ -129,22 +173,33 @@ func validateNetworkInterfaces(networkInterfaces []awsapi.AWSNetworkInterfaceSpe
 }
 
 // ValidateSecret makes sure that the supplied secrets contains the required fields
-func ValidateSecret(secret *corev1.Secret) []error {
-	var allErrs []error
+func ValidateSecret(secret *corev1.Secret, fldPath *field.Path) field.ErrorList {
+	var (
+		allErrs = field.ErrorList{}
+	)
 
 	if secret == nil {
-		allErrs = append(allErrs, fmt.Errorf("SecretReference is Nil"))
+		allErrs = append(allErrs, field.Required(fldPath.Child(""), "secretRef is required"))
 	} else {
 		if "" == string(secret.Data[awsapi.AWSAccessKeyID]) && "" == string(secret.Data[awsapi.AWSAlternativeAccessKeyID]) {
-			allErrs = append(allErrs, fmt.Errorf("secret %s or %s is required field", awsapi.AWSAccessKeyID, awsapi.AWSAlternativeAccessKeyID))
+			allErrs = append(allErrs, field.Required(fldPath.Child("AWSAccessKeyID"), fmt.Sprintf("Mention atleast %s or %s", awsapi.AWSAccessKeyID, awsapi.AWSAlternativeAccessKeyID)))
 		}
 		if "" == string(secret.Data[awsapi.AWSSecretAccessKey]) && "" == string(secret.Data[awsapi.AWSAlternativeSecretAccessKey]) {
-			allErrs = append(allErrs, fmt.Errorf("secret %s or %s is required field", awsapi.AWSSecretAccessKey, awsapi.AWSAlternativeSecretAccessKey))
+			allErrs = append(allErrs, field.Required(fldPath.Child("AWSSecretAccessKey"), fmt.Sprintf("Mention atleast %s or %s", awsapi.AWSSecretAccessKey, awsapi.AWSAlternativeSecretAccessKey)))
 		}
 		if "" == string(secret.Data["userData"]) {
-			allErrs = append(allErrs, fmt.Errorf("secret userData is required field"))
+			allErrs = append(allErrs, field.Required(fldPath.Child("userData"), "Mention userData"))
 		}
 	}
 
 	return allErrs
+}
+
+func contains(arr []string, checkValue string) bool {
+	for _, value := range arr {
+		if value == checkValue {
+			return true
+		}
+	}
+	return false
 }

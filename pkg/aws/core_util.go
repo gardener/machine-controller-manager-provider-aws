@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/codes"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/status"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/klog"
 )
 
@@ -54,9 +55,11 @@ func decodeProviderSpecAndSecret(machineClass *v1alpha1.MachineClass, secret *co
 	}
 
 	// Validate the Spec and Secrets
-	ValidationErr := validation.ValidateAWSProviderSpec(providerSpec, secret)
-	if ValidationErr != nil {
-		err = fmt.Errorf("Error while validating ProviderSpec %v", ValidationErr)
+	validationErr := validation.ValidateAWSProviderSpec(providerSpec, secret, field.NewPath("providerSpec"))
+	if validationErr.ToAggregate() != nil && len(validationErr.ToAggregate().Errors()) > 0 {
+		err = fmt.Errorf("Error while validating ProviderSpec %v", validationErr.ToAggregate().Error())
+		klog.V(2).Infof("Validation of AWSMachineClass failed %s", err)
+
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
