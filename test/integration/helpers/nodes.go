@@ -1,12 +1,8 @@
 package helpers
 
 import (
-	"encoding/json"
-	"fmt"
-
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/watch"
 )
 
 //ProbeNodes tries to probe for nodes. Indirectly it checks whether the cluster is accessible.
@@ -20,27 +16,6 @@ func (c *Cluster) ProbeNodes() error {
 func (c *Cluster) getNodes() (*v1.NodeList, error) {
 	nodes, err := c.clientset.CoreV1().Nodes().List(metav1.ListOptions{})
 	return nodes, err
-}
-
-//WaitForNodeEvent waits until a given event is generated.
-//INProgress
-func (c *Cluster) WaitForNodeEvent(eventType watch.EventType, timeOut int64) error {
-	w, err := c.clientset.CoreV1().Nodes().Watch(metav1.ListOptions{
-		TimeoutSeconds: &timeOut,
-	})
-	for event := range w.ResultChan() {
-		//fmt.Printf("Type: %v\n", event.Type)
-		n, ok := event.Object.(*v1.Node)
-		if ok {
-			text, _ := json.Marshal(n)
-			fmt.Printf("Output: %s", string(text))
-		}
-		if event.Type == "ADDED" {
-			//break
-			fmt.Println("ADDED")
-		}
-	}
-	return err
 }
 
 //NumberOfReadyNodes tries to retrieve the list of node objects in the cluster.

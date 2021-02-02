@@ -2,8 +2,8 @@ package helpers
 
 import (
 	mcmClientset "github.com/gardener/machine-controller-manager/pkg/client/clientset/versioned"
+
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -14,7 +14,7 @@ type Cluster struct {
 	restConfig          *rest.Config
 	clientset           *kubernetes.Clientset
 	apiextensionsClient *apiextensionsclientset.Clientset
-	mcmClient           *mcmClientset.Clientset
+	McmClient           *mcmClientset.Clientset
 }
 
 // FillClientSets checks whether the cluster is accessible and returns an error if not
@@ -32,7 +32,7 @@ func (c *Cluster) FillClientSets() error {
 		}
 		mcmClient, err := mcmClientset.NewForConfig(c.restConfig)
 		if err == nil {
-			c.mcmClient = mcmClient
+			c.McmClient = mcmClient
 		}
 	}
 	return err
@@ -50,13 +50,4 @@ func NewCluster(kubeConfigPath string) (c *Cluster, e error) {
 	}
 
 	return c, err
-}
-
-//GetCustomResource performs get operation and returns runtime object
-// Kind is mandatory and name is optional
-func (c *Cluster) GetCustomResource(kind string, arg ...string) ([]runtime.Object, error) {
-	if kind == "MachineDeployment" {
-		// To-Do: Retrives custom resource using the resource kind
-	}
-	return nil, nil
 }

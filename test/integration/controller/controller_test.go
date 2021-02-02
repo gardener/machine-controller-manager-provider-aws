@@ -41,6 +41,7 @@ import (
 	"github.com/gardener/machine-controller-manager-provider-aws/test/integration/helpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
@@ -79,25 +80,26 @@ var _ = Describe("Machine Resource", func() {
 		By("Check the number of goroutines running are 2")
 		Expect(numberOfBgProcesses).To(BeEquivalentTo(2))
 		// Nodes are healthy
+		By("Check nodes in target cluster are healthy")
 		Expect(targetKubeCluster.NumberOfReadyNodes()).To(BeEquivalentTo(targetKubeCluster.NumberOfNodes()))
 	})
 
 	Describe("Creating one machine resource", func() {
 		Context("In Control cluster", func() {
-			Context("when the nodes in target cluster are listed", func() {
-				It("should correctly list existing nodes +1", func() {
-					// Probe nodes currently available in target cluster
-					initialNodes := targetKubeCluster.NumberOfNodes()
-					// apply machine resource yaml file
-					Expect(controlKubeCluster.ApplyYamlFile("../../../kubernetes/machine.yaml")).To(BeNil())
-					//fmt.Println("wait for 30 sec before probing for nodes")
-					time.Sleep(30 * time.Second)
-					// watch for new events node ready
-					fmt.Println("Wait until a new node is added")
-					//Expect(targetKubeCluster.WaitForNodeEvent("Added", 300)).To(BeNil())
-					// check whether there is one node more
-					Expect(targetKubeCluster.NumberOfReadyNodes()).To(BeEquivalentTo(initialNodes + 1))
-				})
+
+			// Probe nodes currently available in target cluster
+			var initialNodes int16
+
+			It("should not lead to any errors", func() {
+				// apply machine resource yaml file
+				initialNodes = targetKubeCluster.NumberOfNodes()
+				Expect(controlKubeCluster.ApplyYamlFile("../../../kubernetes/machine.yaml")).To(BeNil())
+				//fmt.Println("wait for 30 sec before probing for nodes")
+			})
+			It("should list existing +1 nodes in target cluster", func() {
+				fmt.Println("Wait until a new node is added. Number of nodes should be ", initialNodes+1)
+				// check whether there is one node more
+				Eventually(targetKubeCluster.NumberOfReadyNodes, 300, 5).Should(BeNumerically("==", initialNodes+1))
 			})
 		})
 	})
@@ -105,25 +107,166 @@ var _ = Describe("Machine Resource", func() {
 	Describe("Deleting one machine resource", func() {
 		BeforeEach(func() {
 			// Check there are no machine deployment and machinesets resources existing
+			deploymentList, err := controlKubeCluster.McmClient.MachineV1alpha1().MachineDeployments("default").List(metav1.ListOptions{})
+			Expect(len(deploymentList.Items)).Should(BeZero(), "Zero MachineDeployments should exist")
+			Expect(err).Should(BeNil())
+			machineSetsList, err := controlKubeCluster.McmClient.MachineV1alpha1().MachineSets("default").List(metav1.ListOptions{})
+			Expect(len(machineSetsList.Items)).Should(BeZero(), "Zero Machinesets should exist")
+			Expect(err).Should(BeNil())
 
 		})
 		Context("When there are machine resources available in control cluster", func() {
-			// check for machine resources
-			Context("When one machine is deleted randomly", func() {
-				// Keep count of nodes available
-				//delete machine resource
-				It("should list existing nodes -1 in target cluster", func() {
-					// check there are n-1 nodes
-				})
+			var initialNodes int16
+			It("should not lead to errors", func() {
+				machinesList, _ := controlKubeCluster.McmClient.MachineV1alpha1().Machines("default").List(metav1.ListOptions{})
+				if len(machinesList.Items) != 0 {
+					//Context("When one machine is deleted randomly", func() { //randomly ? Caution - looks like we are not getting blank cluster
+					// Keep count of nodes available
+					//delete machine resource
+					initialNodes = targetKubeCluster.NumberOfNodes()
+					Expect(controlKubeCluster.McmClient.MachineV1alpha1().Machines("default").Delete("test1-machine1", &metav1.DeleteOptions{})).Should(BeNil(), "No Errors while deleting machine")
+				}
+			})
+			It("should list existing nodes -1 in target cluster", func() {
+				// check there are n-1 nodes
+				if initialNodes != 0 {
+					Eventually(targetKubeCluster.NumberOfNodes, 180, 5).Should(BeNumerically("==", initialNodes-1))
+				}
 			})
 		})
 		Context("when there are no machines available", func() {
+			var initialNodes int16
 			// delete one machine (non-existent) by random text as name of resource
 			It("should list existing nodes ", func() {
 				// check there are no changes to nodes
+				machinesList, _ := controlKubeCluster.McmClient.MachineV1alpha1().Machines("default").List(metav1.ListOptions{})
+				if len(machinesList.Items) == 0 {
+					// Keep count of nodes available
+					// delete machine resource
+					initialNodes = targetKubeCluster.NumberOfNodes()
+					err := controlKubeCluster.McmClient.MachineV1alpha1().Machines("default").Delete("test1-machine1-dummy", &metav1.DeleteOptions{})
+					Expect(err).To(HaveOccurred())
+					time.Sleep(30 * time.Second)
+					Expect(targetKubeCluster.NumberOfNodes()).To(BeEquivalentTo(initialNodes))
+				}
 			})
 		})
 	})
+
+	// Testcase #02 | Machine Deployment
+	Describe("Machine Deployment", func() {
+		Context("In Control cluster", func() {
+			var initialNodes int16
+			Context("Creating a machine deployment with 3 replicas", func() {
+				It("Should not lead to any errors", func() {
+					//probe initialnodes before continuing
+					initialNodes = targetKubeCluster.NumberOfNodes()
+
+					// apply machine resource yaml file
+					Expect(controlKubeCluster.ApplyYamlFile("../../../kubernetes/machine-deployment.yaml")).To(BeNil())
+				})
+				It("should correctly list existing nodes +3 in target cluster", func() {
+					fmt.Println("Wait until new nodes are added. Number of nodes should be ", initialNodes+3)
+
+					// check whether all the expected nodes are ready
+					Eventually(targetKubeCluster.NumberOfReadyNodes, 180, 5).Should(BeNumerically("==", initialNodes+3))
+				})
+			})
+			Context("Scale up the number of nodes to 6", func() {
+				It("Should not lead to any errors", func() {
+					machineDployment, _ := controlKubeCluster.McmClient.MachineV1alpha1().MachineDeployments("default").Get("test-machine-deployment", metav1.GetOptions{})
+					machineDployment.Spec.Replicas = 6
+					_, err := controlKubeCluster.McmClient.MachineV1alpha1().MachineDeployments("default").Update(machineDployment)
+					Expect(err).NotTo(HaveOccurred())
+				})
+				It("should correctly list existing nodes +6 in target cluster", func() {
+					fmt.Println("Wait until new nodes are added. Number of nodes should be ", initialNodes+6)
+
+					// check whether all the expected nodes are ready
+					Eventually(targetKubeCluster.NumberOfReadyNodes, 180, 5).Should(BeNumerically("==", initialNodes+6))
+				})
+
+				Context("Scale down the number of nodes to 2", func() {
+					// TODO :- check for freezing and unfreezing
+					// rapidly scaling back to 2 leading to a freezing and unfreezing
+					// check for freezing and unfreezing of machine due to rapid scale up and scale down in the logs of mcm
+					/* freeze_count=$(cat logs/${provider}-mcm.out | grep ' Froze MachineSet' | wc -l)
+					if [[ freeze_count -eq 0 ]]; then
+						printf "\tFailed: Freezing of machineSet failed. Exiting Test to avoid further conflicts.\n"
+						terminate_script
+					fi
+
+					unfreeze_count=$(cat logs/${provider}-mcm.out | grep ' Unfroze MachineSet' | wc -l)
+					if [[ unfreeze_count -eq 0 ]]; then
+						printf "\tFailed: Unfreezing of machineSet failed. Exiting Test to avoid further conflicts.\n"
+						terminate_script
+					fi */
+					It("Should not lead to any errors", func() {
+						//Fetch machine deployment
+						machineDeployment, _ := controlKubeCluster.McmClient.MachineV1alpha1().MachineDeployments("default").Get("test-machine-deployment", metav1.GetOptions{})
+
+						//revert replica count to 3
+						machineDeployment.Spec.Replicas = 3
+
+						//update machine deployment
+						_, err := controlKubeCluster.McmClient.MachineV1alpha1().MachineDeployments("default").Update(machineDeployment)
+
+						//Check there is no error occured
+						Expect(err).NotTo(HaveOccurred())
+					})
+					It("should correctly list existing nodes +3 in target cluster", func() {
+						Eventually(targetKubeCluster.NumberOfReadyNodes, 300, 5).Should(BeNumerically("==", initialNodes+3))
+					})
+				})
+			})
+			Context("Update the machine to v2 and scale up replicas", func() {
+				// update machine type
+				// scale up replicas by 4
+				It("should wait for machines to upgrade to larger machine types and scale up replicas", func() {
+					// wait for 2400s till machines updates
+				})
+			})
+			Context("Delete the machine deployment", func() {
+				Context("When there are machine deployment(s) available in control cluster", func() {
+					var initialNodes int16
+					It("should not lead to errors", func() {
+						machinesList, _ := controlKubeCluster.McmClient.MachineV1alpha1().MachineDeployments("default").List(metav1.ListOptions{})
+						if len(machinesList.Items) != 0 {
+							// Keep count of nodes available
+							initialNodes = targetKubeCluster.NumberOfNodes()
+
+							//delete machine resource
+							Expect(controlKubeCluster.McmClient.MachineV1alpha1().MachineDeployments("default").Delete("test-machine-deployment", &metav1.DeleteOptions{})).Should(BeNil(), "No Errors while deleting machine deployment")
+						}
+					})
+					It("should list existing nodes-3 in target cluster", func() {
+						// check there are n-1 nodes
+						if initialNodes != 0 {
+							Eventually(targetKubeCluster.NumberOfNodes, 120, 5).Should(BeNumerically("==", initialNodes-3))
+						}
+					})
+				})
+			})
+		})
+	})
+
+	// ---------------------------------------------------------------------------------------
+	// Testcase #03 | Orphaned Resources
+	Describe("Check for orphaned resources", func() {
+		Context("In target cluster", func() {
+			Context("Check if there are any VMs matching the tag exists", func() {
+				It("Should list any orphaned VMs if available", func() {
+					// if available should delete orphaned VMs in cloud provider
+				})
+			})
+			Context("Check if there are any disks matching the tag exists", func() {
+				It("Should list any orphaned disks if available", func() {
+					// if available should delete orphaned disks in cloud provider
+				})
+			})
+		})
+	})
+
 })
 
 func prepareClusters() error {
@@ -212,6 +355,36 @@ func startMachineControllerManager() error {
 	dst_path := fmt.Sprintf("%s", mcmRepoPath)
 	go execCommandAsRoutine(command, dst_path)
 	return nil
+
+	// TO-DO: Below error is appearing occasionally - We should avoid it
+	/*
+		I0129 10:51:48.140615   33699 controller.go:508] Starting machine-controller-manager
+		I0129 10:57:19.893033   33699 leaderelection.go:287] failed to renew lease default/machine-controller-manager: failed to tryAcquireOrRenew context deadline exceeded
+		F0129 10:57:19.893084   33699 controllermanager.go:190] leaderelection lost
+		exit status 255
+		make: *** [start] Error 1
+
+
+		STEP: Check the number of goroutines running are 2
+		• Failure in Spec Setup (BeforeEach) [0.001 seconds]
+		Machine Resource
+		/Users/i348967/local-storage/src/github.com/toniajuliejackson/machine-controller-manager-provider-aws/test/integration/controller/controller_test.go:56
+		Check for orphaned resources [BeforeEach]
+		/Users/i348967/local-storage/src/github.com/toniajuliejackson/machine-controller-manager-provider-aws/test/integration/controller/controller_test.go:187
+			In target cluster
+			/Users/i348967/local-storage/src/github.com/toniajuliejackson/machine-controller-manager-provider-aws/test/integration/controller/controller_test.go:188
+			Check if there are any disks matching the tag exists
+			/Users/i348967/local-storage/src/github.com/toniajuliejackson/machine-controller-manager-provider-aws/test/integration/controller/controller_test.go:194
+				Should list any orphaned disks if available
+				/Users/i348967/local-storage/src/github.com/toniajuliejackson/machine-controller-manager-provider-aws/test/integration/controller/controller_test.go:195
+
+				Expected
+					<int16>: 0
+				to be equivalent to
+					<int>: 2
+
+				/Users/i348967/local-storage/src/github.com/toniajuliejackson/machine-controller-manager-provider-aws/test/integration/controller/controller_test.go:80
+	*/
 }
 
 func startMachineController() error {
@@ -239,7 +412,7 @@ func applyMachineClass() error {
 	/* TO-DO: applyMachineClass creates machineclass using
 	- the file available in kubernetes directory of provider specific repo in control cluster
 	*/
-	applyMC := "../../../kubernetes"
+	applyMC := "../../../kubernetes/machine-class.yaml"
 
 	err := applyFiles(applyMC)
 	if err != nil {

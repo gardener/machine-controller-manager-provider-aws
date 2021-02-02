@@ -96,13 +96,19 @@ func (c *Cluster) ApplyYamlFile(filePath string) error {
 				}
 			case "MachineClass":
 				crd := obj.(*v1alpha1.MachineClass)
-				_, err := c.mcmClient.MachineV1alpha1().MachineClasses("default").Create(crd)
+				_, err := c.McmClient.MachineV1alpha1().MachineClasses("default").Create(crd)
 				if err != nil {
 					return err
 				}
 			case "Machine":
 				crd := obj.(*v1alpha1.Machine)
-				_, err := c.mcmClient.MachineV1alpha1().Machines("default").Create(crd)
+				_, err := c.McmClient.MachineV1alpha1().Machines("default").Create(crd)
+				if err != nil {
+					return err
+				}
+			case "MachineDeployment":
+				crd := obj.(*v1alpha1.MachineDeployment)
+				_, err := c.McmClient.MachineV1alpha1().MachineDeployments("default").Create(crd)
 				if err != nil {
 					return err
 				}
