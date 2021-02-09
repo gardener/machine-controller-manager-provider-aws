@@ -31,10 +31,12 @@ import (
 )
 
 const (
-	awsAccessKeyIDIsMissing     = "machine codes error: code = [Internal] message = [Error while validating ProviderSpec secretRef.AWSAccessKeyID: Required value: Mention atleast providerAccessKeyId or accessKeyID]"
-	awsSecretAccessKeyIsMissing = "machine codes error: code = [Internal] message = [Error while validating ProviderSpec secretRef.AWSSecretAccessKey: Required value: Mention atleast providerSecretAccessKey or secretAccessKey]"
-	regionNAMIMissing           = "machine codes error: code = [Internal] message = [Error while validating ProviderSpec [providerSpec.ami: Required value: AMI is required, providerSpec.region: Required value: Region is required]]"
-	userDataIsMissing           = "machine codes error: code = [Internal] message = [Error while validating ProviderSpec secretRef.userData: Required value: Mention userData]"
+	awsAccessKeyIDIsMissing               = "machine codes error: code = [Internal] message = [Error while validating ProviderSpec secretRef.AWSAccessKeyID: Required value: Mention atleast providerAccessKeyId or accessKeyID]"
+	awsSecretAccessKeyIsMissing           = "machine codes error: code = [Internal] message = [Error while validating ProviderSpec secretRef.AWSSecretAccessKey: Required value: Mention atleast providerSecretAccessKey or secretAccessKey]"
+	awsSecretAccessKeyNUserDataAreMissing = "machine codes error: code = [Internal] message = [Error while validating ProviderSpec [secretRef.AWSSecretAccessKey: Required value: Mention atleast providerSecretAccessKey or secretAccessKey, secretRef.userData: Required value: Mention userData]]"
+	regionNAMIMissing                     = "machine codes error: code = [Internal] message = [Error while validating ProviderSpec [providerSpec.ami: Required value: AMI is required, providerSpec.region: Required value: Region is required]]"
+	userDataIsMissing                     = "machine codes error: code = [Internal] message = [Error while validating ProviderSpec secretRef.userData: Required value: Mention userData]"
+	cloudProviderReturnedError            = "machine codes error: code = [Internal] message = [Cloud provider returned error]"
 )
 
 var _ = Describe("MachineServer", func() {
@@ -290,6 +292,7 @@ var _ = Describe("MachineServer", func() {
 	Describe("#DeleteMachine", func() {
 		type setup struct {
 			createMachineRequest *driver.CreateMachineRequest
+			resetProviderToEmpty bool
 		}
 		type action struct {
 			deleteMachineRequest *driver.DeleteMachineRequest
@@ -367,7 +370,7 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        "machine codes error: code = [Internal] message = [Error while validating secret secretRef.AWSAccessKeyID: Required value: Mention atleast providerAccessKeyId or accessKeyID]",
+					errMessage:        awsAccessKeyIDIsMissing,
 				},
 			}),
 			Entry("providerSecretAccessKey & userData missing for secret", &data{
@@ -391,7 +394,7 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        "machine codes error: code = [Internal] message = [Error while validating secret [secretRef.AWSSecretAccessKey: Required value: Mention atleast providerSecretAccessKey or secretAccessKey, secretRef.userData: Required value: Mention userData]]",
+					errMessage:        awsSecretAccessKeyNUserDataAreMissing,
 				},
 			}),
 			Entry("Termination of instance that doesn't exist on provider", &data{
@@ -427,6 +430,56 @@ var _ = Describe("MachineServer", func() {
 				expect: expect{
 					errToHaveOccurred: true,
 					errMessage:        "machine codes error: code = [Internal] message = [Couldn't find instance with given instance-ID i-0123456789-0]",
+				},
+			}),
+			Entry("Termination of machine without any backing instance", &data{
+				setup: setup{},
+				action: action{
+					deleteMachineRequest: &driver.DeleteMachineRequest{
+						Machine:      newMachine(-1),
+						MachineClass: newMachineClass(providerSpec),
+						Secret:       providerSecret,
+					},
+				},
+				expect: expect{
+					deleteMachineResponse: &driver.DeleteMachineResponse{},
+					errToHaveOccurred:     false,
+				},
+			}),
+			Entry("Termination of machine without any backing instance but also failure at describe instances", &data{
+				setup: setup{},
+				action: action{
+					deleteMachineRequest: &driver.DeleteMachineRequest{
+						Machine:      newMachine(-1),
+						MachineClass: newMachineClass([]byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/" + mockclient.ReturnErrorAtDescribeInstances + "\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
+						Secret:       providerSecret,
+					},
+				},
+				expect: expect{
+					deleteMachineResponse: &driver.DeleteMachineResponse{},
+					errToHaveOccurred:     true,
+					errMessage:            cloudProviderReturnedError,
+				},
+			}),
+			Entry("Termination of machine with any backing instance but no providerID", &data{
+				setup: setup{
+					createMachineRequest: &driver.CreateMachineRequest{
+						Machine:      newMachine(0),
+						MachineClass: newMachineClass(providerSpec),
+						Secret:       providerSecret,
+					},
+				},
+				action: action{
+					deleteMachineRequest: &driver.DeleteMachineRequest{
+						// Setting machineIndex to -1 to simulate no providerID
+						Machine:      newMachine(-1),
+						MachineClass: newMachineClass(providerSpec),
+						Secret:       providerSecret,
+					},
+				},
+				expect: expect{
+					deleteMachineResponse: &driver.DeleteMachineResponse{},
+					errToHaveOccurred:     false,
 				},
 			}),
 		)
@@ -788,7 +841,7 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        "machine codes error: code = [Internal] message = [Cloud provider returned error]",
+					errMessage:        cloudProviderReturnedError,
 				},
 			}),
 			Entry("List request without a create request", &data{
