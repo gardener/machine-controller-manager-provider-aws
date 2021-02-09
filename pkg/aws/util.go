@@ -26,13 +26,13 @@ import (
 // awsVolumeRegMatch represents Regex Match for AWS volume.
 var awsVolumeRegMatch = regexp.MustCompile("^vol-[^/]*$")
 
-// encodeMachineID encodes a given provider-ID as per it's provider ID
-func encodeProviderID(region, providerID string) string {
-	return fmt.Sprintf("aws:///%s/%s", region, providerID)
+// encodeInstanceID encodes a given instanceID as per it's providerID
+func encodeInstanceID(region, instanceID string) string {
+	return fmt.Sprintf("aws:///%s/%s", region, instanceID)
 }
 
-// decodeRegionAndProviderID extracts region and provider ID
-func decodeRegionAndProviderID(id string) (string, string, error) {
+// decodeRegionAndInstanceID extracts region and instanceID
+func decodeRegionAndInstanceID(id string) (string, string, error) {
 	splitProviderID := strings.Split(id, "/")
 	if len(splitProviderID) < 2 {
 		err := fmt.Errorf("Unable to decode provider-ID")

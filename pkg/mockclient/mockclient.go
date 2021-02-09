@@ -131,6 +131,12 @@ func (ms *MockEC2Client) DescribeInstances(input *ec2.DescribeInstancesInput) (*
 	found := false
 	instanceList := make([]*ec2.Instance, 0)
 
+	for _, filter := range input.Filters {
+		if *filter.Values[0] == "kubernetes.io/cluster/"+ReturnErrorAtDescribeInstances {
+			return nil, fmt.Errorf("Cloud provider returned error")
+		}
+	}
+
 	if len(input.InstanceIds) > 0 {
 		if *input.InstanceIds[0] == ReturnEmptyListAtDescribeInstances {
 			return &ec2.DescribeInstancesOutput{
@@ -156,10 +162,6 @@ func (ms *MockEC2Client) DescribeInstances(input *ec2.DescribeInstancesInput) (*
 			return nil, fmt.Errorf("Couldn't find any instance matching requirement")
 		}
 	} else {
-
-		if *input.Filters[0].Values[0] == "kubernetes.io/cluster/"+ReturnErrorAtDescribeInstances {
-			return nil, fmt.Errorf("Cloud provider returned error")
-		}
 
 		// Target all instances
 		for _, instance := range *ms.FakeInstances {
