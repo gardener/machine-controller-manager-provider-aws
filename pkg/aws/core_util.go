@@ -20,9 +20,11 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	api "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
 	validation "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis/validation"
 	v1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	"github.com/gardener/machine-controller-manager/pkg/util/provider/driver"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/codes"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/status"
 	corev1 "k8s.io/api/core/v1"
@@ -213,4 +215,25 @@ func (d *Driver) generateTags(tags map[string]string, resourceType string, machi
 		Tags:         tagList,
 	}
 	return tagInstance, nil
+}
+
+func terminateInstance(req *driver.DeleteMachineRequest, svc ec2iface.EC2API, machineID string) error {
+	input := &ec2.TerminateInstancesInput{
+		InstanceIds: []*string{
+			aws.String(machineID),
+		},
+		DryRun: aws.Bool(false),
+	}
+
+	_, err := svc.TerminateInstances(input)
+	if err != nil {
+		klog.Errorf("VM %q for Machine %q couldn't be terminated: %s",
+			req.Machine.Spec.ProviderID,
+			req.Machine.Name,
+			err.Error(),
+		)
+		return status.Error(codes.Internal, err.Error())
+	}
+
+	return nil
 }

@@ -25,13 +25,11 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis/validation"
 	"github.com/gardener/machine-controller-manager-provider-aws/pkg/spi"
 	v1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/driver"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/codes"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/status"
-	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/klog"
 )
 
@@ -165,7 +163,7 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 	}
 
 	response := &driver.CreateMachineResponse{
-		ProviderID: encodeProviderID(providerSpec.Region, *runResult.Instances[0].InstanceId),
+		ProviderID: encodeInstanceID(providerSpec.Region, *runResult.Instances[0].InstanceId),
 		NodeName:   *runResult.Instances[0].PrivateDnsName,
 	}
 
@@ -175,45 +173,62 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 
 // DeleteMachine handles a machine deletion request
 func (d *Driver) DeleteMachine(ctx context.Context, req *driver.DeleteMachineRequest) (*driver.DeleteMachineResponse, error) {
+	var (
+		err    error
+		secret = req.Secret
+	)
 	// Log messages to track delete request
 	klog.V(3).Infof("Machine deletion request has been recieved for %q", req.Machine.Name)
 	defer klog.V(3).Infof("Machine deletion request has been processed for %q", req.Machine.Name)
 
-	region, machineID, err := decodeRegionAndProviderID(req.Machine.Spec.ProviderID)
+	providerSpec, err := decodeProviderSpecAndSecret(req.MachineClass, secret)
+	if err != nil {
+		klog.Error(err)
+		return nil, err
+	}
+
+	svc, err := d.createSVC(req.Secret, providerSpec.Region)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	validationErr := validation.ValidateSecret(req.Secret, field.NewPath("secretRef"))
-	if validationErr.ToAggregate() != nil && len(validationErr.ToAggregate().Errors()) > 0 {
-		err = fmt.Errorf("Error while validating secret %v", validationErr.ToAggregate().Error())
-		klog.V(2).Infof("Validation of AWSMachineClass failed %s", err)
+	if req.Machine.Spec.ProviderID != "" {
+		// ProviderID exists for machine object, hence terminate the correponding VM
 
-		return nil, status.Error(codes.Internal, err.Error())
-	}
+		_, instanceID, err := decodeRegionAndInstanceID(req.Machine.Spec.ProviderID)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
 
-	svc, err := d.createSVC(req.Secret, region)
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
+		err = terminateInstance(req, svc, instanceID)
+		if err != nil {
+			return nil, err
+		}
+		klog.V(3).Infof("VM %q for Machine %q was terminated succesfully", req.Machine.Spec.ProviderID, req.Machine.Name)
 
-	input := &ec2.TerminateInstancesInput{
-		InstanceIds: []*string{
-			aws.String(machineID),
-		},
-		DryRun: aws.Bool(false),
-	}
-	_, err = svc.TerminateInstances(input)
-	if err != nil {
-		klog.Errorf("VM %q for Machine %q couldn't be terminated: %s",
-			req.Machine.Spec.ProviderID,
-			req.Machine.Name,
-			err.Error(),
-		)
-		return nil, status.Error(codes.Internal, err.Error())
-	}
+	} else {
+		// ProviderID doesn't exist, hence check for any existing machine and then delete if exists
 
-	klog.V(3).Infof("VM %q for Machine %q was terminated succesfully", req.Machine.Spec.ProviderID, req.Machine.Name)
+		instances, err := d.getInstancesFromMachineName(req.Machine.Name, providerSpec, req.Secret)
+		if err != nil {
+			status, ok := status.FromError(err)
+			if ok && status.Code() == codes.NotFound {
+				klog.V(3).Infof("No matching VM found. Termination succesful for machine object %q", req.Machine.Name)
+				return &driver.DeleteMachineResponse{}, nil
+			}
+			return nil, err
+		}
+
+		// If instance(s) exist, terminate them
+		for _, instance := range instances {
+			// For each instance backing machine, terminate the VMs
+			err = terminateInstance(req, svc, *instance.InstanceId)
+			if err != nil {
+				return nil, err
+			}
+			klog.V(3).Infof("VM %q for Machine %q was terminated succesfully", *instance.InstanceId, req.Machine.Name)
+		}
+	}
 
 	return &driver.DeleteMachineResponse{}, nil
 }
@@ -251,7 +266,7 @@ func (d *Driver) GetMachineStatus(ctx context.Context, req *driver.GetMachineSta
 
 	response := &driver.GetMachineStatusResponse{
 		NodeName:   *requiredInstance.PrivateDnsName,
-		ProviderID: encodeProviderID(providerSpec.Region, *requiredInstance.InstanceId),
+		ProviderID: encodeInstanceID(providerSpec.Region, *requiredInstance.InstanceId),
 	}
 
 	klog.V(3).Infof("Machine get request has been processed successfully for %q", req.Machine.Name)
@@ -332,7 +347,7 @@ func (d *Driver) ListMachines(ctx context.Context, req *driver.ListMachinesReque
 					break
 				}
 			}
-			listOfVMs[encodeProviderID(providerSpec.Region, *instance.InstanceId)] = machineName
+			listOfVMs[encodeInstanceID(providerSpec.Region, *instance.InstanceId)] = machineName
 		}
 	}
 
