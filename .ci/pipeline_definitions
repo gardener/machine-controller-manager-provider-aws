@@ -28,6 +28,7 @@ machine-controller-manager-provider-aws:
   jobs:
     head-update:
       traits:
+        component_descriptor: ~
         draft_release: ~
     pull-request:
       traits:
