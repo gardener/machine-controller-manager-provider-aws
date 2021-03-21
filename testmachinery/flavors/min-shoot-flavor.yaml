@@ -1,0 +1,25 @@
+flavors:
+- provider: aws
+  kubernetes:
+    pattern: "latest"
+  cloudprofile: aws
+  projectName: it
+  secretBinding: shoot-operator-aws
+  region: eu-west-1
+  zone: eu-west-1c
+  workers:
+  - workerPools:
+    - name: worker-1
+      machine:
+        type: m5.large
+        image:
+          name: gardenlinux
+          version: latest
+      minimum: 1
+      maximum: 2
+      volume:
+        size: 30Gi
+        type: gp2
+      zones:
+      - eu-west-1c
+      

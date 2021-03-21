@@ -353,5 +353,16 @@ const (
 	SYS_FACCESSAT2             = 5439
 	SYS_PROCESS_MADVISE        = 5440
 	SYS_EPOLL_PWAIT2           = 5441
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
 	SYS_MOUNT_SETATTR          = 5442
+=======
+>>>>>>> a389a78 (Add integrationtest vendor package)
+=======
+	SYS_MOUNT_SETATTR          = 5442
+>>>>>>> 2bf9d02 (Update go.mod)
+=======
+	SYS_MOUNT_SETATTR          = 5442
+>>>>>>> cee659e (Update go.mod)
 )

@@ -4,12 +4,11 @@ go 1.15
 
 require (
 	github.com/aws/aws-sdk-go v1.36.0
-	github.com/gardener/machine-controller-manager v0.40.0
+	github.com/gardener/machine-controller-manager v0.39.0
 	github.com/onsi/ginkgo v1.16.2
 	github.com/onsi/gomega v1.11.0
 	github.com/prometheus/client_golang v1.5.1 // indirect
 	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.5.1 // indirect
 	k8s.io/api v0.0.0-20190918155943-95b840bb6a1f
 	k8s.io/apimachinery v0.0.0-20190913080033-27d36303b655
 	k8s.io/component-base v0.0.0-20190918160511-547f6c5d7090
@@ -18,6 +17,7 @@ require (
 )
 
 replace (
+	github.com/gardener/machine-controller-manager => github.com/rkjakeer/machine-controller-manager v0.38.1-0.20210701092429-b810a051db73
 	github.com/onsi/gomega => github.com/onsi/gomega v1.5.0
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.2
 	k8s.io/api => k8s.io/api v0.0.0-20190918155943-95b840bb6a1f // kubernetes-1.16.0

@@ -18,9 +18,17 @@ IMAGE_REPOSITORY    := eu.gcr.io/gardener-project/gardener/machine-controller-ma
 IMAGE_TAG           := $(shell cat VERSION)
 PROVIDER_NAME       := AWS
 PROJECT_NAME        := gardener
-CONTROL_NAMESPACE  := default
-CONTROL_KUBECONFIG := dev/target-kubeconfig.yaml
-TARGET_KUBECONFIG  := dev/target-kubeconfig.yaml
+CONTROL_KUBECONFIG  := dev/control_kubeconfig.yaml
+TARGET_KUBECONFIG   := dev/target_kubeconfig.yaml
+
+# Below ones are used in tests
+MACHINECLASS_V1 	:= dev/machineclassv1.yaml
+MACHINECLASS_V2 	:= 
+MCM_IMAGE			:=
+MC_IMAGE			:=
+# MCM_IMAGE			:= eu.gcr.io/gardener-project/gardener/machine-controller-manager:v0.39.0
+# MC_IMAGE			:= $(IMAGE_REPOSITORY):$(IMAGE_TAG)
+LEADER_ELECT 	    := "true"
 
 #########################################
 # Rules for running helper scripts
@@ -53,6 +61,7 @@ start:
 			--machine-safety-apiserver-statuscheck-timeout=30s \
 			--machine-safety-apiserver-statuscheck-period=1m \
 			--machine-safety-orphan-vms-period=30m \
+			--leader-elect=$(LEADER_ELECT) \
 			--v=3
 
 #########################################
@@ -83,6 +92,18 @@ update-dependencies:
 .PHONY: test-unit
 test-unit:
 	.ci/test
+
+.PHONY: test-integration
+test-integration:
+	@if [[ -f $(PWD)/$(CONTROL_KUBECONFIG) ]]; then export CONTROL_KUBECONFIG=$(PWD)/$(CONTROL_KUBECONFIG); fi; \
+	if [[ -f $(PWD)/$(TARGET_KUBECONFIG) ]]; then export TARGET_KUBECONFIG=$(PWD)/$(TARGET_KUBECONFIG); fi; \
+	if [[ -f $(PWD)/$(MACHINECLASS_V1) ]]; then export MACHINECLASS_V1=$(PWD)/$(MACHINECLASS_V1); fi; \
+	if [[ -f $(PWD)/$(MACHINECLASS_V2) ]]; then export MACHINECLASS_V2=$(PWD)/$(MACHINECLASS_V2); fi; \
+	export MC_CONTAINER_IMAGE=$(MC_IMAGE); \
+	export MCM_CONTAINER_IMAGE=$(MCM_IMAGE); \
+	export CONTROL_CLUSTER_NAMESPACE=$(CONTROL_NAMESPACE); \
+	export MACHINE_CONTROLLER_MANAGER_DEPLOYMENT_NAME=$(MACHINE_CONTROLLER_MANAGER_DEPLOYMENT_NAME); \
+	.ci/integration_test
 
 #########################################
 # Rules for build/release

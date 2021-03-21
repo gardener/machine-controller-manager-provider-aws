@@ -236,11 +236,26 @@ func runSpecsWithCustomReporters(t GinkgoTestingT, description string, specRepor
 		reporters[i] = reporter
 	}
 	passed, hasFocusedTests := global.Suite.Run(t, description, reporters, writer, config.GinkgoConfig)
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 2bf9d02 (Update go.mod)
+=======
+>>>>>>> cee659e (Update go.mod)
 
 	if deprecationTracker.DidTrackDeprecations() {
 		fmt.Fprintln(colorable.NewColorableStderr(), deprecationTracker.DeprecationsReport())
 	}
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> a389a78 (Add integrationtest vendor package)
+=======
+>>>>>>> 2bf9d02 (Update go.mod)
+=======
+>>>>>>> cee659e (Update go.mod)
 	if passed && hasFocusedTests && strings.TrimSpace(os.Getenv("GINKGO_EDITOR_INTEGRATION")) == "" {
 		fmt.Println("PASS | FOCUSED")
 		os.Exit(types.GINKGO_FOCUS_EXIT_CODE)
@@ -394,14 +409,36 @@ func XWhen(text string, body func()) bool {
 //Ginkgo will normally run It blocks synchronously.  To perform asynchronous tests, pass a
 //function that accepts a Done channel.  When you do this, you can also provide an optional timeout.
 func It(text string, body interface{}, timeout ...float64) bool {
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
 	validateBodyFunc(body, codelocation.New(1))
+=======
+>>>>>>> a389a78 (Add integrationtest vendor package)
+=======
+	validateBodyFunc(body, codelocation.New(1))
+>>>>>>> 2bf9d02 (Update go.mod)
+=======
+	validateBodyFunc(body, codelocation.New(1))
+>>>>>>> cee659e (Update go.mod)
 	global.Suite.PushItNode(text, body, types.FlagTypeNone, codelocation.New(1), parseTimeout(timeout...))
 	return true
 }
 
 //You can focus individual Its using FIt
 func FIt(text string, body interface{}, timeout ...float64) bool {
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
 	validateBodyFunc(body, codelocation.New(1))
+=======
+>>>>>>> a389a78 (Add integrationtest vendor package)
+=======
+	validateBodyFunc(body, codelocation.New(1))
+>>>>>>> 2bf9d02 (Update go.mod)
+=======
+	validateBodyFunc(body, codelocation.New(1))
+>>>>>>> cee659e (Update go.mod)
 	global.Suite.PushItNode(text, body, types.FlagTypeFocused, codelocation.New(1), parseTimeout(timeout...))
 	return true
 }
@@ -422,14 +459,36 @@ func XIt(text string, _ ...interface{}) bool {
 //which "It" does not fit into a natural sentence flow. All the same protocols apply for Specify blocks
 //which apply to It blocks.
 func Specify(text string, body interface{}, timeout ...float64) bool {
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
 	validateBodyFunc(body, codelocation.New(1))
+=======
+>>>>>>> a389a78 (Add integrationtest vendor package)
+=======
+	validateBodyFunc(body, codelocation.New(1))
+>>>>>>> 2bf9d02 (Update go.mod)
+=======
+	validateBodyFunc(body, codelocation.New(1))
+>>>>>>> cee659e (Update go.mod)
 	global.Suite.PushItNode(text, body, types.FlagTypeNone, codelocation.New(1), parseTimeout(timeout...))
 	return true
 }
 
 //You can focus individual Specifys using FSpecify
 func FSpecify(text string, body interface{}, timeout ...float64) bool {
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
 	validateBodyFunc(body, codelocation.New(1))
+=======
+>>>>>>> a389a78 (Add integrationtest vendor package)
+=======
+	validateBodyFunc(body, codelocation.New(1))
+>>>>>>> 2bf9d02 (Update go.mod)
+=======
+	validateBodyFunc(body, codelocation.New(1))
+>>>>>>> cee659e (Update go.mod)
 	global.Suite.PushItNode(text, body, types.FlagTypeFocused, codelocation.New(1), parseTimeout(timeout...))
 	return true
 }
@@ -502,7 +561,18 @@ func XMeasure(text string, _ ...interface{}) bool {
 //
 //You may only register *one* BeforeSuite handler per test suite.  You typically do so in your bootstrap file at the top level.
 func BeforeSuite(body interface{}, timeout ...float64) bool {
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
 	validateBodyFunc(body, codelocation.New(1))
+=======
+>>>>>>> a389a78 (Add integrationtest vendor package)
+=======
+	validateBodyFunc(body, codelocation.New(1))
+>>>>>>> 2bf9d02 (Update go.mod)
+=======
+	validateBodyFunc(body, codelocation.New(1))
+>>>>>>> cee659e (Update go.mod)
 	global.Suite.SetBeforeSuiteNode(body, codelocation.New(1), parseTimeout(timeout...))
 	return true
 }
@@ -516,7 +586,18 @@ func BeforeSuite(body interface{}, timeout ...float64) bool {
 //
 //You may only register *one* AfterSuite handler per test suite.  You typically do so in your bootstrap file at the top level.
 func AfterSuite(body interface{}, timeout ...float64) bool {
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
 	validateBodyFunc(body, codelocation.New(1))
+=======
+>>>>>>> a389a78 (Add integrationtest vendor package)
+=======
+	validateBodyFunc(body, codelocation.New(1))
+>>>>>>> 2bf9d02 (Update go.mod)
+=======
+	validateBodyFunc(body, codelocation.New(1))
+>>>>>>> cee659e (Update go.mod)
 	global.Suite.SetAfterSuiteNode(body, codelocation.New(1), parseTimeout(timeout...))
 	return true
 }
@@ -604,7 +685,18 @@ func SynchronizedAfterSuite(allNodesBody interface{}, node1Body interface{}, tim
 //Like It blocks, BeforeEach blocks can be made asynchronous by providing a body function that accepts
 //a Done channel
 func BeforeEach(body interface{}, timeout ...float64) bool {
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
 	validateBodyFunc(body, codelocation.New(1))
+=======
+>>>>>>> a389a78 (Add integrationtest vendor package)
+=======
+	validateBodyFunc(body, codelocation.New(1))
+>>>>>>> 2bf9d02 (Update go.mod)
+=======
+	validateBodyFunc(body, codelocation.New(1))
+>>>>>>> cee659e (Update go.mod)
 	global.Suite.PushBeforeEachNode(body, codelocation.New(1), parseTimeout(timeout...))
 	return true
 }
@@ -615,7 +707,18 @@ func BeforeEach(body interface{}, timeout ...float64) bool {
 //Like It blocks, BeforeEach blocks can be made asynchronous by providing a body function that accepts
 //a Done channel
 func JustBeforeEach(body interface{}, timeout ...float64) bool {
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
 	validateBodyFunc(body, codelocation.New(1))
+=======
+>>>>>>> a389a78 (Add integrationtest vendor package)
+=======
+	validateBodyFunc(body, codelocation.New(1))
+>>>>>>> 2bf9d02 (Update go.mod)
+=======
+	validateBodyFunc(body, codelocation.New(1))
+>>>>>>> cee659e (Update go.mod)
 	global.Suite.PushJustBeforeEachNode(body, codelocation.New(1), parseTimeout(timeout...))
 	return true
 }
@@ -626,7 +729,18 @@ func JustBeforeEach(body interface{}, timeout ...float64) bool {
 //Like It blocks, JustAfterEach blocks can be made asynchronous by providing a body function that accepts
 //a Done channel
 func JustAfterEach(body interface{}, timeout ...float64) bool {
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
 	validateBodyFunc(body, codelocation.New(1))
+=======
+>>>>>>> a389a78 (Add integrationtest vendor package)
+=======
+	validateBodyFunc(body, codelocation.New(1))
+>>>>>>> 2bf9d02 (Update go.mod)
+=======
+	validateBodyFunc(body, codelocation.New(1))
+>>>>>>> cee659e (Update go.mod)
 	global.Suite.PushJustAfterEachNode(body, codelocation.New(1), parseTimeout(timeout...))
 	return true
 }
@@ -637,7 +751,18 @@ func JustAfterEach(body interface{}, timeout ...float64) bool {
 //Like It blocks, AfterEach blocks can be made asynchronous by providing a body function that accepts
 //a Done channel
 func AfterEach(body interface{}, timeout ...float64) bool {
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
 	validateBodyFunc(body, codelocation.New(1))
+=======
+>>>>>>> a389a78 (Add integrationtest vendor package)
+=======
+	validateBodyFunc(body, codelocation.New(1))
+>>>>>>> 2bf9d02 (Update go.mod)
+=======
+	validateBodyFunc(body, codelocation.New(1))
+>>>>>>> cee659e (Update go.mod)
 	global.Suite.PushAfterEachNode(body, codelocation.New(1), parseTimeout(timeout...))
 	return true
 }
