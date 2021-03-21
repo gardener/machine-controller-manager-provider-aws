@@ -1,0 +1,14 @@
+kind: TestDefinition
+metadata:
+  name: mcm-oot-aws-integration-test
+spec:
+  description: Tests the deployment and functioning of etcd-backup-restore.
+
+  activeDeadlineSeconds: 1200
+  labels: ["playground"]
+
+  command: [bash, -c]
+  args:
+  - >-
+    make MC_IMAGE_TAG=$(shell cat VERSION) CONTROL_KUBECONFIG=${TM_KUBECONFIG_PATH}/seed.config TARGET_KUBECONFIG=${TM_KUBECONFIG_PATH}/shoot.config test-integration 
+  image: eu.gcr.io/gardener-project/cc/job-image-golang:0.11.0

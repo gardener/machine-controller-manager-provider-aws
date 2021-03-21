@@ -1,24 +1,20 @@
-# SPDX-FileCopyrightText: 2021 SAP SE or an SAP affiliate company and Gardener contributors
-#
-# SPDX-License-Identifier: Apache-2.0
-
 # Sample machine-deploy object
 
 apiVersion: machine.sapcloud.io/v1alpha1
 kind: MachineDeployment
 metadata:
-  name: test-machine-deployment
-  namespace: default
+  name: test-machine-deployment # Name of the machine deploy
 spec:
-# paused: true [uncommment this when you want to pause]
-# rollbackTo:
-#   revision: 0 [uncommment this when you want to rollback to previous version]
+  #paused: true [uncommment this when you want to pause]
+  #rollbackTo:
+    #revision: 0 [uncommment this when you want to rollback to previous version]
   replicas: 3 # Number of healthy replicas that should always be healthy
   minReadySeconds: 500 # Minimum time to wait for machine to be ready
+  progressDeadlineSeconds: 1200
   strategy:
     type: RollingUpdate # Strategy for update RollingUpdate/Recreate
     rollingUpdate:
-      maxSurge: 1 # Maximum addition machines that spawned over the desired replicas during update
+      maxSurge: 0 # Maximum addition machines that spawned over the desired replicas during update
       maxUnavailable: 1 # Maximum unavailable machines that the cluster can tolerate
   selector:
     matchLabels:
@@ -26,7 +22,7 @@ spec:
   template:
     metadata:
       labels:
-        test-label: test-label # Label to match with selector (XXXXX)
+        test-label: test-label # Label to match  with selector (XXXXX)
     spec:
       class:
         kind: MachineClass # Machine class template used to create machine, could be AWS/GCP/Azure/Other-cloud-providers
