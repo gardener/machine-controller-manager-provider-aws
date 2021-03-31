@@ -42,6 +42,9 @@ providerSpec:
 secretRef: # Secret pointing to a secret which contains the provider secret and cloudconfig
   namespace: default  # Namespace
   name: test-secret # Name of the secret
+# capacityReservation: # Optional - allows targeting of an AWS Capacity reservation or an AWS Resource Group containing reservations. Use either a reservation id or group arn - but not both.
+#   capacityReservationId: "cr-05c28b843c05acc11"
+#   capacityReservationResourceGroupArn: "arn:aws:resource-groups:us-west-1:123456789012:group/my-cr-group"
 # credentialsSecretRef: # Optional - Kubernetes secret containing only provider secrets (in this case the Secret in the secretRef does not need them)
 #   name: "test-secret-credentials" # Name of the secret
 #   namespace: "default" # Namespace of secret
