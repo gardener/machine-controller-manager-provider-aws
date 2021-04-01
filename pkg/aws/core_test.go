@@ -151,7 +151,7 @@ var _ = Describe("MachineServer", func() {
 					errToHaveOccurred: false,
 				},
 			}),
-			Entry("Machine creation request for capacity reservations", &data{
+			Entry("Machine creation request for capacity reservations with capacityReservationId", &data{
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
 						Machine:      newMachine(-1),
@@ -167,7 +167,7 @@ var _ = Describe("MachineServer", func() {
 					errToHaveOccurred: false,
 				},
 			}),
-			Entry("Machine creation request for an AWS Capacity Reservation Group", &data{
+			Entry("Machine creation request for an AWS Capacity Reservation Group with capacityReservationResourceGroupArn", &data{
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
 						Machine:      newMachine(-1),
