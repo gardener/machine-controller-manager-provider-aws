@@ -57,6 +57,7 @@ func ValidateAWSProviderSpec(spec *awsapi.AWSProviderSpec, secret *corev1.Secret
 	}
 
 	allErrs = append(allErrs, validateBlockDevices(spec.BlockDevices, fldPath.Child("blockDevices"))...)
+	allErrs = append(allErrs, validateCapacityReservations(spec.CapacityReservationTarget, fldPath.Child("capacityReservation"))...)
 	allErrs = append(allErrs, validateNetworkInterfaces(spec.NetworkInterfaces, fldPath.Child("networkInterfaces"))...)
 	allErrs = append(allErrs, ValidateSecret(secret, field.NewPath("secretRef"))...)
 	allErrs = append(allErrs, validateSpecTags(spec.Tags, fldPath.Child("tags"))...)
@@ -138,6 +139,20 @@ func validateBlockDevices(blockDevices []awsapi.AWSBlockDeviceMappingSpec, fldPa
 	for device, number := range deviceNames {
 		if number > 1 {
 			allErrs = append(allErrs, field.Required(fldPath, fmt.Sprintf("Device name '%s' duplicated %d times, DeviceName must be unique", device, number)))
+		}
+	}
+
+	return allErrs
+}
+
+func validateCapacityReservations(capacityReservation *awsapi.AWSCapacityReservationTargetSpec, fldPath *field.Path) field.ErrorList {
+	var (
+		allErrs = field.ErrorList{}
+	)
+
+	if capacityReservation != nil {
+		if capacityReservation.CapacityReservationId != nil && capacityReservation.CapacityReservationResourceGroupArn != nil {
+			allErrs = append(allErrs, field.Required(fldPath, "capacityReservationResourceGroupArn or capacityReservationId are optional but only one should be used"))
 		}
 	}
 

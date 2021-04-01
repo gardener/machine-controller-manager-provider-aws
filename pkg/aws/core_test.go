@@ -151,6 +151,19 @@ var _ = Describe("MachineServer", func() {
 					errToHaveOccurred: false,
 				},
 			}),
+			Entry("Machine creation request for capacity reservations fails if more than one type given", &data{
+				action: action{
+					machineRequest: &driver.CreateMachineRequest{
+						Machine:      newMachine(-1),
+						MachineClass: newMachineClass([]byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"capacityReservation\":{\"capacityReservationId\":\"cr-05c28b843c05abcde\",\"capacityReservationResourceGroupArn\":\"arn:aws:resource-groups:us-west-1:123456789012:group/my-test-cr-group\"},\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
+						Secret:       providerSecret,
+					},
+				},
+				expect: expect{
+					errToHaveOccurred: true,
+					errMessage: "machine codes error: code = [Internal] message = [Error while validating ProviderSpec providerSpec.capacityReservation: Required value: Either capacityReservationResourceGroupArn or capacityReservationId needs to be specified - but not both.]",
+				},
+			}),
 			Entry("Machine creation request for capacity reservations with capacityReservationId", &data{
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
