@@ -70,6 +70,9 @@ type AWSProviderSpec struct {
 	// BlockDevices is the list of block devices to be mapped to the instances
 	BlockDevices []AWSBlockDeviceMappingSpec `json:"blockDevices,omitempty"`
 
+	// CapacityReservationTarget is an optional field that allows assigning of machines to an AWS Capacity Reservation
+	CapacityReservationTarget *AWSCapacityReservationTargetSpec `json:"capacityReservation,omitempty"`
+
 	// EbsOptimized specifies that the EBS is optimized
 	EbsOptimized bool `json:"ebsOptimized,omitempty"`
 
@@ -123,6 +126,17 @@ type AWSBlockDeviceMappingSpec struct {
 	// we ignore any machine store volumes specified in the block device mapping
 	// for the AMI.
 	VirtualName string `json:"virtualName,omitempty"`
+}
+
+// AWSCapacityReservationTargetSpec allows to target an AWS Capacity Reservation directly or
+// indirectly using an AWS Resource Group
+type AWSCapacityReservationTargetSpec struct {
+
+	// The ID of the Capacity Reservation in which to run the instance.
+	CapacityReservationId *string `json:"capacityReservationId,omitempty"`
+
+	// The ARN of the Capacity Reservation resource group in which to run the instance.
+	CapacityReservationResourceGroupArn *string `json:"capacityReservationResourceGroupArn,omitempty"`
 }
 
 // AWSEbsBlockDeviceSpec describes a block device for an EBS volume.

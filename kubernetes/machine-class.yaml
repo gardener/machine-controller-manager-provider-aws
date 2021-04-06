@@ -24,6 +24,9 @@ providerSpec:
         volumeType: gp2 # Type of the root block device
         encrypted: true
         deleteOnTermination: true
+#  capacityReservation: # Optional - allows targeting of an AWS Capacity reservation or an AWS Resource Group containing reservations. Only one needs to be specified.
+#   capacityReservationId: "cr-05c28b843c05acc11"
+#   capacityReservationResourceGroupArn: "arn:aws:resource-groups:us-west-1:123456789012:group/my-cr-group"
   iam:
     name: iam-name # Name of the AWS Identity and Access Management
   keyName: key-value-pair-name # EC2 keypair used to access ec2 machine

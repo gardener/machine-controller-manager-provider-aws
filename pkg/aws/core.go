@@ -143,6 +143,26 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 		TagSpecifications: []*ec2.TagSpecification{tagInstance, tagVolume},
 	}
 
+	// Set the AWS Capacity Reservation target. Using an 'open' preference means that if the reservation is not found, then
+	// instances are launched with regular on-demand capacity.
+	if providerSpec.CapacityReservationTarget != nil {
+		if providerSpec.CapacityReservationTarget.CapacityReservationResourceGroupArn != nil {
+			inputConfig.CapacityReservationSpecification = &ec2.CapacityReservationSpecification{
+				CapacityReservationPreference: aws.String("open"),
+				CapacityReservationTarget: &ec2.CapacityReservationTarget{
+					CapacityReservationResourceGroupArn: providerSpec.CapacityReservationTarget.CapacityReservationResourceGroupArn,
+				},
+			}
+		} else if providerSpec.CapacityReservationTarget.CapacityReservationId != nil {
+			inputConfig.CapacityReservationSpecification = &ec2.CapacityReservationSpecification{
+				CapacityReservationPreference: aws.String("open"),
+				CapacityReservationTarget: &ec2.CapacityReservationTarget{
+					CapacityReservationId: providerSpec.CapacityReservationTarget.CapacityReservationId,
+				},
+			}
+		}
+	}
+
 	// Set spot price if it has been set
 	if providerSpec.SpotPrice != nil {
 		inputConfig.InstanceMarketOptions = &ec2.InstanceMarketOptionsRequest{
