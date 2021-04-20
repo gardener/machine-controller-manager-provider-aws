@@ -50,6 +50,9 @@ var _ = Describe("MachineServer", func() {
 			"userData":                []byte("dummy-user-data"),
 		},
 	}
+	annotations := map[string]string{
+		awsPlacement: `{ "affinity": "host", "availabilityZone": "eu-west-1a", "tenancy": "host"}`,
+	}
 
 	Describe("#CreateMachine", func() {
 		type setup struct {
@@ -88,9 +91,10 @@ var _ = Describe("MachineServer", func() {
 				}
 			},
 			Entry("Simple Machine Creation Request", &data{
+				setup: setup{},
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
-						Machine:      newMachine(-1),
+						Machine:      newMachine(-1, nil),
 						MachineClass: newMachineClass(providerSpec),
 						Secret:       providerSecret,
 					},
@@ -106,7 +110,7 @@ var _ = Describe("MachineServer", func() {
 			Entry("Simple Machine Creation Request with missing provider in MachineClass", &data{
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
-						Machine:      newMachine(-1),
+						Machine:      newMachine(-1, nil),
 						MachineClass: newMachineClassWithProvider(providerSpec, "azure"),
 						Secret:       providerSecret,
 					},
@@ -119,7 +123,7 @@ var _ = Describe("MachineServer", func() {
 			Entry("Machine creation request with volume type io1", &data{
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
-						Machine:      newMachine(-1),
+						Machine:      newMachine(-1, nil),
 						MachineClass: newMachineClass([]byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"io1\",\"iops\":50}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
 						Secret:       providerSecret,
 					},
@@ -135,7 +139,7 @@ var _ = Describe("MachineServer", func() {
 			Entry("Machine creation request for spot instance type", &data{
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
-						Machine:      newMachine(-1),
+						Machine:      newMachine(-1, nil),
 						MachineClass: newMachineClass([]byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"spotPrice\":\"\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
 						Secret:       providerSecret,
 					},
@@ -151,7 +155,7 @@ var _ = Describe("MachineServer", func() {
 			Entry("Machine creation request for spot instance type with max price", &data{
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
-						Machine:      newMachine(-1),
+						Machine:      newMachine(-1, nil),
 						MachineClass: newMachineClass([]byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"spotPrice\":\"500\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
 						Secret:       providerSecret,
 					},
@@ -167,20 +171,20 @@ var _ = Describe("MachineServer", func() {
 			Entry("Machine creation request for capacity reservations fails if more than one type given", &data{
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
-						Machine:      newMachine(-1),
+						Machine:      newMachine(-1, nil),
 						MachineClass: newMachineClass([]byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"capacityReservation\":{\"capacityReservationId\":\"cr-05c28b843c05abcde\",\"capacityReservationResourceGroupArn\":\"arn:aws:resource-groups:us-west-1:123456789012:group/my-test-cr-group\"},\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
 						Secret:       providerSecret,
 					},
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage: "machine codes error: code = [Internal] message = [Error while validating ProviderSpec providerSpec.capacityReservation: Required value: Either capacityReservationResourceGroupArn or capacityReservationId needs to be specified - but not both.]",
+					errMessage:        "machine codes error: code = [Internal] message = [Error while validating ProviderSpec providerSpec.capacityReservation: Required value: capacityReservationResourceGroupArn or capacityReservationId are optional but only one should be used]",
 				},
 			}),
 			Entry("Machine creation request for capacity reservations with capacityReservationId", &data{
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
-						Machine:      newMachine(-1),
+						Machine:      newMachine(-1, nil),
 						MachineClass: newMachineClass([]byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"capacityReservation\":{\"capacityReservationId\":\"cr-05c28b843c05abcde\"},\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
 						Secret:       providerSecret,
 					},
@@ -196,7 +200,7 @@ var _ = Describe("MachineServer", func() {
 			Entry("Machine creation request for an AWS Capacity Reservation Group with capacityReservationResourceGroupArn", &data{
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
-						Machine:      newMachine(-1),
+						Machine:      newMachine(-1, nil),
 						MachineClass: newMachineClass([]byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"capacityReservation\":{\"capacityReservationResourceGroupArn\":\"arn:aws:resource-groups:us-west-1:123456789012:group/my-test-cr-group\"},\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
 						Secret:       providerSecret,
 					},
@@ -212,7 +216,7 @@ var _ = Describe("MachineServer", func() {
 			Entry("Unmarshalling for provider spec fails", &data{
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
-						Machine:      newMachine(-1),
+						Machine:      newMachine(-1, nil),
 						MachineClass: newMachineClass([]byte("")),
 						Secret:       providerSecret,
 					},
@@ -225,7 +229,7 @@ var _ = Describe("MachineServer", func() {
 			Entry("providerAccessKeyId missing for secret", &data{
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
-						Machine:      newMachine(-1),
+						Machine:      newMachine(-1, nil),
 						MachineClass: newMachineClass(providerSpec),
 						Secret: &corev1.Secret{
 							Data: map[string][]byte{
@@ -243,7 +247,7 @@ var _ = Describe("MachineServer", func() {
 			Entry("providerSecretAccessKey missing for provider secret", &data{
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
-						Machine:      newMachine(-1),
+						Machine:      newMachine(-1, nil),
 						MachineClass: newMachineClass(providerSpec),
 						Secret: &corev1.Secret{
 							Data: map[string][]byte{
@@ -261,7 +265,7 @@ var _ = Describe("MachineServer", func() {
 			Entry("userData missing for provider secret", &data{
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
-						Machine:      newMachine(-1),
+						Machine:      newMachine(-1, nil),
 						MachineClass: newMachineClass(providerSpec),
 						Secret: &corev1.Secret{
 							Data: map[string][]byte{
@@ -279,7 +283,7 @@ var _ = Describe("MachineServer", func() {
 			Entry("Validation for providerSpec fails. Missing AMI & Region.", &data{
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
-						Machine:      newMachine(-1),
+						Machine:      newMachine(-1, nil),
 						MachineClass: newMachineClass([]byte("{\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
 						Secret:       providerSecret,
 					},
@@ -292,7 +296,7 @@ var _ = Describe("MachineServer", func() {
 			Entry("Invalid region that doesn't exist", &data{
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
-						Machine:      newMachine(-1),
+						Machine:      newMachine(-1, nil),
 						MachineClass: newMachineClass([]byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"" + mockclient.FailAtRegion + "\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
 						Secret:       providerSecret,
 					},
@@ -302,10 +306,26 @@ var _ = Describe("MachineServer", func() {
 					errMessage:        "machine codes error: code = [Internal] message = [Region doesn't exist while trying to create session]",
 				},
 			}),
+			Entry("Placement object with affinity, tenancy and availablityZone set", &data{
+				action: action{
+					machineRequest: &driver.CreateMachineRequest{
+						Machine:      newMachine(0, annotations),
+						MachineClass: newMachineClass(providerSpec),
+						Secret:       providerSecret,
+					},
+				},
+				expect: expect{
+					errToHaveOccurred: false,
+					machineResponse: &driver.CreateMachineResponse{
+						ProviderID: "aws:///eu-west-1/i-0123456789-0/placement={affinity:host,availabilityZone:eu-west-1a,tenancy:host}",
+						NodeName:   "ip-0",
+					},
+				},
+			}),
 			Entry("Invalid image ID that doesn't exist", &data{
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
-						Machine:      newMachine(-1),
+						Machine:      newMachine(-1, nil),
 						MachineClass: newMachineClass([]byte("{\"ami\":\"" + mockclient.FailQueryAtDescribeImages + "\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
 						Secret:       providerSecret,
 					},
@@ -318,7 +338,7 @@ var _ = Describe("MachineServer", func() {
 			Entry("Name tag cannot be set on AWS instances", &data{
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
-						Machine:      newMachine(-1),
+						Machine:      newMachine(-1, nil),
 						MachineClass: newMachineClass([]byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\",\"Name\":\"dummy\"}}")),
 						Secret:       providerSecret,
 					},
@@ -334,7 +354,7 @@ var _ = Describe("MachineServer", func() {
 			Entry("RunInstance call fails", &data{
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
-						Machine:      newMachine(-1),
+						Machine:      newMachine(-1, nil),
 						MachineClass: newMachineClass([]byte("{\"ami\":\"" + mockclient.FailQueryAtRunInstances + "\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
 						Secret:       providerSecret,
 					},
@@ -342,6 +362,186 @@ var _ = Describe("MachineServer", func() {
 				expect: expect{
 					errToHaveOccurred: true,
 					errMessage:        "machine codes error: code = [Internal] message = [Couldn't run instance with given ID]",
+				},
+			}),
+		)
+	})
+
+	Describe("#GetPlacementObject", func() {
+		type setup struct {
+			objectmeta v1.ObjectMeta
+		}
+		type action struct {
+			createMachineRequest *driver.CreateMachineRequest
+		}
+		type expect struct {
+			placementobj      *ec2.Placement
+			errToHaveOccurred bool
+		}
+		type data struct {
+			setup  setup
+			action action
+			expect expect
+		}
+		DescribeTable("##table",
+			func(data *data) {
+				data.action.createMachineRequest.Machine.Spec.NodeTemplateSpec.ObjectMeta.Annotations = data.setup.objectmeta.Annotations
+
+				obj, err := getPlacementObj(data.action.createMachineRequest)
+
+				if data.expect.errToHaveOccurred {
+					Expect(err).To(HaveOccurred())
+				} else {
+					Expect(err).ToNot(HaveOccurred())
+					Expect(obj).To(Equal(data.expect.placementobj))
+				}
+			},
+			Entry("when Availability zone is set and affinity and tenancy set to host", &data{
+				setup: setup{
+					objectmeta: v1.ObjectMeta{
+						Annotations: map[string]string{
+							awsPlacement: `{ "affinity": "host", "availabilityZone": "eu-west-1a", "tenancy": "host"}`,
+						},
+					},
+				},
+				action: action{
+					createMachineRequest: &driver.CreateMachineRequest{
+						Machine:      newMachine(0, nil),
+						MachineClass: newMachineClass(providerSpec),
+						Secret:       providerSecret,
+					},
+				},
+				expect: expect{
+					errToHaveOccurred: false,
+					placementobj: &ec2.Placement{
+						AvailabilityZone: getStringPtr("eu-west-1a"),
+						Affinity:         getStringPtr(ec2.AffinityHost),
+						Tenancy:          getStringPtr(ec2.TenancyHost),
+					},
+				},
+			}),
+			Entry("when Availability zone is not set but affinity and tenancy set to host", &data{
+				setup: setup{
+					objectmeta: v1.ObjectMeta{
+						Annotations: map[string]string{
+							awsPlacement: `{ "affinity": "host", "tenancy": "host"}`,
+						},
+					},
+				},
+				action: action{
+					createMachineRequest: &driver.CreateMachineRequest{
+						Machine:      newMachine(0, nil),
+						MachineClass: newMachineClass(providerSpec),
+						Secret:       providerSecret,
+					},
+				},
+				expect: expect{
+					placementobj: &ec2.Placement{
+						Affinity: getStringPtr(ec2.AffinityHost),
+						Tenancy:  getStringPtr(ec2.TenancyHost),
+					},
+				},
+			}),
+			Entry("when awsPlacement key is not there", &data{
+				setup: setup{
+					objectmeta: v1.ObjectMeta{
+						Annotations: map[string]string{},
+					},
+				},
+				action: action{
+					createMachineRequest: &driver.CreateMachineRequest{
+						Machine:      newMachine(0, nil),
+						MachineClass: newMachineClass(providerSpec),
+						Secret:       providerSecret,
+					},
+				},
+				expect: expect{
+					errToHaveOccurred: false,
+				},
+			}),
+			Entry("when awsPlacement key is there but value not there", &data{
+				setup: setup{
+					objectmeta: v1.ObjectMeta{
+						Annotations: map[string]string{
+							awsPlacement: "",
+						},
+					},
+				},
+				action: action{
+					createMachineRequest: &driver.CreateMachineRequest{
+						Machine:      newMachine(0, nil),
+						MachineClass: newMachineClass(providerSpec),
+						Secret:       providerSecret,
+					},
+				},
+				expect: expect{
+					errToHaveOccurred: false,
+				},
+			}),
+			Entry("when awsPlacement key and value is there but value is {} only", &data{
+				setup: setup{
+					objectmeta: v1.ObjectMeta{
+						Annotations: map[string]string{
+							awsPlacement: "{}",
+						},
+					},
+				},
+				action: action{
+					createMachineRequest: &driver.CreateMachineRequest{
+						Machine:      newMachine(0, nil),
+						MachineClass: newMachineClass(providerSpec),
+						Secret:       providerSecret,
+					},
+				},
+				expect: expect{
+					errToHaveOccurred: false,
+				},
+			}),
+			Entry("when Availability zone is set and affinity and tenancy set to value default", &data{
+				setup: setup{
+					objectmeta: v1.ObjectMeta{
+						Annotations: map[string]string{
+							awsPlacement: `{ "affinity": "default", "availabilityZone": "eu-west-1a", "tenancy": "default"}`,
+						},
+					},
+				},
+				action: action{
+					createMachineRequest: &driver.CreateMachineRequest{
+						Machine:      newMachine(0, nil),
+						MachineClass: newMachineClass(providerSpec),
+						Secret:       providerSecret,
+					},
+				},
+				expect: expect{
+					errToHaveOccurred: false,
+					placementobj: &ec2.Placement{
+						Affinity:         getStringPtr(ec2.AffinityDefault),
+						AvailabilityZone: getStringPtr("eu-west-1a"),
+						Tenancy:          getStringPtr(ec2.TenancyDefault),
+					},
+				},
+			}),
+			Entry("when just hostId and partitionNumber is set", &data{
+				setup: setup{
+					objectmeta: v1.ObjectMeta{
+						Annotations: map[string]string{
+							awsPlacement: `{ "hostId": "h-0123b456af7f89123", "partitionNumber": 7}`,
+						},
+					},
+				},
+				action: action{
+					createMachineRequest: &driver.CreateMachineRequest{
+						Machine:      newMachine(0, nil),
+						MachineClass: newMachineClass(providerSpec),
+						Secret:       providerSecret,
+					},
+				},
+				expect: expect{
+					errToHaveOccurred: false,
+					placementobj: &ec2.Placement{
+						HostId:          getStringPtr("h-0123b456af7f89123"),
+						PartitionNumber: getIntPtrForString("7"),
+					},
 				},
 			}),
 		)
@@ -389,14 +589,14 @@ var _ = Describe("MachineServer", func() {
 			Entry("Simple Machine Delete Request", &data{
 				setup: setup{
 					createMachineRequest: &driver.CreateMachineRequest{
-						Machine:      newMachine(0),
+						Machine:      newMachine(0, nil),
 						MachineClass: newMachineClass(providerSpec),
 						Secret:       providerSecret,
 					},
 				},
 				action: action{
 					deleteMachineRequest: &driver.DeleteMachineRequest{
-						Machine:      newMachine(0),
+						Machine:      newMachine(0, nil),
 						MachineClass: newMachineClass(providerSpec),
 						Secret:       providerSecret,
 					},
@@ -409,14 +609,14 @@ var _ = Describe("MachineServer", func() {
 			Entry("Simple Machine Delete Request with wrong provider in MachineClass", &data{
 				setup: setup{
 					createMachineRequest: &driver.CreateMachineRequest{
-						Machine:      newMachine(0),
+						Machine:      newMachine(0, nil),
 						MachineClass: newMachineClass(providerSpec),
 						Secret:       providerSecret,
 					},
 				},
 				action: action{
 					deleteMachineRequest: &driver.DeleteMachineRequest{
-						Machine:      newMachine(0),
+						Machine:      newMachine(0, nil),
 						MachineClass: newMachineClassWithProvider(providerSpec, "azure"),
 						Secret:       providerSecret,
 					},
@@ -429,14 +629,14 @@ var _ = Describe("MachineServer", func() {
 			Entry("providerAccessKeyId missing for secret", &data{
 				setup: setup{
 					createMachineRequest: &driver.CreateMachineRequest{
-						Machine:      newMachine(0),
+						Machine:      newMachine(0, nil),
 						MachineClass: newMachineClass(providerSpec),
 						Secret:       providerSecret,
 					},
 				},
 				action: action{
 					deleteMachineRequest: &driver.DeleteMachineRequest{
-						Machine:      newMachine(0),
+						Machine:      newMachine(0, nil),
 						MachineClass: newMachineClass(providerSpec),
 						Secret: &corev1.Secret{
 							Data: map[string][]byte{
@@ -454,14 +654,14 @@ var _ = Describe("MachineServer", func() {
 			Entry("providerSecretAccessKey & userData missing for secret", &data{
 				setup: setup{
 					createMachineRequest: &driver.CreateMachineRequest{
-						Machine:      newMachine(0),
+						Machine:      newMachine(0, nil),
 						MachineClass: newMachineClass(providerSpec),
 						Secret:       providerSecret,
 					},
 				},
 				action: action{
 					deleteMachineRequest: &driver.DeleteMachineRequest{
-						Machine:      newMachine(0),
+						Machine:      newMachine(0, nil),
 						MachineClass: newMachineClass(providerSpec),
 						Secret: &corev1.Secret{
 							Data: map[string][]byte{
@@ -479,7 +679,7 @@ var _ = Describe("MachineServer", func() {
 				setup: setup{},
 				action: action{
 					deleteMachineRequest: &driver.DeleteMachineRequest{
-						Machine:      newMachine(0),
+						Machine:      newMachine(0, nil),
 						MachineClass: newMachineClass(providerSpec),
 						Secret:       providerSecret,
 					},
@@ -493,14 +693,14 @@ var _ = Describe("MachineServer", func() {
 			Entry("Termination of instance that doesn't exist on provider", &data{
 				setup: setup{
 					createMachineRequest: &driver.CreateMachineRequest{
-						Machine:      newMachine(-1),
+						Machine:      newMachine(-1, nil),
 						MachineClass: newMachineClass([]byte("{\"ami\":\"" + mockclient.SetInstanceID + "\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"" + mockclient.FailQueryAtTerminateInstances + "\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
 						Secret:       providerSecret,
 					},
 				},
 				action: action{
 					deleteMachineRequest: &driver.DeleteMachineRequest{
-						Machine:      newMachine(0),
+						Machine:      newMachine(0, nil),
 						MachineClass: newMachineClass([]byte("{\"ami\":\"" + mockclient.SetInstanceID + "\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"" + mockclient.FailQueryAtTerminateInstances + "\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
 						Secret:       providerSecret,
 					},
@@ -514,7 +714,7 @@ var _ = Describe("MachineServer", func() {
 				setup: setup{},
 				action: action{
 					deleteMachineRequest: &driver.DeleteMachineRequest{
-						Machine:      newMachine(-1),
+						Machine:      newMachine(-1, nil),
 						MachineClass: newMachineClass(providerSpec),
 						Secret:       providerSecret,
 					},
@@ -528,7 +728,7 @@ var _ = Describe("MachineServer", func() {
 				setup: setup{},
 				action: action{
 					deleteMachineRequest: &driver.DeleteMachineRequest{
-						Machine:      newMachine(-1),
+						Machine:      newMachine(-1, nil),
 						MachineClass: newMachineClass([]byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/" + mockclient.ReturnErrorAtDescribeInstances + "\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
 						Secret:       providerSecret,
 					},
@@ -542,7 +742,7 @@ var _ = Describe("MachineServer", func() {
 			Entry("Termination of machine with any backing instance but no providerID", &data{
 				setup: setup{
 					createMachineRequest: &driver.CreateMachineRequest{
-						Machine:      newMachine(0),
+						Machine:      newMachine(0, nil),
 						MachineClass: newMachineClass(providerSpec),
 						Secret:       providerSecret,
 					},
@@ -550,7 +750,7 @@ var _ = Describe("MachineServer", func() {
 				action: action{
 					deleteMachineRequest: &driver.DeleteMachineRequest{
 						// Setting machineIndex to -1 to simulate no providerID
-						Machine:      newMachine(-1),
+						Machine:      newMachine(-1, nil),
 						MachineClass: newMachineClass(providerSpec),
 						Secret:       providerSecret,
 					},
@@ -586,6 +786,7 @@ var _ = Describe("MachineServer", func() {
 				ms := NewAWSDriver(mockPluginSPIImpl)
 				ctx := context.Background()
 
+				//if there is a create machine request by the test case then create the machine
 				if data.setup.createMachineRequest != nil {
 					_, err := ms.CreateMachine(ctx, data.setup.createMachineRequest)
 					Expect(err).ToNot(HaveOccurred())
@@ -603,14 +804,14 @@ var _ = Describe("MachineServer", func() {
 			Entry("Simple Machine Get Request", &data{
 				setup: setup{
 					createMachineRequest: &driver.CreateMachineRequest{
-						Machine:      newMachine(0),
+						Machine:      newMachine(0, nil),
 						MachineClass: newMachineClass(providerSpec),
 						Secret:       providerSecret,
 					},
 				},
 				action: action{
 					getMachineRequest: &driver.GetMachineStatusRequest{
-						Machine:      newMachine(0),
+						Machine:      newMachine(0, nil),
 						MachineClass: newMachineClass(providerSpec),
 						Secret:       providerSecret,
 					},
@@ -620,14 +821,14 @@ var _ = Describe("MachineServer", func() {
 			Entry("Simple Machine Get Request with unsupported provider in MachineClass", &data{
 				setup: setup{
 					createMachineRequest: &driver.CreateMachineRequest{
-						Machine:      newMachine(0),
+						Machine:      newMachine(0, nil),
 						MachineClass: newMachineClass(providerSpec),
 						Secret:       providerSecret,
 					},
 				},
 				action: action{
 					getMachineRequest: &driver.GetMachineStatusRequest{
-						Machine:      newMachine(0),
+						Machine:      newMachine(0, nil),
 						MachineClass: newMachineClassWithProvider(providerSpec, "azure"),
 						Secret:       providerSecret,
 					},
@@ -640,14 +841,14 @@ var _ = Describe("MachineServer", func() {
 			Entry("providerAccessKeyId missing for secret", &data{
 				setup: setup{
 					createMachineRequest: &driver.CreateMachineRequest{
-						Machine:      newMachine(0),
+						Machine:      newMachine(0, nil),
 						MachineClass: newMachineClass(providerSpec),
 						Secret:       providerSecret,
 					},
 				},
 				action: action{
 					getMachineRequest: &driver.GetMachineStatusRequest{
-						Machine:      newMachine(0),
+						Machine:      newMachine(0, nil),
 						MachineClass: newMachineClass(providerSpec),
 						Secret: &corev1.Secret{
 							Data: map[string][]byte{
@@ -665,14 +866,14 @@ var _ = Describe("MachineServer", func() {
 			Entry("providerSecretAccessKey missing for secret", &data{
 				setup: setup{
 					createMachineRequest: &driver.CreateMachineRequest{
-						Machine:      newMachine(0),
+						Machine:      newMachine(0, nil),
 						MachineClass: newMachineClass(providerSpec),
 						Secret:       providerSecret,
 					},
 				},
 				action: action{
 					getMachineRequest: &driver.GetMachineStatusRequest{
-						Machine:      newMachine(0),
+						Machine:      newMachine(0, nil),
 						MachineClass: newMachineClass(providerSpec),
 						Secret: &corev1.Secret{
 							Data: map[string][]byte{
@@ -690,14 +891,14 @@ var _ = Describe("MachineServer", func() {
 			Entry("userData missing for secret", &data{
 				setup: setup{
 					createMachineRequest: &driver.CreateMachineRequest{
-						Machine:      newMachine(0),
+						Machine:      newMachine(0, nil),
 						MachineClass: newMachineClass(providerSpec),
 						Secret:       providerSecret,
 					},
 				},
 				action: action{
 					getMachineRequest: &driver.GetMachineStatusRequest{
-						Machine:      newMachine(0),
+						Machine:      newMachine(0, nil),
 						MachineClass: newMachineClass(providerSpec),
 						Secret: &corev1.Secret{
 							Data: map[string][]byte{
@@ -715,14 +916,14 @@ var _ = Describe("MachineServer", func() {
 			Entry("Machine deletion where provider-ID is missing", &data{
 				setup: setup{
 					createMachineRequest: &driver.CreateMachineRequest{
-						Machine:      newMachine(0),
+						Machine:      newMachine(0, nil),
 						MachineClass: newMachineClass(providerSpec),
 						Secret:       providerSecret,
 					},
 				},
 				action: action{
 					getMachineRequest: &driver.GetMachineStatusRequest{
-						Machine:      newMachine(-1),
+						Machine:      newMachine(-1, nil),
 						MachineClass: newMachineClass(providerSpec),
 						Secret:       providerSecret,
 					},
@@ -735,7 +936,7 @@ var _ = Describe("MachineServer", func() {
 				setup: setup{},
 				action: action{
 					getMachineRequest: &driver.GetMachineStatusRequest{
-						Machine:      newMachine(0),
+						Machine:      newMachine(0, nil),
 						MachineClass: newMachineClass(providerSpec),
 						Secret:       providerSecret,
 					},
@@ -792,17 +993,17 @@ var _ = Describe("MachineServer", func() {
 				setup: setup{
 					createMachineRequest: []*driver.CreateMachineRequest{
 						{
-							Machine:      newMachine(0),
+							Machine:      newMachine(0, nil),
 							MachineClass: newMachineClass(providerSpec),
 							Secret:       providerSecret,
 						},
 						{
-							Machine:      newMachine(1),
+							Machine:      newMachine(1, nil),
 							MachineClass: newMachineClass(providerSpec),
 							Secret:       providerSecret,
 						},
 						{
-							Machine:      newMachine(2),
+							Machine:      newMachine(2, nil),
 							MachineClass: newMachineClass(providerSpec),
 							Secret:       providerSecret,
 						},

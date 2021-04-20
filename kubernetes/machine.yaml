@@ -14,3 +14,7 @@ spec:
     kind: MachineClass
     name: test-mc
     namespace: default
+# nodeTemplate: 
+#   metadata:
+#     annotations:  
+#       machine.sapcloud.io/awsPlacement: '{ "affinity": "host", "availabilityZone": "eu-west-1a", "tenancy": "host"}' # Optional: it allows placing machine on a dedicated host in an availability zone,assuming dedicated host has auto-placement enabled; affinity can be host only if tenancy is host
