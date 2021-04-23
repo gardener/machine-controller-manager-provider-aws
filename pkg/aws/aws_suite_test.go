@@ -70,5 +70,15 @@ func newMachineClass(providerSpec []byte) *v1alpha1.MachineClass {
 		ProviderSpec: runtime.RawExtension{
 			Raw: providerSpec,
 		},
+		Provider: ProviderAWS,
+	}
+}
+
+func newMachineClassWithProvider(providerSpec []byte, provider string) *v1alpha1.MachineClass {
+	return &v1alpha1.MachineClass{
+		ProviderSpec: runtime.RawExtension{
+			Raw: providerSpec,
+		},
+		Provider: provider,
 	}
 }

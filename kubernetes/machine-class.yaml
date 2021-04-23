@@ -9,6 +9,7 @@ kind: MachineClass
 metadata:
   name: test-mc
   namespace: default # Namespace where the controller would watch
+provider: AWS
 providerSpec:
   ami: ami-123456 # Amazon machine image name goes here
   blockDevices:

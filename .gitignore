@@ -5,3 +5,4 @@ cmi-plugin
 *coverprofile.out*
 bin/
 .idea
+/dev

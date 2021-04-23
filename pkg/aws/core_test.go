@@ -103,6 +103,19 @@ var _ = Describe("MachineServer", func() {
 					errToHaveOccurred: false,
 				},
 			}),
+			Entry("Simple Machine Creation Request with missing provider in MachineClass", &data{
+				action: action{
+					machineRequest: &driver.CreateMachineRequest{
+						Machine:      newMachine(-1),
+						MachineClass: newMachineClassWithProvider(providerSpec, "azure"),
+						Secret:       providerSecret,
+					},
+				},
+				expect: expect{
+					errToHaveOccurred: true,
+					errMessage:        "machine codes error: code = [InvalidArgument] message = [Requested for Provider 'azure', we only support 'AWS']",
+				},
+			}),
 			Entry("Machine creation request with volume type io1", &data{
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
@@ -393,6 +406,26 @@ var _ = Describe("MachineServer", func() {
 					errToHaveOccurred:     false,
 				},
 			}),
+			Entry("Simple Machine Delete Request with wrong provider in MachineClass", &data{
+				setup: setup{
+					createMachineRequest: &driver.CreateMachineRequest{
+						Machine:      newMachine(0),
+						MachineClass: newMachineClass(providerSpec),
+						Secret:       providerSecret,
+					},
+				},
+				action: action{
+					deleteMachineRequest: &driver.DeleteMachineRequest{
+						Machine:      newMachine(0),
+						MachineClass: newMachineClassWithProvider(providerSpec, "azure"),
+						Secret:       providerSecret,
+					},
+				},
+				expect: expect{
+					errToHaveOccurred: true,
+					errMessage:        "machine codes error: code = [InvalidArgument] message = [Requested for Provider 'azure', we only support 'AWS']",
+				},
+			}),
 			Entry("providerAccessKeyId missing for secret", &data{
 				setup: setup{
 					createMachineRequest: &driver.CreateMachineRequest{
@@ -584,6 +617,26 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{},
 			}),
+			Entry("Simple Machine Get Request with unsupported provider in MachineClass", &data{
+				setup: setup{
+					createMachineRequest: &driver.CreateMachineRequest{
+						Machine:      newMachine(0),
+						MachineClass: newMachineClass(providerSpec),
+						Secret:       providerSecret,
+					},
+				},
+				action: action{
+					getMachineRequest: &driver.GetMachineStatusRequest{
+						Machine:      newMachine(0),
+						MachineClass: newMachineClassWithProvider(providerSpec, "azure"),
+						Secret:       providerSecret,
+					},
+				},
+				expect: expect{
+					errToHaveOccurred: true,
+					errMessage:        "machine codes error: code = [InvalidArgument] message = [Requested for Provider 'azure', we only support 'AWS']",
+				},
+			}),
 			Entry("providerAccessKeyId missing for secret", &data{
 				setup: setup{
 					createMachineRequest: &driver.CreateMachineRequest{
@@ -770,6 +823,20 @@ var _ = Describe("MachineServer", func() {
 							"aws:///eu-west-1/i-0123456789-2": "machine-2",
 						},
 					},
+				},
+			}),
+
+			Entry("List Machine Request with unsupported provider in MachineClass", &data{
+				setup: setup{},
+				action: action{
+					listMachineRequest: &driver.ListMachinesRequest{
+						MachineClass: newMachineClassWithProvider(providerSpec, "azure"),
+						Secret:       providerSecret,
+					},
+				},
+				expect: expect{
+					errToHaveOccurred: true,
+					errMessage:        "machine codes error: code = [InvalidArgument] message = [Requested for Provider 'azure', we only support 'AWS']",
 				},
 			}),
 			Entry("Unexpected end of JSON input", &data{
@@ -1181,7 +1248,9 @@ var _ = Describe("MachineServer", func() {
 								},
 							},
 						},
-						MachineClass: &v1alpha1.MachineClass{},
+						MachineClass: &v1alpha1.MachineClass{
+							Provider: ProviderAWS,
+						},
 						ClassSpec: &v1alpha1.ClassSpec{
 							//APIGroup: "",
 							Kind: AWSMachineClassKind,

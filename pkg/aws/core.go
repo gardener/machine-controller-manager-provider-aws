@@ -62,6 +62,12 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 		machineClass = req.MachineClass
 	)
 
+	// Check if the MachineClass is for the supported cloud provider
+	if req.MachineClass.Provider != ProviderAWS {
+		err := fmt.Errorf("Requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderAWS)
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
 	// Log messages to track request
 	klog.V(3).Infof("Machine creation request has been recieved for %q", req.Machine.Name)
 
@@ -197,6 +203,13 @@ func (d *Driver) DeleteMachine(ctx context.Context, req *driver.DeleteMachineReq
 		err    error
 		secret = req.Secret
 	)
+
+	// Check if the MachineClass is for the supported cloud provider
+	if req.MachineClass.Provider != ProviderAWS {
+		err := fmt.Errorf("Requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderAWS)
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
 	// Log messages to track delete request
 	klog.V(3).Infof("Machine deletion request has been recieved for %q", req.Machine.Name)
 	defer klog.V(3).Infof("Machine deletion request has been processed for %q", req.Machine.Name)
@@ -260,6 +273,12 @@ func (d *Driver) GetMachineStatus(ctx context.Context, req *driver.GetMachineSta
 		machineClass = req.MachineClass
 	)
 
+	// Check if the MachineClass is for the supported cloud provider
+	if req.MachineClass.Provider != ProviderAWS {
+		err := fmt.Errorf("Requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderAWS)
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
 	// Log messages to track start and end of request
 	klog.V(3).Infof("Get request has been recieved for %q", req.Machine.Name)
 
@@ -299,6 +318,12 @@ func (d *Driver) ListMachines(ctx context.Context, req *driver.ListMachinesReque
 		machineClass = req.MachineClass
 		secret       = req.Secret
 	)
+
+	// Check if the MachineClass is for the supported cloud provider
+	if req.MachineClass.Provider != ProviderAWS {
+		err := fmt.Errorf("Requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderAWS)
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
 
 	// Log messages to track start and end of request
 	klog.V(3).Infof("List machines request has been recieved for %q", machineClass.Name)
