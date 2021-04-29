@@ -133,7 +133,7 @@ type AWSBlockDeviceMappingSpec struct {
 type AWSCapacityReservationTargetSpec struct {
 
 	// The ID of the Capacity Reservation in which to run the instance.
-	CapacityReservationId *string `json:"capacityReservationId,omitempty"`
+	CapacityReservationID *string `json:"capacityReservationId,omitempty"`
 
 	// The ARN of the Capacity Reservation resource group in which to run the instance.
 	CapacityReservationResourceGroupArn *string `json:"capacityReservationResourceGroupArn,omitempty"`

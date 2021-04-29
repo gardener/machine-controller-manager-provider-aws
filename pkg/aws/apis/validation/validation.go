@@ -151,7 +151,7 @@ func validateCapacityReservations(capacityReservation *awsapi.AWSCapacityReserva
 	)
 
 	if capacityReservation != nil {
-		if capacityReservation.CapacityReservationId != nil && capacityReservation.CapacityReservationResourceGroupArn != nil {
+		if capacityReservation.CapacityReservationID != nil && capacityReservation.CapacityReservationResourceGroupArn != nil {
 			allErrs = append(allErrs, field.Required(fldPath, "capacityReservationResourceGroupArn or capacityReservationId are optional but only one should be used"))
 		}
 	}
