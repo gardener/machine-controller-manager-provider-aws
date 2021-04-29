@@ -162,11 +162,11 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 					CapacityReservationResourceGroupArn: providerSpec.CapacityReservationTarget.CapacityReservationResourceGroupArn,
 				},
 			}
-		} else if providerSpec.CapacityReservationTarget.CapacityReservationId != nil {
+		} else if providerSpec.CapacityReservationTarget.CapacityReservationID != nil {
 			inputConfig.CapacityReservationSpecification = &ec2.CapacityReservationSpecification{
 				CapacityReservationPreference: aws.String("open"),
 				CapacityReservationTarget: &ec2.CapacityReservationTarget{
-					CapacityReservationId: providerSpec.CapacityReservationTarget.CapacityReservationId,
+					CapacityReservationId: providerSpec.CapacityReservationTarget.CapacityReservationID,
 				},
 			}
 		}
