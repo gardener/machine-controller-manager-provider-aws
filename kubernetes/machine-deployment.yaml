@@ -10,9 +10,9 @@ metadata:
   name: test-machine-deployment
   namespace: default
 spec:
-  #paused: true [uncommment this when you want to pause]
-  #rollbackTo:
-    #revision: 0 [uncommment this when you want to rollback to previous version]
+# paused: true [uncommment this when you want to pause]
+# rollbackTo:
+#   revision: 0 [uncommment this when you want to rollback to previous version]
   replicas: 3 # Number of healthy replicas that should always be healthy
   minReadySeconds: 500 # Minimum time to wait for machine to be ready
   strategy:
@@ -32,3 +32,7 @@ spec:
         kind: MachineClass # Machine class template used to create machine, could be AWS/GCP/Azure/Other-cloud-providers
         name: test-mc # Name of the machine class
         namespace: default
+    # nodeTemplate: 
+    #   metadata:
+    #     annotations:  
+    #       machine.sapcloud.io/awsPlacement: '{ "affinity": "host", "availabilityZone": "eu-west-1a", "tenancy": "host"}' # Optional: it allows placing machine on a dedicated host in an availability zone,assuming dedicated host has auto-placement enabled; affinity can be host only if tenancy is host

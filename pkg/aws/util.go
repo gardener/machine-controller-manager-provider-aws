@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
@@ -90,4 +91,13 @@ func kubernetesVolumeIDToEBSVolumeID(kubernetesID string) (string, error) {
 	}
 
 	return awsID, nil
+}
+
+func getStringPtr(s string) *string {
+	return &s
+}
+func getIntPtrForString(s string) *int64 {
+	var num int64
+	num, _ = strconv.ParseInt(s, 10, 64)
+	return &num
 }

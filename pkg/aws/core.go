@@ -20,6 +20,7 @@ package aws
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -43,6 +44,7 @@ const (
 	resourceTypeVolume   = "volume"
 	// awsEBSDriverName is the name of the CSI driver for EBS
 	awsEBSDriverName = "ebs.csi.aws.com"
+	awsPlacement     = "machine.sapcloud.io/awsPlacement"
 )
 
 // NewAWSDriver returns an empty AWSDriver object
@@ -134,6 +136,7 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 	}
 
 	// Specify the details of the machine that you want to create.
+
 	inputConfig := ec2.RunInstancesInput{
 		BlockDeviceMappings: blkDeviceMappings,
 		ImageId:             aws.String(providerSpec.AMI),
@@ -169,6 +172,12 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 		}
 	}
 
+	placement, err := getPlacementObj(req)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	} else if placement != nil {
+		inputConfig.Placement = placement
+	}
 	// Set spot price if it has been set
 	if providerSpec.SpotPrice != nil {
 		inputConfig.InstanceMarketOptions = &ec2.InstanceMarketOptionsRequest{
@@ -195,6 +204,25 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 
 	klog.V(3).Infof("VM with Provider-ID: %q created for Machine: %q", response.ProviderID, machine.Name)
 	return response, nil
+}
+
+//returns Placement Object required in ec2.RunInstancesInput
+func getPlacementObj(req *driver.CreateMachineRequest) (*ec2.Placement, error) {
+	placementobj := &ec2.Placement{}
+
+	requestAnnotations := req.Machine.Spec.NodeTemplateSpec.ObjectMeta.Annotations
+
+	if placementAnnotation, ok := requestAnnotations[awsPlacement]; ok && placementAnnotation != "" {
+		placementAnnotationsRaw := []byte(placementAnnotation)
+		if err := json.Unmarshal(placementAnnotationsRaw, placementobj); err != nil {
+			return nil, err
+		}
+	}
+
+	if *placementobj == (ec2.Placement{}) {
+		return nil, nil
+	}
+	return placementobj, nil
 }
 
 // DeleteMachine handles a machine deletion request

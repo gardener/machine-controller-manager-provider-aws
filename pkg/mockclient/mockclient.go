@@ -100,9 +100,13 @@ func (ms *MockEC2Client) RunInstances(input *ec2.RunInstancesInput) (*ec2.Reserv
 	if *input.ImageId == FailQueryAtRunInstances {
 		return nil, fmt.Errorf("Couldn't run instance with given ID")
 	}
-
 	instanceID := fmt.Sprintf("i-0123456789-%d", len(*ms.FakeInstances))
 	privateDNSName := fmt.Sprintf("ip-%d", len(*ms.FakeInstances))
+
+	placement := input.Placement
+	if placement != nil {
+		instanceID = fmt.Sprintf("i-0123456789-%d/placement={affinity:%s,availabilityZone:%s,tenancy:%s}", len(*ms.FakeInstances), *placement.Affinity, *placement.AvailabilityZone, *placement.Tenancy)
+	}
 
 	if strings.Contains(*input.ImageId, SetInstanceID) {
 		instanceID = *input.KeyName

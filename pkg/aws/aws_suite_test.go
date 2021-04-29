@@ -32,8 +32,9 @@ const (
 	testNamespace = "test"
 )
 
+//params is used to pass annotations to the machine spec
 func newMachine(
-	setMachineIndex int,
+	setMachineIndex int, annotations map[string]string,
 ) *v1alpha1.Machine {
 	index := 0
 
@@ -62,6 +63,12 @@ func newMachine(
 		}
 	}
 
+	machine.Spec.NodeTemplateSpec.ObjectMeta.Annotations = make(map[string]string)
+
+	//appending to already existing annotations
+	for k, v := range annotations {
+		machine.Spec.NodeTemplateSpec.ObjectMeta.Annotations[k] = v
+	}
 	return machine
 }
 
