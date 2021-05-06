@@ -136,6 +136,12 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 	}
 
 	// Specify the details of the machine that you want to create.
+	iam := &ec2.IamInstanceProfileSpecification{}
+	if len(providerSpec.IAM.Name) > 0 {
+		iam.Name = &providerSpec.IAM.Name
+	} else if len(providerSpec.IAM.ARN) > 0 {
+		iam.Arn = &providerSpec.IAM.ARN
+	}
 
 	inputConfig := ec2.RunInstancesInput{
 		BlockDeviceMappings: blkDeviceMappings,
@@ -145,11 +151,9 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 		MaxCount:            aws.Int64(1),
 		UserData:            &UserDataEnc,
 		KeyName:             aws.String(providerSpec.KeyName),
-		IamInstanceProfile: &ec2.IamInstanceProfileSpecification{
-			Name: &(providerSpec.IAM.Name),
-		},
-		NetworkInterfaces: networkInterfaceSpecs,
-		TagSpecifications: []*ec2.TagSpecification{tagInstance, tagVolume},
+		IamInstanceProfile:  iam,
+		NetworkInterfaces:   networkInterfaceSpecs,
+		TagSpecifications:   []*ec2.TagSpecification{tagInstance, tagVolume},
 	}
 
 	// Set the AWS Capacity Reservation target. Using an 'open' preference means that if the reservation is not found, then
