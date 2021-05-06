@@ -49,9 +49,9 @@ if [[ "${SOURCE_PATH}" != *"src/github.com/gardener/machine-controller-manager-p
 fi
 
 # Install Ginkgo (test framework) to be able to execute the tests.
-echo "Fetching Ginkgo frawework"
+echo "Fetching Ginkgo framework"
 GO111MODULE=off go get -u github.com/onsi/ginkgo/ginkgo
-echo "Successfully fetched Ginkgo frawework"
+echo "Successfully fetched Ginkgo framework"
 
 ##############################################################################
 

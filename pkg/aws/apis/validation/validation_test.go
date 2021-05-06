@@ -261,7 +261,7 @@ var _ = Describe("Validation", func() {
 					},
 				},
 			}),
-			Entry("IAM.Name field missing", &data{
+			Entry("both IAM.Name and IAM.ARN fields missing", &data{
 				setup: setup{},
 				action: action{
 					spec: &awsapi.AWSProviderSpec{
@@ -273,6 +273,54 @@ var _ = Describe("Validation", func() {
 									VolumeType: "gp2",
 								},
 							},
+						},
+						IAM:         awsapi.AWSIAMProfileSpec{},
+						Region:      "eu-west-1",
+						MachineType: "m4.large",
+						KeyName:     "test-ssh-publickey",
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
+								SecurityGroupIDs: []string{
+									"sg-00002132323",
+								},
+								SubnetID: "subnet-123456",
+							},
+						},
+						Tags: map[string]string{
+							"kubernetes.io/cluster/shoot--test": "1",
+							"kubernetes.io/role/test":           "1",
+						},
+					},
+					secret: providerSecret,
+				},
+				expect: expect{
+					errToHaveOccurred: true,
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueInvalid",
+							Field:    "providerSpec.iam",
+							BadValue: awsapi.AWSIAMProfileSpec{},
+							Detail:   "either IAM Name or ARN must be set",
+						},
+					},
+				},
+			}),
+			Entry("both IAM.Name and IAM.ARN fields set", &data{
+				setup: setup{},
+				action: action{
+					spec: &awsapi.AWSProviderSpec{
+						AMI: "ami-123456789",
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
+									VolumeSize: 50,
+									VolumeType: "gp2",
+								},
+							},
+						},
+						IAM: awsapi.AWSIAMProfileSpec{
+							Name: "foo",
+							ARN:  "bar",
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
@@ -296,10 +344,13 @@ var _ = Describe("Validation", func() {
 					errToHaveOccurred: true,
 					errList: field.ErrorList{
 						{
-							Type:     "FieldValueRequired",
-							Field:    "providerSpec.iam.name",
-							BadValue: "",
-							Detail:   "IAM Name is required",
+							Type:  "FieldValueInvalid",
+							Field: "providerSpec.iam",
+							BadValue: awsapi.AWSIAMProfileSpec{
+								Name: "foo",
+								ARN:  "bar",
+							},
+							Detail: "either IAM Name or ARN must be set",
 						},
 					},
 				},

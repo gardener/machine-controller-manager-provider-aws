@@ -49,8 +49,8 @@ func ValidateAWSProviderSpec(spec *awsapi.AWSProviderSpec, secret *corev1.Secret
 	if "" == spec.MachineType {
 		allErrs = append(allErrs, field.Required(fldPath.Child("machineType"), "MachineType is required"))
 	}
-	if "" == spec.IAM.Name {
-		allErrs = append(allErrs, field.Required(fldPath.Child("iam.name"), "IAM Name is required"))
+	if ("" == spec.IAM.Name && "" == spec.IAM.ARN) || ("" != spec.IAM.Name && "" != spec.IAM.ARN) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("iam"), spec.IAM, "either IAM Name or ARN must be set"))
 	}
 	if "" == spec.KeyName {
 		allErrs = append(allErrs, field.Required(fldPath.Child("keyName"), "KeyName is required"))

@@ -120,6 +120,22 @@ var _ = Describe("MachineServer", func() {
 					errMessage:        "machine codes error: code = [InvalidArgument] message = [Requested for Provider 'azure', we only support 'AWS']",
 				},
 			}),
+			Entry("Machine creation request with IAM ARN", &data{
+				action: action{
+					machineRequest: &driver.CreateMachineRequest{
+						Machine:      newMachine(-1, nil),
+						MachineClass: newMachineClass([]byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"arn\":\"some-arn\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
+						Secret:       providerSecret,
+					},
+				},
+				expect: expect{
+					machineResponse: &driver.CreateMachineResponse{
+						ProviderID: "aws:///eu-west-1/i-0123456789-0",
+						NodeName:   "ip-0",
+					},
+					errToHaveOccurred: false,
+				},
+			}),
 			Entry("Machine creation request with volume type io1", &data{
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
