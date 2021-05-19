@@ -4,9 +4,9 @@ go 1.15
 
 require (
 	github.com/aws/aws-sdk-go v1.36.0
-	github.com/gardener/machine-controller-manager v0.37.0
-	github.com/onsi/ginkgo v1.12.0
-	github.com/onsi/gomega v1.9.0
+	github.com/gardener/machine-controller-manager v0.39.0
+	github.com/onsi/ginkgo v1.15.2
+	github.com/onsi/gomega v1.11.0
 	github.com/prometheus/client_golang v1.5.1 // indirect
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.5.1 // indirect

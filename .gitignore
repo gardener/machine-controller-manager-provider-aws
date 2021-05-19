@@ -6,3 +6,4 @@ cmi-plugin
 bin/
 .idea
 /dev
+.cache_ggshield
