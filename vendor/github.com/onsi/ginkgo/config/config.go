@@ -20,19 +20,7 @@ import (
 	"fmt"
 )
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
 const VERSION = "1.16.2"
-=======
-const VERSION = "1.15.2"
->>>>>>> a389a78 (Add integrationtest vendor package)
-=======
-const VERSION = "1.16.2"
->>>>>>> 2bf9d02 (Update go.mod)
-=======
-const VERSION = "1.16.2"
->>>>>>> cee659e (Update go.mod)
 
 type GinkgoConfigType struct {
 	RandomSeed         int64

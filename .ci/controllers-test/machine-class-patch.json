@@ -1,1 +1,8 @@
-{"providerSpec": {"tags": {"mcm-integration-test": "true" }}}
+{
+    "providerSpec": {
+        "tags": {
+            "kubernetes.io/role/integration-test": "1",
+            "kubernetes.io/role/node": null
+        }
+    }
+}

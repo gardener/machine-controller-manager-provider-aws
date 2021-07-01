@@ -7,13 +7,6 @@ Jump to the [docs](https://onsi.github.io/ginkgo/) | [中文文档](https://ke-c
 
 If you have a question, comment, bug report, feature request, etc. please open a GitHub issue, or visit the [Ginkgo Slack channel](https://app.slack.com/client/T029RQSE6/CQQ50BBNW).
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 2bf9d02 (Update go.mod)
-=======
->>>>>>> cee659e (Update go.mod)
 # Ginkgo 2.0 is coming soon!
 
 An effort is underway to develop and deliver Ginkgo 2.0.  The work is happening in the [v2](https://github.com/onsi/ginkgo/tree/v2) branch and a changelog and migration guide is being maintained on that branch [here](https://github.com/onsi/ginkgo/blob/v2/docs/MIGRATING_TO_V2.md).  Issue [#711](https://github.com/onsi/ginkgo/issues/711) is the central place for discussion and links to the original [proposal doc](https://docs.google.com/document/d/1h28ZknXRsTLPNNiOjdHIO-F2toCzq4xoZDXbfYaBdoQ/edit#).
@@ -26,14 +19,6 @@ The current timeline for completion of 2.0 looks like:
 - May 2021: first beta/rc of 2.0 with most new functionality in place.
 - June/July 2021: 2.0 ships and fully replaces the 1.x codebase on master.
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> a389a78 (Add integrationtest vendor package)
-=======
->>>>>>> 2bf9d02 (Update go.mod)
-=======
->>>>>>> cee659e (Update go.mod)
 ## TLDR
 Ginkgo builds on Go's `testing` package, allowing expressive [Behavior-Driven Development](https://en.wikipedia.org/wiki/Behavior-driven_development) ("BDD") style tests.
 It is typically (and optionally) paired with the [Gomega](https://github.com/onsi/gomega) matcher library.
@@ -115,7 +100,6 @@ To install the Ginkgo command line interface:
 go get -u github.com/onsi/ginkgo/ginkgo
 ```
 Note that this will install it to `$GOBIN`, which will need to be in the `$PATH` (or equivalent). Run `go help install` for more information.
-<<<<<<< HEAD
 
 ### Go module ["tools package"](https://github.com/golang/go/issues/25922):
 Create (or update) a file called `tools/tools.go` with the following contents:
@@ -128,20 +112,6 @@ import (
 	_ "github.com/onsi/ginkgo/ginkgo"
 )
 
-=======
-
-### Go module ["tools package"](https://github.com/golang/go/issues/25922):
-Create (or update) a file called `tools/tools.go` with the following contents:
-```go
-// +build tools
-
-package tools
-
-import (
-	_ "github.com/onsi/ginkgo/ginkgo"
-)
-
->>>>>>> a389a78 (Add integrationtest vendor package)
 // This file imports packages that are used when running go generate, or used
 // during the development process but not otherwise depended on by built code.
 ```
