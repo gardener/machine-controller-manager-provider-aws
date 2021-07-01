@@ -6,41 +6,36 @@ import (
 	v1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 )
 
+//ResourcesTrackerImpl type keeps a note of resources which are initialized in MCM IT suite and are used in provider IT
 type ResourcesTrackerImpl struct {
-	InitialVolumes   []string
-	InitialInstances []string
-	InitialMachines  []string
-	MachineClass     *v1alpha1.MachineClass
-	SecretData       map[string][]byte
-	ClusterName      string
+	MachineClass *v1alpha1.MachineClass
+	SecretData   map[string][]byte
+	ClusterName  string
 }
 
+//InitializeResourcesTracker initializes the type ResourcesTrackerImpl variable and tries
+//to delete the orphan resources present before the actual IT runs.
 func (r *ResourcesTrackerImpl) InitializeResourcesTracker(machineClass *v1alpha1.MachineClass, secretData map[string][]byte, clusterName string) error {
-
-	clusterTag := "tag:kubernetes.io/cluster/" + clusterName
-	clusterTagValue := "1"
 
 	r.MachineClass = machineClass
 	r.SecretData = secretData
 	r.ClusterName = clusterName
-	instances, err := DescribeInstancesWithTag("tag:mcm-integration-test", "true", machineClass, secretData)
-	if err == nil {
-		r.InitialInstances = instances
-		volumes, err := DescribeAvailableVolumes(clusterTag, clusterTagValue, machineClass, secretData)
-		if err == nil {
-			r.InitialVolumes = volumes
-			r.InitialMachines, err = DescribeMachines(machineClass, secretData)
-			return err
-		} else {
-			return err
-		}
-	} else {
+
+	initialVMs, initialVolumes, initialMachines, initialNICs, err := r.probeResources()
+	if err != nil {
+		fmt.Printf("Error in initial probe of orphaned resources: %s", err.Error())
 		return err
 	}
+
+	if initialVMs != nil || initialVolumes != nil || initialMachines != nil || initialNICs != nil {
+		err := fmt.Errorf("orphan resources are available. Clean them up before proceeding with the test.\nvirtual machines: %v\ndisks: %v\nmcm machines: %v\nnics: %v", initialVMs, initialVolumes, initialMachines, initialNICs)
+		return err
+	}
+	return nil
 }
 
 // probeResources will look for resources currently available and returns them
-func (r *ResourcesTrackerImpl) probeResources() ([]string, []string, []string, error) {
+func (r *ResourcesTrackerImpl) probeResources() ([]string, []string, []string, []string, error) {
 	// Check for VM instances with matching tags/labels
 	// Describe volumes attached to VM instance & delete the volumes
 	// Finally delete the VM instance
@@ -48,78 +43,52 @@ func (r *ResourcesTrackerImpl) probeResources() ([]string, []string, []string, e
 	clusterTag := "tag:kubernetes.io/cluster/" + r.ClusterName
 	clusterTagValue := "1"
 
-	instances, err := DescribeInstancesWithTag("tag:mcm-integration-test", "true", r.MachineClass, r.SecretData)
+	integrationtestTag := "tag:kubernetes.io/role/integration-test"
+	integrationTestTagValue := "1"
+
+	orphanVMs, err := getOrphanedInstances(integrationtestTag, integrationTestTagValue, r.MachineClass, r.SecretData)
 	if err != nil {
-		return instances, nil, nil, err
+		return orphanVMs, nil, nil, nil, err
 	}
 
 	// Check for available volumes in cloud provider with tag/label [Status:available]
-	availVols, err := DescribeAvailableVolumes(clusterTag, clusterTagValue, r.MachineClass, r.SecretData)
+	orphanVols, err := getOrphanedDisks(integrationtestTag, integrationTestTagValue, r.MachineClass, r.SecretData)
 	if err != nil {
-		return instances, availVols, nil, err
+		return orphanVMs, orphanVols, nil, nil, err
 	}
 
-	availMachines, _ := DescribeMachines(r.MachineClass, r.SecretData)
-	// Check for available vpc and network interfaces in cloud provider with tag
-	err = AdditionalResourcesCheck(clusterTag, clusterTagValue)
+	availMachines, err := getMachines(r.MachineClass, r.SecretData)
+	if err != nil {
+		return orphanVMs, orphanVols, availMachines, nil, err
+	}
 
-	return instances, availVols, availMachines, err
+	orphanNICs, err := getOrphanedNICs(clusterTag, clusterTagValue, r.MachineClass, r.SecretData)
+
+	return orphanVMs, orphanVols, availMachines, orphanNICs, err
 
 }
 
-// differenceOrphanedResources checks for difference in the found orphaned resource before test execution with the list after test execution
-func differenceOrphanedResources(beforeTestExecution []string, afterTestExecution []string) []string {
-	var diff []string
-
-	// Loop two times, first to find beforeTestExecution strings not in afterTestExecution,
-	// second loop to find afterTestExecution strings not in beforeTestExecution
-	for i := 0; i < 2; i++ {
-		for _, b1 := range beforeTestExecution {
-			found := false
-			for _, a2 := range afterTestExecution {
-				if b1 == a2 {
-					found = true
-					break
-				}
-			}
-			// String not found. We add it to return slice
-			if !found {
-				diff = append(diff, b1)
-			}
-		}
-		// Swap the slices, only if it was the first loop
-		if i == 0 {
-			beforeTestExecution, afterTestExecution = afterTestExecution, beforeTestExecution
-		}
-	}
-
-	return diff
-}
-
-/* IsOrphanedResourcesAvailable checks whether there are any orphaned resources left.
-If yes, then prints them and returns true. If not, then returns false
-*/
+// IsOrphanedResourcesAvailable checks whether there are any orphaned resources left.
+//If yes, then prints them and returns true. If not, then returns false
 func (r *ResourcesTrackerImpl) IsOrphanedResourcesAvailable() bool {
-	afterTestExecutionInstances, afterTestExecutionAvailVols, afterTestExecutionAvailmachines, err := r.probeResources()
-	//Check there is no error occured
-	if err == nil {
-		orphanedResourceInstances := differenceOrphanedResources(r.InitialInstances, afterTestExecutionInstances)
-		if orphanedResourceInstances != nil {
-			fmt.Println("orphaned instances are:", orphanedResourceInstances)
-			return true
-		}
-		orphanedResourceAvailVols := differenceOrphanedResources(r.InitialVolumes, afterTestExecutionAvailVols)
-		if orphanedResourceAvailVols != nil {
-			fmt.Println("orphaned volumes are:", orphanedResourceAvailVols)
-			return true
-		}
-		orphanedResourceAvailMachines := differenceOrphanedResources(r.InitialMachines, afterTestExecutionAvailmachines)
-		if orphanedResourceAvailMachines != nil {
-			fmt.Println("orphaned volumes are:", orphanedResourceAvailMachines)
-			return true
-		}
-		return false
+	afterTestExecutionVMs, afterTestExecutionAvailDisks, afterTestExecutionAvailmachines, afterTestExecutionNICs, err := r.probeResources()
+	if err != nil {
+		fmt.Printf("Error probing orphaned resources: %s", err.Error())
+		return true
 	}
-	//assuming there are orphaned resources as probe can not be done
-	return true
+
+	if afterTestExecutionVMs != nil || afterTestExecutionAvailDisks != nil || afterTestExecutionAvailmachines != nil {
+		fmt.Printf("attempting to delete orphan resrouces... the following resources are orphaned\n")
+		fmt.Printf("Virtual Machines: %v\nVolumes: %v\nMCM Machines: %v\n", afterTestExecutionVMs, afterTestExecutionAvailDisks, afterTestExecutionAvailmachines)
+		return true
+	}
+
+	if afterTestExecutionNICs != nil {
+		fmt.Printf("Manually delete the orphan NICs after the test!\n")
+		fmt.Printf("NICs: %v\n", afterTestExecutionNICs)
+		return true
+	}
+
+	return false
+
 }

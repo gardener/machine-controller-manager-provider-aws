@@ -15,7 +15,9 @@ func CloneRepo(source string, destinationDir string) error {
 	fi, err := os.Stat(destinationDir)
 	if err == nil {
 		if fi.IsDir() {
-			log.Printf("skipping as %s directory already exists. If cloning is necessary, delete directory and rerun test", destinationDir)
+			log.Printf(
+				"skipping as %s directory already exists. If cloning is necessary, delete directory and rerun test",
+				destinationDir)
 			return nil
 		}
 	}
@@ -24,10 +26,13 @@ func CloneRepo(source string, destinationDir string) error {
 	// clone the given repository to the given directory
 	fmt.Printf("git clone %s %s --recursive", source, destinationDir)
 
-	repo, err := git.PlainClone(destinationDir, false, &git.CloneOptions{
-		URL:               source,
-		RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
-	})
+	repo, err := git.PlainClone(destinationDir,
+		false,
+		&git.CloneOptions{
+			URL:               source,
+			RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
+		},
+	)
 	if err != nil {
 		fmt.Printf("\nFailed to clone repoistory to the destination; %s.\n", destinationDir)
 		return err

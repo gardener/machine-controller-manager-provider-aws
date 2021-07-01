@@ -1,10 +1,3 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 2bf9d02 (Update go.mod)
-=======
->>>>>>> cee659e (Update go.mod)
 ## 1.16.2
 
 ### Fixes
@@ -28,14 +21,6 @@
 ### Fixes
 - Fix accidental reference to 1488 (#784) [9fb7fe4]
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> a389a78 (Add integrationtest vendor package)
-=======
->>>>>>> 2bf9d02 (Update go.mod)
-=======
->>>>>>> cee659e (Update go.mod)
 ## 1.15.2
 
 ### Fixes

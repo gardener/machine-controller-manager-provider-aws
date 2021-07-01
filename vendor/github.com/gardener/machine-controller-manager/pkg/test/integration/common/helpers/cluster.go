@@ -1,6 +1,8 @@
 package helpers
 
 import (
+	"context"
+
 	mcmClientset "github.com/gardener/machine-controller-manager/pkg/client/clientset/versioned"
 	v1 "k8s.io/api/core/v1"
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -68,12 +70,18 @@ func (c *Cluster) IsSeed(target *Cluster) bool {
 			Try to retrieve the cluster-name (clusters[0].name) from the target kubeconfig passed in.
 			 ---- Check if there is any cluster resource available ( means it is a seed cluster ) and see if there is any cluster with name same as to target cluster-name
 			 ---- Alternatively check if there is a namespace with same name as that of cluster name found in kube config
-			kubectl get clusters -A
+			 ---- when both control and target cluster are the same then return false
+			 kubectl get clusters -A
 			NAME                             AGE
 			shoot--landscape--project-shoot   46h
 	*/
+	controlClusterName, _ := c.ClusterName()
 	targetClusterName, _ := target.ClusterName()
-	nameSpaces, _ := c.Clientset.CoreV1().Namespaces().List(metav1.ListOptions{})
+
+	if controlClusterName == targetClusterName {
+		return false
+	}
+	nameSpaces, _ := c.Clientset.CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{})
 	for _, namespace := range nameSpaces.Items {
 		if namespace.Name == targetClusterName {
 			return true
@@ -97,7 +105,7 @@ func (c *Cluster) ClusterName() (string, error) {
 	return clusterName, err
 }
 
-// getSecretData combines secrets
+// GetSecretData combines secrets
 func (c *Cluster) GetSecretData(machineClassName string, secretRefs ...*v1.SecretReference) (map[string][]byte, error) {
 	var secretData map[string][]byte
 
@@ -135,7 +143,7 @@ func (c *Cluster) getSecret(ref *v1.SecretReference, MachineClassName string) (*
 	if ref == nil {
 		return nil, nil
 	}
-	secretRef, err := c.Clientset.CoreV1().Secrets(ref.Namespace).Get(ref.Name, metav1.GetOptions{})
+	secretRef, err := c.Clientset.CoreV1().Secrets(ref.Namespace).Get(context.Background(), ref.Name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}

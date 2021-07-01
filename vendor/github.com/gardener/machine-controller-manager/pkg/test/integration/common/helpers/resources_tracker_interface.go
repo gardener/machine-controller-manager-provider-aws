@@ -9,5 +9,9 @@ import (
 //And reporting orphan resources whenever IsOrphanedResourcesAvailable is invoked
 type ResourcesTrackerInterface interface {
 	IsOrphanedResourcesAvailable() bool
-	InitializeResourcesTracker(machineClass *v1alpha1.MachineClass, secretData map[string][]byte, clusterName string) error
+	InitializeResourcesTracker(
+		machineClass *v1alpha1.MachineClass,
+		secretData map[string][]byte,
+		clusterName string,
+	) error
 }
