@@ -57,6 +57,12 @@ func (c *controller) reconcileClusterMachineSafetyOrphanVMs(key string) error {
 		c.machineSafetyOrphanVMsQueue.AddAfter("", time.Duration(retryPeriod))
 	}
 
+	retryPeriod, err = c.AnnotateNodesUnmanagedByMCM()
+	if err != nil {
+		klog.Errorf("reconcileClusterMachineSafetyOrphanVMs: Error occurred while checking for nodes not handled by MCM: %s", err)
+		c.machineSafetyOrphanVMsQueue.AddAfter("", time.Duration(retryPeriod))
+	}
+
 	return nil
 }
 
@@ -159,6 +165,49 @@ func (c *controller) isAPIServerUp() bool {
 	}
 
 	return true
+}
+
+// AnnotateNodesUnmanagedByMCM checks for nodes which are not handled by MCM and annotes them
+func (c *controller) AnnotateNodesUnmanagedByMCM() (machineutils.RetryPeriod, error) {
+	// list all the nodes on target cluster
+	nodes, err := c.nodeLister.List(labels.Everything())
+	if err != nil {
+		klog.Errorf("Safety-Net: Error getting nodes")
+		return machineutils.LongRetry, err
+	}
+	for _, node := range nodes {
+		_, err := c.getMachineFromNode(node.Name)
+		if err != nil {
+			if err == errMultipleMachineMatch {
+				klog.Errorf("Couldn't fetch machine, Error: %s", err)
+			} else if err == errNoMachineMatch {
+
+				if !node.CreationTimestamp.Time.Before(time.Now().Add(c.safetyOptions.MachineCreationTimeout.Duration * -1)) {
+					// node creationTimestamp is NOT before now() - machineCreationTime
+					// meaning creationTimeout has not occurred since node creation
+					// hence don't tag such nodes
+					klog.V(3).Infof("Node %q is still too young to be tagged with NotManagedByMCM", node.Name)
+					continue
+				} else if _, annotationPresent := node.ObjectMeta.Annotations[machineutils.NotManagedByMCM]; annotationPresent {
+					// annotation already exists, ignore this node
+					continue
+				}
+
+				// if no backing machine object for a node, annotate it
+				nodeCopy := node.DeepCopy()
+				annotations := map[string]string{
+					machineutils.NotManagedByMCM: "1",
+				}
+
+				// err is returned only when node update fails
+				if err := c.updateNodeWithAnnotation(nodeCopy, annotations); err != nil {
+					return machineutils.MediumRetry, err
+				}
+			}
+		}
+	}
+
+	return machineutils.LongRetry, nil
 }
 
 // checkCommonMachineClass checks for orphan VMs in MachinesClasses

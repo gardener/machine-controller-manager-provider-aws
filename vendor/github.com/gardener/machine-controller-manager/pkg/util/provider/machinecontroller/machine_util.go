@@ -26,6 +26,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"strings"
@@ -42,7 +43,6 @@ import (
 	utilstrings "github.com/gardener/machine-controller-manager/pkg/util/strings"
 	utiltime "github.com/gardener/machine-controller-manager/pkg/util/time"
 
-	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -121,6 +121,16 @@ func (c *controller) ValidateMachineClass(classSpec *v1alpha1.ClassSpec) (*v1alp
 	if err != nil {
 		klog.V(2).Infof("Could not compute secret data: %+v", err)
 		return nil, nil, retry, err
+	}
+
+	if finalizers := sets.NewString(machineClass.Finalizers...); !finalizers.Has(MCMFinalizerName) {
+		c.machineClassQueue.Add(machineClass.Name)
+
+		errMessage := fmt.Sprintf("The machine class %s has no finalizers set. So not reconciling the machine.", machineClass.Name)
+		err := errors.New(errMessage)
+		klog.Warning(errMessage)
+
+		return nil, nil, machineutils.ShortRetry, err
 	}
 
 	return machineClass, secretData, retry, nil
@@ -838,7 +848,7 @@ func (c *controller) getVMStatus(getMachineStatusRequest *driver.GetMachineStatu
 	} else {
 		if machineErr, ok := status.FromError(err); !ok {
 			// Error occurred with decoding machine error status, aborting without retry.
-			description = "Error occurred with decoding machine error status while getting VM status, aborting without retry. " + machineutils.GetVMStatus
+			description = "Error occurred with decoding machine error status while getting VM status, aborting without retry. " + err.Error() + " " + machineutils.GetVMStatus
 			state = v1alpha1.MachineStateFailed
 			retry = machineutils.LongRetry
 
@@ -867,7 +877,7 @@ func (c *controller) getVMStatus(getMachineStatusRequest *driver.GetMachineStatu
 
 			default:
 				// Error occurred with decoding machine error status, abort with retry.
-				description = "Error occurred with decoding machine error status while getting VM status, aborting without retry. machine code: " + machineErr.Message() + " " + machineutils.GetVMStatus
+				description = "Error occurred with decoding machine error status while getting VM status, aborting without retry. machine code: " + err.Error() + " " + machineutils.GetVMStatus
 				state = v1alpha1.MachineStateFailed
 				retry = machineutils.MediumRetry
 			}
@@ -926,6 +936,7 @@ func (c *controller) drainNode(deleteMachineRequest *driver.DeleteMachineRequest
 		machine                                      = deleteMachineRequest.Machine
 		maxEvictRetries                              = int32(math.Min(float64(*c.getEffectiveMaxEvictRetries(machine)), c.getEffectiveDrainTimeout(machine).Seconds()/drain.PodEvictionRetryInterval.Seconds()))
 		pvDetachTimeOut                              = c.safetyOptions.PvDetachTimeout.Duration
+		pvReattachTimeOut                            = c.safetyOptions.PvReattachTimeout.Duration
 		timeOutDuration                              = c.getEffectiveDrainTimeout(deleteMachineRequest.Machine).Duration
 		forceDeleteLabelPresent                      = machine.Labels["force-deletion"] == "True"
 		nodeName                                     = machine.Labels["node"]
@@ -948,11 +959,11 @@ func (c *controller) drainNode(deleteMachineRequest *driver.DeleteMachineRequest
 			}
 		}
 
-		if !isConditionEmpty(nodeReadyCondition) && (nodeReadyCondition.Status != corev1.ConditionTrue) && (time.Since(nodeReadyCondition.LastTransitionTime.Time) > nodeNotReadyDuration) {
+		if !isConditionEmpty(nodeReadyCondition) && (nodeReadyCondition.Status != v1.ConditionTrue) && (time.Since(nodeReadyCondition.LastTransitionTime.Time) > nodeNotReadyDuration) {
 			message := "Skipping drain as machine is NotReady for over 5minutes."
 			printLogInitError(message, &err, &description, machine)
 			skipDrain = true
-		} else if !isConditionEmpty(readOnlyFileSystemCondition) && (readOnlyFileSystemCondition.Status != corev1.ConditionFalse) && (time.Since(readOnlyFileSystemCondition.LastTransitionTime.Time) > nodeNotReadyDuration) {
+		} else if !isConditionEmpty(readOnlyFileSystemCondition) && (readOnlyFileSystemCondition.Status != v1.ConditionFalse) && (time.Since(readOnlyFileSystemCondition.LastTransitionTime.Time) > nodeNotReadyDuration) {
 			message := "Skipping drain as machine is in ReadonlyFilesystem for over 5minutes."
 			printLogInitError(message, &err, &description, machine)
 			skipDrain = true
@@ -1016,6 +1027,7 @@ func (c *controller) drainNode(deleteMachineRequest *driver.DeleteMachineRequest
 				timeOutDuration,
 				maxEvictRetries,
 				pvDetachTimeOut,
+				pvReattachTimeOut,
 				nodeName,
 				-1,
 				forceDeletePods,
@@ -1028,6 +1040,8 @@ func (c *controller) drainNode(deleteMachineRequest *driver.DeleteMachineRequest
 				c.pvcLister,
 				c.pvLister,
 				c.pdbLister,
+				c.nodeLister,
+				c.volumeAttachmentHandler,
 			)
 			err = drainOptions.RunDrain()
 			if err == nil {
