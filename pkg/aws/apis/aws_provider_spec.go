@@ -98,6 +98,9 @@ type AWSProviderSpec struct {
 	// When set to "" there is no maxPrice else, specifies the maxPrice
 	SpotPrice *string `json:"spotPrice,omitempty"`
 
+	// If set to false, source and destination checks are disabled, default is true
+	SrcAndDstChecksEnabled *bool `json:"srcAndDstChecksEnabled,omitempty"`
+
 	// Tags to be specified on the EC2 instances
 	Tags map[string]string `json:"tags,omitempty"`
 }

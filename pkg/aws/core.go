@@ -201,6 +201,14 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
+	// if SrcAnDstCheckEnabled is false then disable the SrcAndDestCheck on running NAT instance
+	if providerSpec.SrcAndDstChecksEnabled != nil && !*providerSpec.SrcAndDstChecksEnabled {
+		err := disableSrcAndDestCheck(svc, runResult.Instances[0].InstanceId)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+
 	response := &driver.CreateMachineResponse{
 		ProviderID: encodeInstanceID(providerSpec.Region, *runResult.Instances[0].InstanceId),
 		NodeName:   *runResult.Instances[0].PrivateDnsName,
@@ -334,6 +342,20 @@ func (d *Driver) GetMachineStatus(ctx context.Context, req *driver.GetMachineSta
 	}
 
 	requiredInstance := instances[0]
+
+	// if SrcAnDstCheckEnabled is false then disable the SrcAndDestCheck on running NAT instance
+	if providerSpec.SrcAndDstChecksEnabled != nil && !*providerSpec.SrcAndDstChecksEnabled {
+
+		svc, err := d.createSVC(secret, providerSpec.Region)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		err = disableSrcAndDestCheck(svc, requiredInstance.InstanceId)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
 
 	response := &driver.GetMachineStatusResponse{
 		NodeName:   *requiredInstance.PrivateDnsName,

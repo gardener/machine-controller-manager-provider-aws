@@ -30,6 +30,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/klog"
+	"k8s.io/utils/pointer"
 )
 
 const (
@@ -66,6 +67,24 @@ func decodeProviderSpecAndSecret(machineClass *v1alpha1.MachineClass, secret *co
 	}
 
 	return providerSpec, nil
+}
+
+// disableSrcAndDestCheck disbales the SrcAndDestCheck for NAT instances
+func disableSrcAndDestCheck(svc ec2iface.EC2API, instanceID *string) error {
+
+	srcAndDstCheckEnabled := &ec2.ModifyInstanceAttributeInput{
+		InstanceId: instanceID,
+		SourceDestCheck: &ec2.AttributeBooleanValue{
+			Value: pointer.BoolPtr(false),
+		},
+	}
+
+	_, err := svc.ModifyInstanceAttribute(srcAndDstCheckEnabled)
+	if err != nil {
+		return err
+	}
+	klog.V(3).Infof("Successfully disabled Source/Destination check on instance %s.", *instanceID)
+	return nil
 }
 
 // getInstancesFromMachineName extracts AWS Instance object from given machine name

@@ -46,17 +46,17 @@ import (
 	Machine controller - Machine add, update, delete watches
 */
 func (c *controller) addMachine(obj interface{}) {
-	klog.V(4).Infof("Adding machine object")
+	klog.V(5).Infof("Adding machine object")
 	c.enqueueMachine(obj)
 }
 
 func (c *controller) updateMachine(oldObj, newObj interface{}) {
-	klog.V(4).Info("Updating machine object")
+	klog.V(5).Info("Updating machine object")
 	c.enqueueMachine(newObj)
 }
 
 func (c *controller) deleteMachine(obj interface{}) {
-	klog.V(4).Info("Deleting machine object")
+	klog.V(5).Info("Deleting machine object")
 	c.enqueueMachine(obj)
 }
 
@@ -73,14 +73,14 @@ func (c *controller) isToBeEnqueued(obj interface{}) (bool, string) {
 
 func (c *controller) enqueueMachine(obj interface{}) {
 	if toBeEnqueued, key := c.isToBeEnqueued(obj); toBeEnqueued {
-		klog.V(4).Infof("Adding machine object to the queue %q", key)
+		klog.V(5).Infof("Adding machine object to the queue %q", key)
 		c.machineQueue.Add(key)
 	}
 }
 
 func (c *controller) enqueueMachineAfter(obj interface{}, after time.Duration) {
 	if toBeEnqueued, key := c.isToBeEnqueued(obj); toBeEnqueued {
-		klog.V(4).Infof("Adding machine object to the queue %q after %s", key, after)
+		klog.V(5).Infof("Adding machine object to the queue %q after %s", key, after)
 		c.machineQueue.AddAfter(key, after)
 	}
 }
@@ -102,7 +102,7 @@ func (c *controller) reconcileClusterMachineKey(key string) error {
 	}
 
 	retryPeriod, err := c.reconcileClusterMachine(machine)
-	klog.V(4).Info(err, retryPeriod)
+	klog.V(5).Info(err, retryPeriod)
 
 	c.enqueueMachineAfter(machine, time.Duration(retryPeriod))
 
@@ -110,8 +110,8 @@ func (c *controller) reconcileClusterMachineKey(key string) error {
 }
 
 func (c *controller) reconcileClusterMachine(machine *v1alpha1.Machine) (machineutils.RetryPeriod, error) {
-	klog.V(4).Infof("Start Reconciling machine: %q , nodeName: %q ,providerID: %q", machine.Name, getNodeName(machine), getProviderID(machine))
-	defer klog.V(4).Infof("Stop Reconciling machine %q, nodeName: %q ,providerID: %q", machine.Name, getNodeName(machine), getProviderID(machine))
+	klog.V(5).Infof("Start Reconciling machine: %q , nodeName: %q ,providerID: %q", machine.Name, getNodeName(machine), getProviderID(machine))
+	defer klog.V(5).Infof("Stop Reconciling machine %q, nodeName: %q ,providerID: %q", machine.Name, getNodeName(machine), getProviderID(machine))
 
 	if c.safetyOptions.MachineControllerFrozen && machine.DeletionTimestamp == nil {
 		// If Machine controller is frozen and
@@ -134,6 +134,7 @@ func (c *controller) reconcileClusterMachine(machine *v1alpha1.Machine) (machine
 		return machineutils.LongRetry, err
 	}
 
+	// Validate MachineClass
 	machineClass, secretData, retry, err := c.ValidateMachineClass(&machine.Spec.Class)
 	if err != nil {
 		klog.Error(err)
@@ -182,11 +183,21 @@ func (c *controller) reconcileClusterMachine(machine *v1alpha1.Machine) (machine
 	SECTION
 	Machine controller - nodeToMachine
 */
+var (
+	errMultipleMachineMatch = errors.New("Multiple machines matching node")
+	errNoMachineMatch       = errors.New("No machines matching node found")
+)
+
 func (c *controller) addNodeToMachine(obj interface{}) {
 
 	node := obj.(*corev1.Node)
 	if node == nil {
 		klog.Errorf("Couldn't convert to node from object")
+		return
+	}
+
+	// If NotManagedByMCM annotation is present on node, don't process this node object
+	if _, annotationPresent := node.ObjectMeta.Annotations[machineutils.NotManagedByMCM]; annotationPresent {
 		return
 	}
 
@@ -198,14 +209,17 @@ func (c *controller) addNodeToMachine(obj interface{}) {
 
 	machine, err := c.getMachineFromNode(key)
 	if err != nil {
+		if err == errNoMachineMatch {
+			// errNoMachineMatch could mean that VM is still in creation hence ignoring it
+			return
+		}
+
 		klog.Errorf("Couldn't fetch machine %s, Error: %s", key, err)
-		return
-	} else if machine == nil {
 		return
 	}
 
 	if machine.Status.CurrentStatus.Phase != v1alpha1.MachineCrashLoopBackOff && nodeConditionsHaveChanged(machine.Status.Conditions, node.Status.Conditions) {
-		klog.V(4).Infof("Enqueue machine object %q as conditions of backing node %q have changed", machine.Name, getNodeName(machine))
+		klog.V(5).Infof("Enqueue machine object %q as conditions of backing node %q have changed", machine.Name, getNodeName(machine))
 		c.enqueueMachine(machine)
 	}
 }
@@ -224,8 +238,6 @@ func (c *controller) deleteNodeToMachine(obj interface{}) {
 	machine, err := c.getMachineFromNode(key)
 	if err != nil {
 		klog.Errorf("Couldn't fetch machine %s, Error: %s", key, err)
-		return
-	} else if machine == nil {
 		return
 	}
 
@@ -248,9 +260,9 @@ func (c *controller) getMachineFromNode(nodeName string) (*v1alpha1.Machine, err
 	machines, _ := c.machineLister.List(selector)
 
 	if len(machines) > 1 {
-		return nil, errors.New("Multiple machines matching node")
+		return nil, errMultipleMachineMatch
 	} else if len(machines) < 1 {
-		return nil, nil
+		return nil, errNoMachineMatch
 	}
 
 	return machines[0], nil
