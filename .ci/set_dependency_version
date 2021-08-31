@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+
+set -eu
+
+if [ -z "${MAIN_REPO_DIR:-}" ]; then
+  export MAIN_REPO_DIR="$(readlink -f "$(dirname "${0}")/..")"
+fi
+
+echo "repo-dir: ${MAIN_REPO_DIR}"
+
+if [ "${DEPENDENCY_NAME}" != "github.com/gardener/machine-controller-manager" ]; then
+  echo "error: do not know how to upgrade ${DEPENDENCY_NAME}"
+  exit 1
+fi
+
+if [ -z "${DEPENDENCY_VERSION:-}" ]; then
+  echo "env var DEPENDENCY_VERSION must be set"
+  exit 1
+fi
+
+# for now, we only know how to upgrade github.com/gardener/machine-controller-manager, as checked above
+
+MCM_FILEPATH="${MAIN_REPO_DIR}/MCM_VERSION"
+
+if [ ! -f "${MCM_FILEPATH}" ]; then
+  echo "error: no such file: {MCM_FILEPATH}"
+  exit 1
+fi
+
+echo -n "${DEPENDENCY_VERSION}" > "${MCM_FILEPATH}"
+echo "set dependency-version of ${DEPENDENCY_NAME} to ${DEPENDENCY_VERSION}"

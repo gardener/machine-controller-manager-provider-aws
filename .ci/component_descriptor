@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+set -eu
+
+if [ -z "${MAIN_REPO_DIR:-}" ]; then
+  export MAIN_REPO_DIR="$(readlink -f "$(dirname "${0}")/..")"
+fi
+MCM_VERSION_FILEPATH="${MAIN_REPO_DIR}/MCM_VERSION"
+
+export VERSION="$(cat "${MCM_VERSION_FILEPATH}")"
+
+${ADD_DEPENDENCIES_CMD} \
+  --component-dependencies "{\"name\":\"github.com/gardener/machine-controller-manager\",\"version\":\"$VERSION\"}"
+
+mv "${BASE_DEFINITION_PATH}" "${COMPONENT_DESCRIPTOR_PATH}"
