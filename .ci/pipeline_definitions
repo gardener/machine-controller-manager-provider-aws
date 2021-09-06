@@ -33,6 +33,11 @@ machine-controller-manager-provider-aws:
     pull-request:
       traits:
         pull-request: ~
+    create-upgrade-prs:
+      traits:
+        cronjob:
+          interval: '5m'
+        update_component_deps: ~
     release:
       traits:
         version:
