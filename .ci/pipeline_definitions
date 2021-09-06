@@ -1,23 +1,17 @@
 machine-controller-manager-provider-aws:
   template: 'default'
-  base_definition:
-    repo: ~
-    traits:
-      version:
-        preprocess:
-          'inject-commit-hash'
-        inject_effective_version: true
-      publish:
-        dockerimages:
-          machine-controller-manager-provider-aws:
-            inputs:
-              repos:
-                source: ~ # default
-              steps:
-                build: ~
-            registry: 'gcr-readwrite'
-            image: 'eu.gcr.io/gardener-project/gardener/machine-controller-manager-provider-aws'
-    steps:
+  inherit:
+    publish: &publish_anchor
+      dockerimages:
+        machine-controller-manager-provider-aws:
+          inputs:
+            repos:
+              source: ~ # default
+            steps:
+              build: ~
+          registry: 'gcr-readwrite'
+          image: 'eu.gcr.io/gardener-project/gardener/machine-controller-manager-provider-aws'
+    steps: &steps_anchor
       check:
         image: 'golang:1.13.5'
       build:
@@ -25,14 +19,24 @@ machine-controller-manager-provider-aws:
         output_dir: 'binary'
       test:
         image: 'golang:1.13.5'
+    version: &version_anchor
+      inject_effective_version: true
   jobs:
     head-update:
+      repo: ~
+      <<: *steps_anchor
       traits:
+        <<: *version_anchor
         component_descriptor: ~
         draft_release: ~
+        <<: *publish_anchor
     pull-request:
+      repo: ~
+      <<: *steps_anchor
       traits:
+        <<: *version_anchor
         pull-request: ~
+        <<: *publish_anchor
     create-upgrade-prs:
       traits:
         component_descriptor: ~
@@ -40,7 +44,10 @@ machine-controller-manager-provider-aws:
           interval: '5m'
         update_component_deps: ~
     release:
+      repo: ~
+      <<: *steps_anchor
       traits:
+        <<: *publish_anchor
         version:
           preprocess: 'finalize'
         release:
