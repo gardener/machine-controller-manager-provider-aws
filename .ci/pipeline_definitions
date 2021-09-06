@@ -35,6 +35,7 @@ machine-controller-manager-provider-aws:
         pull-request: ~
     create-upgrade-prs:
       traits:
+        component_descriptor: ~
         cronjob:
           interval: '5m'
         update_component_deps: ~
