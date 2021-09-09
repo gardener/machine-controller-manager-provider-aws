@@ -1,26 +1,29 @@
 machine-controller-manager-provider-aws:
   template: 'default'
   inherit:
-    publish: &publish_anchor
-      dockerimages:
-        machine-controller-manager-provider-aws:
-          inputs:
-            repos:
-              source: ~ # default
-            steps:
-              build: ~
-          registry: 'gcr-readwrite'
-          image: 'eu.gcr.io/gardener-project/gardener/machine-controller-manager-provider-aws'
-    steps: &steps_anchor
-      check:
-        image: 'golang:1.13.5'
-      build:
-        image: 'golang:1.13.5'
-        output_dir: 'binary'
-      test:
-        image: 'golang:1.13.5'
-    version: &version_anchor
-      inject_effective_version: true
+    publish_template: &publish_anchor
+      publish:
+        dockerimages:
+          machine-controller-manager-provider-aws:
+            inputs:
+              repos:
+                source: ~ # default
+              steps:
+                build: ~
+            registry: 'gcr-readwrite'
+            image: 'eu.gcr.io/gardener-project/gardener/machine-controller-manager-provider-aws'
+    steps_template: &steps_anchor
+      steps:
+        check:
+          image: 'golang:1.13.5'
+        build:
+          image: 'golang:1.13.5'
+          output_dir: 'binary'
+        test:
+          image: 'golang:1.13.5'
+    version_template: &version_anchor
+      version:
+        inject_effective_version: true
   jobs:
     head-update:
       repo: ~
