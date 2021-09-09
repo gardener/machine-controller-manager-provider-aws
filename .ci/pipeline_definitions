@@ -1,5 +1,7 @@
 machine-controller-manager-provider-aws:
   template: 'default'
+  base_definition:
+    repo: ~
   inherit:
     publish_template: &publish_anchor
       publish:
@@ -26,7 +28,6 @@ machine-controller-manager-provider-aws:
         inject_effective_version: true
   jobs:
     head-update:
-      repo: ~
       <<: *steps_anchor
       traits:
         <<: *version_anchor
@@ -34,7 +35,6 @@ machine-controller-manager-provider-aws:
         draft_release: ~
         <<: *publish_anchor
     pull-request:
-      repo: ~
       <<: *steps_anchor
       traits:
         <<: *version_anchor
@@ -47,7 +47,6 @@ machine-controller-manager-provider-aws:
           interval: '5m'
         update_component_deps: ~
     release:
-      repo: ~
       <<: *steps_anchor
       traits:
         <<: *publish_anchor
