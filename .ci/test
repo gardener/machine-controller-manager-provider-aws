@@ -83,7 +83,7 @@ if [[ "${SKIP_INTEGRATION_TESTS}" != "" ]]; then
   echo ">>>>> Skipping integration tests"
 else
   echo ">>>>> Invoking intergration tests"
-  .ci/pipeline_integration_tests
+  .ci/pipeline_integration_test
   echo ">>>>> Finished executing integration tests"
 fi
 
