@@ -1,0 +1,78 @@
+mkdir -p dev
+
+logs_path=$SOURCE_PATH/.ci/controllers-test/logs
+TEST_RESULT=
+cli_path=/cc/utils/cli.py
+
+declare CONTROL_KUBECONFIG=dev/control_kubeconfig.yaml
+declare TARGET_KUBECONFIG=dev/target_kubeconfig.yaml
+
+${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-control --key kubeconfig > dev/control_kubeconfig.yaml
+${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-target --key kubeconfig > dev/target_kubeconfig.yaml
+
+#export MC_CONTAINER_IMAGE
+#export MCM_CONTAINER_IMAGE
+#export CONTROL_CLUSTER_NAMESPACE
+export CONTROL_KUBECONFIG
+export TARGET_KUBECONFIG
+export MACHINECLASS_V1=$SOURCE_PATH/.ci/controllers-test/machineClasses/v1machineclass.yaml
+#export MACHINECLASS_V2=$SOURCE_PATH/.ci/controllers-test/machineClasses/v2machineclass.yaml
+export MACHINE_CONTROLLER_MANAGER_DEPLOYMENT_NAME="machine-controller-manager"
+
+function setup_ginkgo() {
+    echo "Installing Ginkgo..."
+    GO111MODULE=off go get -u github.com/onsi/ginkgo/ginkgo
+    ginkgo version
+    echo "Successfully installed Ginkgo."
+}
+
+function setup_environment() {
+    printf "\n\t\t\t----- Setup Test Environment --------\n"
+
+    # install kubectl
+    printf "\nDownloading and installing kubectl\n"
+    curl -LO https://storage.googleapis.com/kubernetes-release/release/v1.16.0/bin/linux/amd64/kubectl
+    chmod +x ./kubectl
+    mv ./kubectl /usr/local/bin/kubectl
+    printf "Successfully installed kubectl\n"
+
+    #install ginkgo
+    if ! [ -x "$(command -v ginkgo)" ]; then
+    setup_ginkgo
+    fi
+}
+
+function run_integration_tests() {
+    echo "Starting integration tests..."
+    set +e
+
+    ginkgo -v -mod=vendor $SOURCE_PATH/test/integration/controller
+    TEST_RESULT=$?
+    
+    set -e
+
+    if [ ${TEST_RESULT} -ne 0 ]; then
+        echo "\nIntegration tests failed. Kindly check you PR"
+    else
+        echo "Done with integration test"
+    fi
+}
+
+function print_controller_logs {
+    printf "\n\t\t\t----- Start of MCM Logs -----------\n"
+    cat $logs_path/mcm_process.log
+    printf "\n\t\t\t----- End of MCM Logs   ----------\n\n"
+
+    printf "\n\t\t\t----- Start of MC Logs -----------\n"
+    cat $logs_path/mc_process.log
+    printf "\n\t\t\t----- End of MC Logs   ----------\n\n"
+}
+
+
+printf "\n\t\t\t----- Start of Test Script -----------\n"
+setup_environment
+run_integration_tests
+print_controller_logs
+printf "\n\t\t\t----- End of Test Script -----------\n"
+
+exit $TEST_RESULT
