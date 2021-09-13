@@ -24,7 +24,7 @@ ${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-tar
 #export CONTROL_CLUSTER_NAMESPACE
 export CONTROL_KUBECONFIG
 export TARGET_KUBECONFIG
-export MACHINECLASS_V1=$SOURCE_PATH/.ci/controllers-test/machineClasses/v1machineclass.yaml
+export MACHINECLASS_V1=.ci/controllers-test/machineClasses/v1machineclass.yaml
 #export MACHINECLASS_V2=$SOURCE_PATH/.ci/controllers-test/machineClasses/v2machineclass.yaml
 export MACHINE_CONTROLLER_MANAGER_DEPLOYMENT_NAME="machine-controller-manager"
 
