@@ -1,3 +1,7 @@
+#pwd= /tmp/build/a94a8fe5/pull-request-gardener.machine-controller-manager-provider-aws-pr.master/tmp/src/github.com/gardener/machine-controller-manager-provider-aws
+#source path= /tmp/build/a94a8fe5/pull-request-gardener.machine-controller-manager-provider-aws-pr.master
+#logs_path= /tmp/build/a94a8fe5/pull-request-gardener.machine-controller-manager-provider-aws-pr.master/.ci/controllers-test/logs
+
 mkdir -p dev
 
 logs_path=$SOURCE_PATH/.ci/controllers-test/logs
@@ -7,6 +11,7 @@ cli_path=/cc/utils/cli.py
 echo "pwd= $(pwd)"
 echo "source path= $SOURCE_PATH"
 echo "logs_path= $logs_path"
+echo "ls SOURCE_PATH= $(tree $SOURCE_PATH)"
 
 declare CONTROL_KUBECONFIG=dev/control_kubeconfig.yaml
 declare TARGET_KUBECONFIG=dev/target_kubeconfig.yaml
