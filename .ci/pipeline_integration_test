@@ -4,6 +4,10 @@ logs_path=$SOURCE_PATH/.ci/controllers-test/logs
 TEST_RESULT=
 cli_path=/cc/utils/cli.py
 
+echo "pwd= $(pwd)"
+echo "source path= $SOURCE_PATH"
+echo "logs_path= $logs_path"
+
 declare CONTROL_KUBECONFIG=dev/control_kubeconfig.yaml
 declare TARGET_KUBECONFIG=dev/target_kubeconfig.yaml
 
