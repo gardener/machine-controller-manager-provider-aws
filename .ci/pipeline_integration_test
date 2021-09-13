@@ -6,7 +6,7 @@ mkdir -p dev
 
 logs_path=.ci/controllers-test/logs
 TEST_RESULT=
-cli_path=$SOURCE_PATH/cc/utils/cli.py
+cli_path=$SOURCE_PATH/../cc/utils/cli.py
 
 echo "IN .ci/pipeline_integration_test"
 echo "ls of pwd"
@@ -15,11 +15,13 @@ echo $(ls)
 echo "ls of SOURCE_PATH"
 echo $(ls ${SOURCE_PATH})
 
+echo "ls of /tmp/build/a947&&***"
+echo $(ls ${CC_ROOT_DIR})
+
 echo "PATH= ${PATH}"
 echo "pwd= $(pwd)"
 echo "source path= $SOURCE_PATH"
 echo "logs_path= $logs_path"
-echo "ls SOURCE_PATH= $(ls $SOURCE_PATH)"
 
 declare CONTROL_KUBECONFIG=dev/control_kubeconfig.yaml
 declare TARGET_KUBECONFIG=dev/target_kubeconfig.yaml
