@@ -1,0 +1,34 @@
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: MachineClass
+metadata:
+  name: test-mc-v1
+  namespace: default
+provider: AWS
+providerSpec:
+  ami: ami-032de7308a9eb91f5
+  blockDevices:
+  - ebs:
+      deleteOnTermination: true
+      encrypted: true
+      volumeSize: 50
+      volumeType: gp2
+  iam:
+    name: shoot--mcm-ci--aws-oot-target-nodes
+  keyName: shoot--mcm-ci--aws-oot-target-ssh-publickey
+  machineType: m5.large
+  networkInterfaces:
+  - securityGroupIDs:
+    - sg-056d0ea9f33be0d27
+    subnetID: subnet-0b17585c4ec5ef777
+  region: eu-west-1
+  tags:
+    kubernetes.io/cluster/shoot--mcm-ci--aws-oot-target: "1"
+    kubernetes.io/role/node: "1"
+    node.kubernetes.io/role: node
+    worker.garden.sapcloud.io/group: worker-m5large
+    worker.gardener.cloud/cri-name: docker
+    worker.gardener.cloud/pool: worker-m5large
+    worker.gardener.cloud/system-components: "true"
+secretRef:
+  name: test-mc-secret
+  namespace: default
