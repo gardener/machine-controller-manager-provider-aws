@@ -48,6 +48,11 @@ if [[ "${SOURCE_PATH}" != *"src/github.com/gardener/machine-controller-manager-p
   export PATH="${GOBIN}:${PATH}"
 fi
 
+echo "IN .ci/test"
+echo "pwd= $(pwd)"
+echo "source path= $SOURCE_PATH"
+echo "source_symlink_path= $${SOURCE_SYMLINK_PATH}"
+
 # Install Ginkgo (test framework) to be able to execute the tests.
 echo "Fetching Ginkgo framework"
 GO111MODULE=off go get -u github.com/onsi/ginkgo/ginkgo
