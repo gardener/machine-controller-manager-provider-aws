@@ -17,12 +17,12 @@ machine-controller-manager-provider-aws:
     steps_template: &steps_anchor
       steps:
         check:
-          image: 'golang:1.13.5'
+          image: 'golang:1.16.6'
         build:
-          image: 'golang:1.13.5'
+          image: 'golang:1.16.6'
           output_dir: 'binary'
         test:
-          image: 'golang:1.13.5'
+          image: 'golang:1.16.6'
     version_template: &version_anchor
       version:
         inject_effective_version: true
