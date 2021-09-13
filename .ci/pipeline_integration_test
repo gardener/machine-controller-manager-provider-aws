@@ -4,9 +4,9 @@
 
 mkdir -p dev
 
-logs_path=$SOURCE_PATH/.ci/controllers-test/logs
+logs_path=.ci/controllers-test/logs
 TEST_RESULT=
-cli_path=/cc/utils/cli.py
+cli_path=$SOURCE_PATH/cc/utils/cli.py
 
 echo "pwd= $(pwd)"
 echo "source path= $SOURCE_PATH"
@@ -55,13 +55,13 @@ function run_integration_tests() {
     echo "Starting integration tests..."
     set +e
 
-    ginkgo -v -mod=vendor $SOURCE_PATH/test/integration/controller
+    ginkgo -v -mod=vendor test/integration/controller
     TEST_RESULT=$?
     
     set -e
 
     if [ ${TEST_RESULT} -ne 0 ]; then
-        echo "\nIntegration tests failed. Kindly check you PR"
+        echo "\n\t\t\tIntegration tests failed. Kindly check you PR"
     else
         echo "Done with integration test"
     fi
@@ -81,7 +81,7 @@ function print_controller_logs {
 printf "\n\t\t\t----- Start of Test Script -----------\n"
 setup_environment
 run_integration_tests
-print_controller_logs
+#print_controller_logs
 printf "\n\t\t\t----- End of Test Script -----------\n"
 
 exit $TEST_RESULT
