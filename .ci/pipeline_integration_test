@@ -6,7 +6,7 @@ mkdir -p dev
 
 logs_path=.ci/controllers-test/logs
 TEST_RESULT=
-cli_path=$SOURCE_PATH/../cc/utils/cli.py
+cli_path=/cc/utils/cli.py
 
 echo "IN .ci/pipeline_integration_test"
 echo "ls of pwd"
