@@ -1,0 +1,90 @@
+#pwd= /tmp/build/a94a8fe5/pull-request-gardener.machine-controller-manager-provider-aws-pr.master/tmp/src/github.com/gardener/machine-controller-manager-provider-aws
+#source path= /tmp/build/a94a8fe5/pull-request-gardener.machine-controller-manager-provider-aws-pr.master
+#logs_path= /tmp/build/a94a8fe5/pull-request-gardener.machine-controller-manager-provider-aws-pr.master/.ci/controllers-test/logs
+
+mkdir -p dev
+
+logs_path=.ci/controllers-test/logs
+TEST_RESULT=
+cli_path=/cc/utils/cli.py
+num_of_existing_nodes=1
+RED='\033[0;31m'
+
+function hf_num_of_objects() {
+    output=$(kubectl --kubeconfig=dev/control_kubeconfig.yaml get "$1" 2>&1)
+    if [[ $output == *"No resources found."* ]]; then
+        return 0
+    fi
+    object_count=$(echo "$output" | wc -l)
+    ((object_count--))
+
+    return "$object_count"
+}
+
+function hf_num_of_ready_nodes() {
+    output=$(kubectl --kubeconfig=dev/target_kubeconfig.yaml get "$1" 2>&1)
+    ready_count=$(echo "$output" | tr " " "\n" | grep ^Ready -c)
+
+    return $((ready_count-num_of_existing_nodes))
+}
+
+function hf_wait_on() {
+    function_name=$1
+    function_param=$2
+    count_to_match=$3
+    seconds_to_wait=$4
+    iteration_count=$(($seconds_to_wait/30))
+
+    while
+        "$function_name" "$function_param"
+        ret=$?
+        [[ $ret -ne $count_to_match ]]
+    do
+        sleep 30
+        ((iteration_count--))
+
+        # Exit script when timeout occurs
+        if [ $iteration_count -le 0 ]; then
+            printf "\tFailed: Timeout occured while waiting for operation. Exiting Test to avoid further conflicts.\n"
+            printf "\tWas Executing function: %s, %s" $function_name $function_param
+            printf "${RED}Integration Test for this PR couldn't be run on the cluster as cluster already has nodes/machine objects present\n"
+            exit 1
+        fi
+
+    done
+}
+
+function check_cluster_state() {
+    printf "\t\t\t----- Checking Test Environment -------\n"
+
+    printf "\nChecking existance of machine objects\n"
+    # Wait 60mins for any existing PRs to cleanup machines
+    hf_wait_on "hf_num_of_objects" machines 0 3600
+    printf "No machine objects in control test cluster\n"
+
+    printf "\nChecking existance of node objects\n"
+    # Wait 60mins for any existing PRs to cleanup nodes
+    hf_wait_on "hf_num_of_ready_nodes" nodes 0 3600
+    printf "No additional node objects in target test cluster\n"
+
+    printf "\nCluster state looks clean\n"
+}
+
+
+
+printf "\n\t\t\t----- Start of Test Script -----------\n"
+
+setup_environment
+
+#if cluster state is not clean then don't run the tests
+check_cluster_state
+result=$?
+if [ ${result} -ne 0]; then
+exit $result
+fi
+
+run_integration_tests
+#print_controller_logs
+printf "\n\t\t\t----- End of Test Script -----------\n"
+
+exit $TEST_RESULT

@@ -69,14 +69,22 @@ function test_with_coverage() {
 
 ###############################################################################
 
-if [[ "${SKIP_UNIT_TESTS}" != "" ]]; then
-  echo ">>>>>Skipping unit tests"
+# if [[ "${SKIP_UNIT_TESTS}" != "" ]]; then
+#   echo ">>>>>Skipping unit tests"
+# else
+#   echo ">>>>> Invoking unit tests"
+#   TEST_PACKAGES="pkg"
+#   GINKGO_COMMON_FLAGS="-r -timeout=1h0m0s --randomizeAllSpecs --randomizeSuites --failOnPending  --progress"
+#   test_with_coverage
+#   echo ">>>>> Finished executing unit tests"
+# fi
+
+if [[ "${SKIP_INTEGRATION_TESTS}" != "" ]]; then
+  echo ">>>>> Skipping integration tests"
 else
-  echo ">>>>> Invoking unit tests"
-  TEST_PACKAGES="pkg"
-  GINKGO_COMMON_FLAGS="-r -timeout=1h0m0s --randomizeAllSpecs --randomizeSuites --failOnPending  --progress"
-  test_with_coverage
-  echo ">>>>> Finished executing unit tests"
+  echo ">>>>> Invoking intergration tests"
+  .ci/pipeline_integration_test
+  echo ">>>>> Finished executing integration tests"
 fi
 
 echo "CI tests have passed successfully"

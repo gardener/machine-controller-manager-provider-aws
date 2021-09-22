@@ -1,0 +1,180 @@
+#pwd= /tmp/build/a94a8fe5/pull-request-gardener.machine-controller-manager-provider-aws-pr.master/tmp/src/github.com/gardener/machine-controller-manager-provider-aws
+#source path= /tmp/build/a94a8fe5/pull-request-gardener.machine-controller-manager-provider-aws-pr.master
+#logs_path= /tmp/build/a94a8fe5/pull-request-gardener.machine-controller-manager-provider-aws-pr.master/.ci/controllers-test/logs
+
+############################################## <Color> ##############################################
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+############################################## </Color> ##############################################
+
+mkdir -p dev
+
+logs_path=.ci/controllers-test/logs
+TEST_RESULT=
+cli_path=/cc/utils/cli.py
+num_of_existing_nodes=1
+
+#these variables are accessed in test/integration/controller so prefixed by ${SOURCE_PATH} for absolute path
+declare CONTROL_KUBECONFIG=${SOURCE_PATH}/dev/control_kubeconfig.yaml
+declare TARGET_KUBECONFIG=${SOURCE_PATH}/dev/target_kubeconfig.yaml
+
+${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-control --key kubeconfig > dev/control_kubeconfig.yaml
+${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-target --key kubeconfig > dev/target_kubeconfig.yaml
+
+#export MC_CONTAINER_IMAGE
+#export MCM_CONTAINER_IMAGE
+#export CONTROL_CLUSTER_NAMESPACE
+export CONTROL_KUBECONFIG
+export TARGET_KUBECONFIG
+export MACHINECLASS_V1=${SOURCE_PATH}/.ci/controllers-test/machineClasses/v1machineclass.yaml
+#export MACHINECLASS_V2=$SOURCE_PATH/.ci/controllers-test/machineClasses/v2machineclass.yaml
+export MACHINE_CONTROLLER_MANAGER_DEPLOYMENT_NAME="machine-controller-manager"
+
+############################################## <Helper fn> ##############################################
+
+function hf_num_of_objects() {
+    output=$(kubectl --kubeconfig=dev/control_kubeconfig.yaml get "$1" | grep machine.sapcloud.io 2>&1)
+
+    echo "$output"
+    
+    if [ -z "$output" ]; then
+       return 0 
+    fi
+
+    object_count=$(echo "$output" | wc -l)
+
+    return "$object_count"
+}
+
+function hf_num_of_ready_nodes() {
+    output=$(kubectl --kubeconfig=dev/target_kubeconfig.yaml get "$1" 2>&1)
+    echo "$output"
+
+    ready_count=$(echo "$output" | tr " " "\n" | grep ^Ready -c)
+
+    return $((ready_count-num_of_existing_nodes))
+}
+
+function hf_wait_on() {
+    function_name=$1
+    function_param=$2
+    count_to_match=$3
+    seconds_to_wait=$4
+    iteration_count=$(($seconds_to_wait/30))
+
+    while
+        "$function_name" "$function_param"
+        ret=$?
+        [[ $ret -ne $count_to_match ]]
+    do
+        sleep 30
+        ((iteration_count--))
+
+        # Exit script when timeout occurs
+        if [ $iteration_count -le 0 ]; then
+            printf "\tFailed: Timeout occured while waiting for operation. Exiting Test to avoid further conflicts.\n"
+            printf "\tWas Executing function: %s, %s\n" $function_name $function_param
+            printf "${RED}There is another PR running its integration test on the clusters. Waiting Timed Out. Kindly re-run the tests.${NC}\n"
+            exit 1
+        fi
+
+    done
+}
+
+############################################## </Helper fn> ##############################################
+
+
+############################################## <Initialization> ##############################################
+
+function setup_ginkgo() {
+    echo "Installing Ginkgo..."
+    GO111MODULE=off go get -u github.com/onsi/ginkgo/ginkgo
+    ginkgo version
+    echo "Successfully installed Ginkgo."
+}
+
+function setup_environment() {
+    printf "\n\t\t\t----- Setup Test Environment --------\n"
+
+    # install kubectl
+    printf "\nDownloading and installing kubectl\n"
+    curl -LO https://storage.googleapis.com/kubernetes-release/release/v1.16.0/bin/linux/amd64/kubectl
+    chmod +x ./kubectl
+    mv ./kubectl /usr/local/bin/kubectl
+    printf "Successfully installed kubectl\n"
+
+    #install ginkgo
+    if ! [ -x "$(command -v ginkgo)" ]; then
+    setup_ginkgo
+    fi
+}
+
+function check_cluster_state() {
+    printf "\t\t\t----- Checking Test Environment -------\n"
+
+    printf "\nChecking existance of machine crds\n"
+    # Wait 60mins for any existing PRs to cleanup machine crds, as crd cleanup is last step.
+    hf_wait_on "hf_num_of_objects" crd 0 3600
+    printf "No machine crds in control test cluster\n"
+
+    printf "\nChecking existance of node objects\n"
+    # Wait 60mins for any existing PRs to cleanup nodes
+    hf_wait_on "hf_num_of_ready_nodes" nodes 0 3600
+    printf "No additional node objects in target test cluster\n"
+
+    sleep 30
+
+    printf "\nCluster state looks clean\n"
+    printf "\t\t\t----- Checking Test Environment DONE -------\n"
+}
+
+############################################## </Initialization> ##############################################
+
+############################################## <Modules> ########################################################
+
+function run_integration_tests() {
+    echo "Starting integration tests..."
+    set +e
+
+    ginkgo -v -mod=vendor test/integration/controller
+    TEST_RESULT=$?
+    
+    set -e
+
+    if [ ${TEST_RESULT} -ne 0 ]; then
+        printf "\n\t\t\t${RED}Integration tests failed. Kindly check you PR${NC}\n"
+    else
+        printf "Done with integration test\n"
+    fi
+}
+
+function print_controller_logs {
+    printf "\n\t\t\t----- Start of MCM Logs -----------\n"
+    cat $logs_path/mcm_process.log
+    printf "\n\t\t\t----- End of MCM Logs   ----------\n\n"
+
+    printf "\n\t\t\t----- Start of MC Logs -----------\n"
+    cat $logs_path/mc_process.log
+    printf "\n\t\t\t----- End of MC Logs   ----------\n\n"
+}
+
+############################################## </Modules> ########################################################
+
+
+############################################## <Main> ########################################################
+
+printf "\n\t\t\t----- Start of Test Script -----------\n"
+setup_environment
+#if cluster state is not clean then don't run the tests
+check_cluster_state
+result=$?
+if [ ${result} -ne 0 ]; then
+exit $result
+fi
+run_integration_tests
+print_controller_logs
+printf "\n\t\t\t----- End of Test Script -----------\n"
+
+exit $TEST_RESULT
+
+############################################## </Main> ########################################################
