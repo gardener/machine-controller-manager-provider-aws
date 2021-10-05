@@ -23,10 +23,9 @@ ${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-con
 ${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-target --key kubeconfig > dev/target_kubeconfig.yaml
 
 #bringing machineclass from secret server
-config=${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-control
-echo $config
-printf "\n"
-mc=${config}.raw['machineClass']
+config=`${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-control`
+
+mc=`${config}.raw['machineClass']`
 echo $mc > /dev/v1machineclass.yaml
 echo $mc
 printf "\n"
