@@ -26,7 +26,7 @@ ${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-tar
 config=`${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-control --key machineClass`
 
 cat << EOF > /dev/v1machineclass.yaml
-$(echo ${config})
+$config
 EOF
 
 export CONTROL_KUBECONFIG
