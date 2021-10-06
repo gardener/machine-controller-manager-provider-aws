@@ -28,6 +28,9 @@ ${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-tar
 # cat << EOF > ${SOURCE_PATH}/dev/v1machineclass.yaml
 # ${config}
 # EOF
+printf "The target kubeconfig is \n"
+printf "$(cat ${SOURCE_PATH}/dev/target_kubeconfig.yaml)"
+printf "\n"
 
 ${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-control --key machineClass > ${SOURCE_PATH}/dev/v1machineclass.yaml
 
