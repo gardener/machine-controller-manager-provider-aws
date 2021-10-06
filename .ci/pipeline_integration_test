@@ -23,13 +23,17 @@ ${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-con
 ${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-target --key kubeconfig > dev/target_kubeconfig.yaml
 
 #bringing machineclass from secret server
-config=`${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-control --key machineClass`
+# config=`${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-control --key machineClass`
 
-cat << EOF > ${SOURCE_PATH}/dev/v1machineclass.yaml
-${config}
-EOF
+# cat << EOF > ${SOURCE_PATH}/dev/v1machineclass.yaml
+# ${config}
+# EOF
 
-# ${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-control --key machineClass > ${SOURCE_PATH}/dev/v1machineclass.yaml
+${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-control --key machineClass > ${SOURCE_PATH}/dev/v1machineclass.yaml
+
+printf "The machineclass is \n"
+printf "$(cat ${SOURCE_PATH}/dev/v1machineclass.yaml)"
+printf "\n"
 
 export CONTROL_KUBECONFIG
 export TARGET_KUBECONFIG
