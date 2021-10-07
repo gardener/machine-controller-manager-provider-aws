@@ -19,8 +19,8 @@ declare CONTROL_KUBECONFIG=${SOURCE_PATH}/dev/control_kubeconfig.yaml
 declare TARGET_KUBECONFIG=${SOURCE_PATH}/dev/target_kubeconfig.yaml
 
 #bringing target and control kubeconfig from secret server
-${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-control --key kubeconfig --json > dev/control_kubeconfig.yaml
-${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-target --key kubeconfig --no-json > dev/target_kubeconfig.yaml
+${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-control --key kubeconfig  > dev/control_kubeconfig.yaml
+${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-target --key kubeconfig > dev/target_kubeconfig.yaml
 
 #bringing machineclass from secret server
 # config=`${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-control --key machineClass`
@@ -29,15 +29,7 @@ ${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-tar
 # ${config}
 # EOF
 
-printf "The control kubeconfig is \n"
-printf "$(cat ${SOURCE_PATH}/dev/control_kubeconfig.yaml)"
-printf "\n"
-
-printf "The target kubeconfig is \n"
-printf "$(cat ${SOURCE_PATH}/dev/target_kubeconfig.yaml)"
-printf "\n"
-
-${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-control --key machineClass --no-json > ${SOURCE_PATH}/dev/v1machineclass.yaml
+${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-target --key machineClass > ${SOURCE_PATH}/dev/v1machineclass.yaml
 
 printf "The machineclass is \n"
 printf "$(cat ${SOURCE_PATH}/dev/v1machineclass.yaml)"
