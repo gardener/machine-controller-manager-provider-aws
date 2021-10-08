@@ -1,6 +1,8 @@
 #pwd= /tmp/build/a94a8fe5/pull-request-gardener.machine-controller-manager-provider-aws-pr.master/tmp/src/github.com/gardener/machine-controller-manager-provider-aws
 #source path= /tmp/build/a94a8fe5/pull-request-gardener.machine-controller-manager-provider-aws-pr.master
 #logs_path= /tmp/build/a94a8fe5/pull-request-gardener.machine-controller-manager-provider-aws-pr.master/.ci/controllers-test/logs
+# System configurations are
+# Linux ec20b931-cef8-4fea-4619-af72b6f1beb1 5.4.0-6-cloud-amd64 #1 SMP Debian 5.4.93-1 (2021-02-09) x86_64 GNU/Linux
 
 ############################################## <Color> ##############################################
 RED='\033[0;31m'
@@ -25,6 +27,13 @@ ${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-tar
 printf "System configurations are\n"
 uname -a 
 printf "\n"
+
+#installing yq in container
+printf "\nDownloading and installing yq\n"
+    curl -LO https://github.com/mikefarah/yq/releases/download/v4.13.3/yq_linux_amd64
+    chmod +x ./yq_linux_amd64
+    mv ./yq_linux_amd64 /usr/local/bin/yq
+printf "Successfully installed yq\n"
 
 #bringing machineclass from secret server
 ${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-target --key machineClass > ${SOURCE_PATH}/dev/v1machineclass.json
