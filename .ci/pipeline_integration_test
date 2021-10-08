@@ -22,13 +22,11 @@ declare TARGET_KUBECONFIG=${SOURCE_PATH}/dev/target_kubeconfig.yaml
 ${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-control --key kubeconfig  > dev/control_kubeconfig.yaml
 ${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-target --key kubeconfig > dev/target_kubeconfig.yaml
 
+printf "System configurations are\n"
+uname -a 
+printf "\n"
+
 #bringing machineclass from secret server
-# config=`${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-control --key machineClass`
-
-# cat << EOF > ${SOURCE_PATH}/dev/v1machineclass.yaml
-# ${config}
-# EOF
-
 ${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-target --key machineClass > ${SOURCE_PATH}/dev/v1machineclass.json
 
 #convert json to yaml, so that machineclass can be parsed during integration-test
