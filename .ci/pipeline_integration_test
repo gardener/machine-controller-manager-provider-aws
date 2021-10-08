@@ -1,9 +1,3 @@
-#pwd= /tmp/build/a94a8fe5/pull-request-gardener.machine-controller-manager-provider-aws-pr.master/tmp/src/github.com/gardener/machine-controller-manager-provider-aws
-#source path= /tmp/build/a94a8fe5/pull-request-gardener.machine-controller-manager-provider-aws-pr.master
-#logs_path= /tmp/build/a94a8fe5/pull-request-gardener.machine-controller-manager-provider-aws-pr.master/.ci/controllers-test/logs
-# System configurations are
-# Linux ec20b931-cef8-4fea-4619-af72b6f1beb1 5.4.0-6-cloud-amd64 #1 SMP Debian 5.4.93-1 (2021-02-09) x86_64 GNU/Linux
-
 ############################################## <Color> ##############################################
 RED='\033[0;31m'
 NC='\033[0m' # No Color
@@ -19,35 +13,6 @@ num_of_existing_nodes=1
 #these variables are accessed in test/integration/controller so prefixed by ${SOURCE_PATH} for absolute path
 declare CONTROL_KUBECONFIG=${SOURCE_PATH}/dev/control_kubeconfig.yaml
 declare TARGET_KUBECONFIG=${SOURCE_PATH}/dev/target_kubeconfig.yaml
-
-#bringing target and control kubeconfig from secret server
-${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-control --key kubeconfig  > dev/control_kubeconfig.yaml
-${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-target --key kubeconfig > dev/target_kubeconfig.yaml
-
-printf "System configurations are\n"
-uname -a 
-printf "\n"
-
-#installing yq in container
-printf "\nDownloading and installing yq\n"
-    curl -LO https://github.com/mikefarah/yq/releases/download/v4.13.3/yq_linux_amd64
-    chmod +x ./yq_linux_amd64
-    mv ./yq_linux_amd64 /usr/local/bin/yq
-printf "Successfully installed yq\n"
-
-#bringing machineclass from secret server
-${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-target --key machineClass > ${SOURCE_PATH}/dev/v1machineclass.json
-
-#convert json to yaml, so that machineclass can be parsed during integration-test
-yq e -P ${SOURCE_PATH}/dev/v1machineclass.json > ${SOURCE_PATH}/dev/v1machineclass_converted.yaml
-
-printf "The machineclass in json is \n"
-printf "$(cat ${SOURCE_PATH}/dev/v1machineclass.json)"
-printf "\n"
-
-printf "The machineclass in yaml is \n"
-printf "$(cat ${SOURCE_PATH}/dev/v1machineclass_converted.yaml)"
-printf "\n"
 
 export CONTROL_KUBECONFIG
 export TARGET_KUBECONFIG
@@ -114,8 +79,39 @@ function setup_ginkgo() {
     echo "Successfully installed Ginkgo."
 }
 
+function fetch_control_kubeconfig() {
+    ${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-control --key kubeconfig  > dev/control_kubeconfig.yaml
+}
+
+function fetch_target_kubeconfig() {
+    ${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-target --key kubeconfig > dev/target_kubeconfig.yaml
+}
+
+function fetch_machine_class() {
+    #bringing machineclass from secret server
+    ${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-target --key machineClass > ${SOURCE_PATH}/dev/v1machineclass.json
+
+    #convert json to yaml, so that machineclass can be parsed during integration-test
+    yq e -P ${SOURCE_PATH}/dev/v1machineclass.json > ${SOURCE_PATH}/dev/v1machineclass_converted.yaml
+
+    printf "The machineclass in json is \n"
+    printf "$(cat ${SOURCE_PATH}/dev/v1machineclass.json)"
+    printf "\n"
+
+    printf "The machineclass in yaml is \n"
+    printf "$(cat ${SOURCE_PATH}/dev/v1machineclass_converted.yaml)"
+    printf "\n"
+}
+
 function setup_environment() {
     printf "\n\t\t\t----- Setup Test Environment --------\n"
+
+    #installing yq 
+    printf "\nDownloading and installing yq\n"
+    curl -LO https://github.com/mikefarah/yq/releases/download/v4.13.3/yq_linux_amd64
+    chmod +x ./yq_linux_amd64
+    mv ./yq_linux_amd64 /usr/local/bin/yq
+    printf "Successfully installed yq\n"
 
     # install kubectl
     printf "\nDownloading and installing kubectl\n"
@@ -128,6 +124,11 @@ function setup_environment() {
     if ! [ -x "$(command -v ginkgo)" ]; then
     setup_ginkgo
     fi
+
+    #fetching kubeconfigs and machineClass from secret_server
+    fetch_control_kubeconfig
+    fetch_target_kubeconfig
+    fetch_machine_class
 }
 
 function check_cluster_state() {
