@@ -31,13 +31,20 @@ ${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-tar
 
 ${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-target --key machineClass > ${SOURCE_PATH}/dev/v1machineclass.json
 
-printf "The machineclass is \n"
-printf "$(cat ${SOURCE_PATH}/dev/v1machineclass.yaml)"
+#convert json to yaml, so that machineclass can be parsed during integration-test
+yq e -P ${SOURCE_PATH}/dev/v1machineclass.json > ${SOURCE_PATH}/dev/v1machineclass_converted.yaml
+
+printf "The machineclass in json is \n"
+printf "$(cat ${SOURCE_PATH}/dev/v1machineclass.json)"
+printf "\n"
+
+printf "The machineclass in yaml is \n"
+printf "$(cat ${SOURCE_PATH}/dev/v1machineclass_converted.yaml)"
 printf "\n"
 
 export CONTROL_KUBECONFIG
 export TARGET_KUBECONFIG
-export MACHINECLASS_V1=${SOURCE_PATH}/dev/v1machineclass.json
+export MACHINECLASS_V1=${SOURCE_PATH}/dev/v1machineclass_converted.yaml
 export MACHINE_CONTROLLER_MANAGER_DEPLOYMENT_NAME="machine-controller-manager"
 
 ############################################## <Helper fn> ##############################################
