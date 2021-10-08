@@ -29,7 +29,7 @@ ${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-tar
 # ${config}
 # EOF
 
-${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-target --key machineClass > ${SOURCE_PATH}/dev/v1machineclass.yaml
+${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-target --key machineClass > ${SOURCE_PATH}/dev/v1machineclass.json
 
 printf "The machineclass is \n"
 printf "$(cat ${SOURCE_PATH}/dev/v1machineclass.yaml)"
@@ -37,7 +37,7 @@ printf "\n"
 
 export CONTROL_KUBECONFIG
 export TARGET_KUBECONFIG
-export MACHINECLASS_V1=${SOURCE_PATH}/dev/v1machineclass.yaml
+export MACHINECLASS_V1=${SOURCE_PATH}/dev/v1machineclass.json
 export MACHINE_CONTROLLER_MANAGER_DEPLOYMENT_NAME="machine-controller-manager"
 
 ############################################## <Helper fn> ##############################################
