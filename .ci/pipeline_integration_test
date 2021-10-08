@@ -93,14 +93,6 @@ function fetch_machine_class() {
 
     #convert json to yaml, so that machineclass can be parsed during integration-test
     yq e -P ${SOURCE_PATH}/dev/v1machineclass.json > ${SOURCE_PATH}/dev/v1machineclass_converted.yaml
-
-    printf "The machineclass in json is \n"
-    printf "$(cat ${SOURCE_PATH}/dev/v1machineclass.json)"
-    printf "\n"
-
-    printf "The machineclass in yaml is \n"
-    printf "$(cat ${SOURCE_PATH}/dev/v1machineclass_converted.yaml)"
-    printf "\n"
 }
 
 function setup_environment() {
