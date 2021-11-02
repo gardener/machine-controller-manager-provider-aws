@@ -79,4 +79,12 @@ else
   echo ">>>>> Finished executing unit tests"
 fi
 
+if [[ "${SKIP_INTEGRATION_TESTS}" != "" ]]; then
+  echo ">>>>> Skipping integration tests"
+else
+  echo ">>>>> Invoking intergration tests"
+  .ci/pipeline_integration_test
+  echo ">>>>> Finished executing integration tests"
+fi
+
 echo "CI tests have passed successfully"

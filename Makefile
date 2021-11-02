@@ -94,8 +94,8 @@ update-dependencies:
 
 .PHONY: test-unit
 test-unit:
-	.ci/test
-
+	@SKIP_INTEGRATION_TESTS=X .ci/test
+	
 .PHONY: test-integration
 test-integration:
 	@if [[ -f $(PWD)/$(CONTROL_KUBECONFIG) ]]; then export CONTROL_KUBECONFIG=$(PWD)/$(CONTROL_KUBECONFIG); fi; \
@@ -106,7 +106,7 @@ test-integration:
 	export MCM_CONTAINER_IMAGE=$(MCM_IMAGE); \
 	export CONTROL_CLUSTER_NAMESPACE=$(CONTROL_NAMESPACE); \
 	export MACHINE_CONTROLLER_MANAGER_DEPLOYMENT_NAME=$(MACHINE_CONTROLLER_MANAGER_DEPLOYMENT_NAME); \
-	.ci/integration_test
+	.ci/local_integration_test
 
 #########################################
 # Rules for build/release
