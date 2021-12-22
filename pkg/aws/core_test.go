@@ -15,6 +15,8 @@ package aws
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -56,6 +58,7 @@ var _ = Describe("MachineServer", func() {
 
 	Describe("#CreateMachine", func() {
 		type setup struct {
+			maxElapsedTimeForRetry time.Duration
 		}
 		type action struct {
 			machineRequest *driver.CreateMachineRequest
@@ -76,10 +79,15 @@ var _ = Describe("MachineServer", func() {
 				ms := NewAWSDriver(mockPluginSPIImpl)
 
 				ctx := context.Background()
+				var temp time.Duration
+
+				if data.setup.maxElapsedTimeForRetry != 0 {
+					temp = maxElapsedTimeInBackoff
+					maxElapsedTimeInBackoff = data.setup.maxElapsedTimeForRetry
+				}
 				response, err := ms.CreateMachine(ctx, data.action.machineRequest)
 
-				//klog.Error(err)
-				//klog.Error(data.expect.errMessage)
+				maxElapsedTimeInBackoff = temp
 
 				if data.expect.errToHaveOccurred {
 					Expect(err).To(HaveOccurred())
@@ -378,6 +386,22 @@ var _ = Describe("MachineServer", func() {
 				expect: expect{
 					errToHaveOccurred: true,
 					errMessage:        "machine codes error: code = [Internal] message = [Couldn't run instance with given ID]",
+				},
+			}),
+			Entry("Should Fail when APIs are not consistent for 10sec", &data{
+				setup: setup{
+					maxElapsedTimeForRetry: 10 * time.Second,
+				},
+				action: action{
+					machineRequest: &driver.CreateMachineRequest{
+						Machine:      newMachine(-1, nil),
+						MachineClass: newMachineClass([]byte("{\"ami\":\"" + mockclient.InconsistencyInAPIs + "\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
+						Secret:       providerSecret,
+					},
+				},
+				expect: expect{
+					errToHaveOccurred: true,
+					errMessage:        "creation of VM : \"aws:///eu-west-1/i-instance-doesnt-exist\" Failed, timed out waiting for eventual consistency",
 				},
 			}),
 		)
