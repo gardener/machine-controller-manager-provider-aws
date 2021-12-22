@@ -24,6 +24,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/pointer"
 )
 
 const (
@@ -47,6 +48,8 @@ const (
 	ReturnErrorAtDescribeInstances string = "return-error-at-DescribeInstances"
 	// SetInstanceID string sets the instance ID provided at keyname
 	SetInstanceID string = "set-instance-id"
+	// InconsistentInAPIs string makes RunInstances and DescribeInstances APIs out of sync
+	InconsistencyInAPIs string = "apis-are-inconsistent"
 )
 
 // MockPluginSPIImpl is the mock implementation of PluginSPI interface that makes dummy calls
@@ -96,12 +99,21 @@ func (ms *MockEC2Client) DescribeImages(input *ec2.DescribeImagesInput) (*ec2.De
 // RunInstances implements a mock run instance method
 // The name of the newly created instances depends on the number of instances in cache starts from 0
 func (ms *MockEC2Client) RunInstances(input *ec2.RunInstancesInput) (*ec2.Reservation, error) {
+	instanceID := fmt.Sprintf("i-0123456789-%d", len(*ms.FakeInstances))
+	privateDNSName := fmt.Sprintf("ip-%d", len(*ms.FakeInstances))
 
 	if *input.ImageId == FailQueryAtRunInstances {
 		return nil, fmt.Errorf("Couldn't run instance with given ID")
+	} else if *input.ImageId == InconsistencyInAPIs {
+		return &ec2.Reservation{
+			Instances: []*ec2.Instance{
+				{
+					InstanceId:     pointer.StringPtr(InstanceDoesntExistError),
+					PrivateDnsName: &privateDNSName,
+				},
+			},
+		}, nil
 	}
-	instanceID := fmt.Sprintf("i-0123456789-%d", len(*ms.FakeInstances))
-	privateDNSName := fmt.Sprintf("ip-%d", len(*ms.FakeInstances))
 
 	placement := input.Placement
 	if placement != nil {
@@ -150,6 +162,11 @@ func (ms *MockEC2Client) DescribeInstances(input *ec2.DescribeInstancesInput) (*
 					},
 				},
 			}, nil
+		} else if *input.InstanceIds[0] == InstanceDoesntExistError {
+			return nil, awserr.New(
+				ec2.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceIdNotFound, "",
+				fmt.Errorf("Instance with instance-ID doesn't exist"),
+			)
 		}
 
 		// Target Specific instances
