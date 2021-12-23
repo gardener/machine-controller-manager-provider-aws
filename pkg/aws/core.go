@@ -221,7 +221,7 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 	klog.V(3).Infof("Waiting for VM with Provider-ID %q to be visible to all AWS endpoints", response.ProviderID)
 
 	operation := func() error {
-		_, err := confirmInstanceById(svc, *runResult.Instances[0].InstanceId)
+		_, err := confirmInstanceByID(svc, *runResult.Instances[0].InstanceId)
 		return err
 	}
 

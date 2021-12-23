@@ -159,17 +159,17 @@ func (d *Driver) getInstancesFromMachineName(machineName string, providerSpec *a
 	return instances, nil
 }
 
-func confirmInstanceById(svc ec2iface.EC2API, instanceID string) (bool,error){
+func confirmInstanceByID(svc ec2iface.EC2API, instanceID string) (bool, error) {
 	input := ec2.DescribeInstancesInput{
 		InstanceIds: []*string{&instanceID},
 	}
 
 	_, err := svc.DescribeInstances(&input)
-	if err!=nil{
-		return false,err
+	if err != nil {
+		return false, err
 	}
 
-	return true,nil
+	return true, nil
 }
 
 func (d *Driver) generateBlockDevices(blockDevices []api.AWSBlockDeviceMappingSpec, rootDeviceName *string) ([]*ec2.BlockDeviceMapping, error) {
