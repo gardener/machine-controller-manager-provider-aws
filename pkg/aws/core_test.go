@@ -387,14 +387,14 @@ var _ = Describe("MachineServer", func() {
 					errMessage:        "machine codes error: code = [Internal] message = [Couldn't run instance with given ID]",
 				},
 			}),
-			Entry("Should Fail when APIs are not consistent for 10sec", &data{
+			Entry("Should Fail when APIs are not consistent for 10sec(in real situation its 5min)", &data{
 				setup: setup{
 					maxElapsedTimeForRetry: 10 * time.Second,
 				},
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
 						Machine:      newMachine(-1, nil),
-						MachineClass: newMachineClass([]byte("{\"ami\":\"" + mockclient.InconsistencyInAPIs + "\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
+						MachineClass: newMachineClass([]byte("{\"ami\":\"" + mockclient.SetInstanceID + "\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"" + mockclient.InconsistencyInAPIs + "\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
 						Secret:       providerSecret,
 					},
 				},
