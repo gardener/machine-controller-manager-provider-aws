@@ -47,7 +47,7 @@ const (
 	ReturnErrorAtDescribeInstances string = "return-error-at-DescribeInstances"
 	// SetInstanceID string sets the instance ID provided at keyname
 	SetInstanceID string = "set-instance-id"
-	// InconsistentInAPIs string makes RunInstances and DescribeInstances APIs out of sync
+	// InconsistencyInAPIs string makes RunInstances and DescribeInstances APIs out of sync
 	InconsistencyInAPIs string = "apis-are-inconsistent"
 )
 
