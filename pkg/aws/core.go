@@ -45,6 +45,9 @@ const (
 	// awsEBSDriverName is the name of the CSI driver for EBS
 	awsEBSDriverName = "ebs.csi.aws.com"
 	awsPlacement     = "machine.sapcloud.io/awsPlacement"
+	// InstanceMetadataResponseHopLimit HTTP PUT response hop limit for instance metadata requests
+	// the default is 1 which makes it inaccessible from inside containers
+	InstanceMetadataResponseHopLimit = 2
 )
 
 // NewAWSDriver returns an empty AWSDriver object
@@ -154,6 +157,9 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 		IamInstanceProfile:  iam,
 		NetworkInterfaces:   networkInterfaceSpecs,
 		TagSpecifications:   []*ec2.TagSpecification{tagInstance, tagVolume},
+		MetadataOptions: &ec2.InstanceMetadataOptionsRequest{
+			HttpPutResponseHopLimit: aws.Int64(InstanceMetadataResponseHopLimit),
+		},
 	}
 
 	// Set the AWS Capacity Reservation target. Using an 'open' preference means that if the reservation is not found, then
