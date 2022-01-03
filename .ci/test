@@ -16,6 +16,9 @@
 
 set -e
 
+# to mute ginkgo deprecation warnings
+export ACK_GINKGO_DEPRECATIONS=2.0.0
+
 # For the test step concourse will set the following environment variables:
 # SOURCE_PATH - path to component repository root directory.
 
@@ -50,7 +53,7 @@ fi
 
 # Install Ginkgo (test framework) to be able to execute the tests.
 echo "Fetching Ginkgo framework"
-GO111MODULE=off go get -u github.com/onsi/ginkgo/ginkgo
+GO111MODULE=on go install github.com/onsi/ginkgo/ginkgo@v1.16.5
 echo "Successfully fetched Ginkgo framework"
 
 ##############################################################################
