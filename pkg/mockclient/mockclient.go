@@ -163,7 +163,7 @@ func (ms *MockEC2Client) DescribeInstances(input *ec2.DescribeInstancesInput) (*
 			}
 		}
 		if !found {
-			return nil, fmt.Errorf("Couldn't find any instance matching requirement")
+			return nil, fmt.Errorf("InvalidInstanceID.NotFound: The instance IDs do not exist")
 		}
 	} else {
 
@@ -191,12 +191,6 @@ func (ms *MockEC2Client) TerminateInstances(input *ec2.TerminateInstancesInput) 
 			ec2.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceIdMalformed, "",
 			fmt.Errorf("Termination of instance errorred out"),
 		)
-	} else if *input.InstanceIds[0] == InstanceDoesntExistError {
-		// If instance with instance ID doesn't exist
-		return nil, awserr.New(
-			ec2.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceIdNotFound, "",
-			fmt.Errorf("Instance with instance-ID doesn't exist"),
-		)
 	}
 
 	var desiredInstance ec2.Instance
@@ -217,7 +211,7 @@ func (ms *MockEC2Client) TerminateInstances(input *ec2.TerminateInstancesInput) 
 	ms.FakeInstances = &newInstanceList
 
 	if !found {
-		return nil, fmt.Errorf("Couldn't find instance with given instance-ID %s", *input.InstanceIds[0])
+		return nil, fmt.Errorf("InvalidInstanceID.NotFound: The instance IDs do not exist")
 	}
 
 	return &ec2.TerminateInstancesOutput{
@@ -239,13 +233,6 @@ func (ms *MockEC2Client) StopInstances(input *ec2.StopInstancesInput) (*ec2.Stop
 
 	if *input.InstanceIds[0] == InstanceStopError {
 		return nil, fmt.Errorf("Stopping of instance errored out")
-	} else if *input.InstanceIds[0] == InstanceDoesntExistError {
-		// If instance with instance ID doesn't exist
-		return nil, awserr.New(
-			ec2.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceIdMalformed,
-			"Instance with instance-ID doesn't exist",
-			fmt.Errorf("Instance with instance-ID doesn't exist"),
-		)
 	} else if *input.DryRun {
 		// If it is a dry run
 		return nil, awserr.New(
@@ -270,7 +257,7 @@ func (ms *MockEC2Client) StopInstances(input *ec2.StopInstancesInput) (*ec2.Stop
 	}
 
 	if !found {
-		return nil, fmt.Errorf("Couldn't find any instance matching requirement")
+		return nil, fmt.Errorf("InvalidInstanceID.NotFound: The instance IDs do not exist")
 	}
 
 	return &ec2.StopInstancesOutput{

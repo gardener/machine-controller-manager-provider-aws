@@ -246,6 +246,11 @@ func terminateInstance(req *driver.DeleteMachineRequest, svc ec2iface.EC2API, ma
 
 	_, err := svc.TerminateInstances(input)
 	if err != nil {
+		// if InvalidInstanceID.NotFound error from AWS, then assume VM is terminated
+		if strings.Contains(err.Error(), ec2.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceIdNotFound) {
+			return nil
+		}
+
 		klog.Errorf("VM %q for Machine %q couldn't be terminated: %s",
 			req.Machine.Spec.ProviderID,
 			req.Machine.Name,
