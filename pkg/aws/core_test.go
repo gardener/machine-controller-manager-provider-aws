@@ -691,7 +691,7 @@ var _ = Describe("MachineServer", func() {
 					errMessage:        awsSecretAccessKeyNUserDataAreMissing,
 				},
 			}),
-			Entry("Termination of instance that doesn't exist on provider", &data{
+			Entry("Termination of instance that doesn't exist on provider but machine obj has providerID", &data{
 				setup: setup{},
 				action: action{
 					deleteMachineRequest: &driver.DeleteMachineRequest{
@@ -702,11 +702,10 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					deleteMachineResponse: &driver.DeleteMachineResponse{},
-					errToHaveOccurred:     true,
-					errMessage:            "machine codes error: code = [Internal] message = [Couldn't find instance with given instance-ID i-0123456789-0]",
+					errToHaveOccurred:     false,
 				},
 			}),
-			Entry("Termination of instance that doesn't exist on provider", &data{
+			Entry("Another case for Termination of instance that doesn't exist on provider but machine obj has providerID", &data{
 				setup: setup{
 					createMachineRequest: &driver.CreateMachineRequest{
 						Machine:      newMachine(-1, nil),
@@ -717,16 +716,15 @@ var _ = Describe("MachineServer", func() {
 				action: action{
 					deleteMachineRequest: &driver.DeleteMachineRequest{
 						Machine:      newMachine(0, nil),
-						MachineClass: newMachineClass([]byte("{\"ami\":\"" + mockclient.SetInstanceID + "\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"" + mockclient.FailQueryAtTerminateInstances + "\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
+						MachineClass: newMachineClass(providerSpec),
 						Secret:       providerSecret,
 					},
 				},
 				expect: expect{
-					errToHaveOccurred: true,
-					errMessage:        "machine codes error: code = [Internal] message = [Couldn't find instance with given instance-ID i-0123456789-0]",
+					errToHaveOccurred: false,
 				},
 			}),
-			Entry("Termination of machine without any backing instance", &data{
+			Entry("Termination of machine obj without providerID and backing instance", &data{
 				setup: setup{},
 				action: action{
 					deleteMachineRequest: &driver.DeleteMachineRequest{
