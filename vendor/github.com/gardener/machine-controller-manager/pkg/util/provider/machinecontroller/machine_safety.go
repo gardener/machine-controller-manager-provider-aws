@@ -19,11 +19,13 @@ package controller
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/cache"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/driver"
+	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/codes"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machineutils"
 
 	corev1 "k8s.io/api/core/v1"
@@ -250,8 +252,9 @@ func (c *controller) checkMachineClass(ctx context.Context, machineClass *v1alph
 		return machineutils.LongRetry, err
 	}
 
-	// Making sure that its not a VM just being created, machine object not yet updated at API server
-	if len(listMachineResponse.MachineList) > 1 {
+	// making sure cache is updated .This is for cases where a new machine object is at etcd, but cache is unaware
+	// and its correspinding VM is in the list.
+	if len(listMachineResponse.MachineList) > 0 {
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
@@ -264,16 +267,16 @@ func (c *controller) checkMachineClass(ctx context.Context, machineClass *v1alph
 	for machineID, machineName := range listMachineResponse.MachineList {
 		machine, err := c.machineLister.Machines(c.namespace).Get(machineName)
 
-		if err != nil && !apierrors.IsNotFound(err) {
-			// Any other types of errors
-			klog.Errorf("SafetyController: Error while trying to GET machines. Error: %s", err)
-		} else if err != nil || machine.Spec.ProviderID != machineID {
-
-			// If machine exists and machine object is still been processed by the machine controller
-			if err == nil &&
-				(machine.Status.CurrentStatus.Phase == "" || machine.Status.CurrentStatus.Phase == v1alpha1.MachineCrashLoopBackOff) {
-				klog.V(3).Infof("SafetyController: Machine object %q with backing nodeName %q , providerID %q is being processed by machine controller, hence skipping", machine.Name, getNodeName(machine), getProviderID(machine))
-				continue
+		if apierrors.IsNotFound(err) || err == nil {
+			if err == nil {
+				if machine.Spec.ProviderID == machineID {
+					continue
+				}
+				// machine obj is still being processed by the machine controller
+				if machine.Status.CurrentStatus.Phase == "" || machine.Status.CurrentStatus.Phase == v1alpha1.MachineCrashLoopBackOff {
+					klog.V(3).Infof("SafetyController: Machine object %q with backing nodeName %q , providerID %q is being processed by machine controller, hence skipping", machine.Name, getNodeName(machine), getProviderID(machine))
+					continue
+				}
 			}
 
 			// Creating a dummy machine object to create deleteMachineRequest
@@ -296,14 +299,38 @@ func (c *controller) checkMachineClass(ctx context.Context, machineClass *v1alph
 			} else {
 				klog.V(2).Infof("SafetyController: Orphan VM found and terminated VM: %s, %s", machineName, machineID)
 			}
+		} else {
+			// errors other than NotFound error
+			klog.Errorf("SafetyController: Error while trying to GET machine %s. Error: %s", machineName, err)
 		}
 	}
+
 	return machineutils.LongRetry, nil
+}
+
+// updateMachineToSafety enqueues into machineSafetyQueue when a machine is updated to particular status
+func (c *controller) updateMachineToSafety(oldObj, newObj interface{}) {
+	oldMachine := oldObj.(*v1alpha1.Machine)
+	newMachine := newObj.(*v1alpha1.Machine)
+
+	if oldMachine == nil || newMachine == nil {
+		klog.Errorf("Couldn't convert to machine resource from object")
+		return
+	}
+
+	if !strings.Contains(oldMachine.Status.LastOperation.Description, codes.OutOfRange.String()) && strings.Contains(newMachine.Status.LastOperation.Description, codes.OutOfRange.String()) {
+		klog.Warningf("Multiple VMs backing machine obj %q found, triggering orphan collection.", newMachine.Name)
+		c.enqueueMachineSafetyOrphanVMsKey(newMachine)
+	}
 }
 
 // deleteMachineToSafety enqueues into machineSafetyQueue when a new machine is deleted
 func (c *controller) deleteMachineToSafety(obj interface{}) {
 	machine := obj.(*v1alpha1.Machine)
+	if machine == nil {
+		klog.Errorf("Couldn't convert to machine resource from object")
+		return
+	}
 	c.enqueueMachineSafetyOrphanVMsKey(machine)
 }
 

@@ -200,6 +200,9 @@ func (c *IntegrationTestFramework) initalizeClusters() error {
 	} else if len(controlClusterNamespace) == 0 {
 		controlClusterNamespace = "default"
 	}
+
+	// setting env variable for later use
+	os.Setenv("CONTROL_CLUSTER_NAMESPACE", controlClusterNamespace)
 	return nil
 }
 
@@ -860,6 +863,13 @@ func (c *IntegrationTestFramework) ControllerTests() {
 								Machines(controlClusterNamespace).
 								Delete(ctx, "test-machine", metav1.DeleteOptions{})).
 							Should(gomega.BeNil(), "No Errors while deleting machine")
+
+						ginkgo.By("Waiting until test-machine machine object is deleted")
+						gomega.Eventually(
+							c.ControlCluster.IsTestMachineDeleted,
+							c.timeout,
+							c.pollingInterval).
+							Should(gomega.BeTrue())
 
 						ginkgo.By("Waiting until number of ready nodes is equal to number of initial  nodes")
 						gomega.Eventually(
