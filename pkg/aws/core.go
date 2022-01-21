@@ -23,9 +23,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
+
 	"github.com/gardener/machine-controller-manager-provider-aws/pkg/spi"
 	v1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/driver"
@@ -46,6 +48,8 @@ const (
 	awsEBSDriverName = "ebs.csi.aws.com"
 	awsPlacement     = "machine.sapcloud.io/awsPlacement"
 )
+
+var maxElapsedTimeInBackoff = 5 * time.Minute
 
 // NewAWSDriver returns an empty AWSDriver object
 func NewAWSDriver(spi spi.SessionProviderInterface) driver.Driver {
@@ -212,6 +216,18 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 	response := &driver.CreateMachineResponse{
 		ProviderID: encodeInstanceID(providerSpec.Region, *runResult.Instances[0].InstanceId),
 		NodeName:   *runResult.Instances[0].PrivateDnsName,
+	}
+
+	klog.V(3).Infof("Waiting for VM with Provider-ID %q to be visible to all AWS endpoints", response.ProviderID)
+
+	operation := func() error {
+		_, err := confirmInstanceByID(svc, *runResult.Instances[0].InstanceId)
+		return err
+	}
+
+	if err := retryWithExponentialBackOff(operation, maxElapsedTimeInBackoff); err != nil {
+		klog.V(3).Infof("Timed out waiting for VM %q to be visible to all AWS endpoints. Multiple VM backing machine obj %q might spawn, they will be orphan collected", response.ProviderID, machine.Name)
+		return nil, fmt.Errorf("creation of VM : %q Failed, timed out waiting for eventual consistency", response.ProviderID)
 	}
 
 	klog.V(3).Infof("VM with Provider-ID: %q created for Machine: %q", response.ProviderID, machine.Name)

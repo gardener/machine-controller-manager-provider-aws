@@ -19,8 +19,10 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	backoff "github.com/cenkalti/backoff/v4"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -100,4 +102,14 @@ func getIntPtrForString(s string) *int64 {
 	var num int64
 	num, _ = strconv.ParseInt(s, 10, 64)
 	return &num
+}
+
+func retryWithExponentialBackOff(operation backoff.Operation, maxElapsedTime time.Duration) error {
+	expBackOffObj := backoff.NewExponentialBackOff()
+	expBackOffObj.MaxElapsedTime = maxElapsedTimeInBackoff
+	if err := backoff.Retry(operation, expBackOffObj); err != nil {
+		return err
+	}
+
+	return nil
 }

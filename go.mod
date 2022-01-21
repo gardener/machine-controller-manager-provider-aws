@@ -4,6 +4,7 @@ go 1.17
 
 require (
 	github.com/aws/aws-sdk-go v1.36.0
+	github.com/cenkalti/backoff/v4 v4.1.2
 	github.com/gardener/machine-controller-manager v0.40.1-0.20210913052707-0051cd1cccd0
 	github.com/onsi/ginkgo v1.16.2
 	github.com/onsi/gomega v1.11.0
