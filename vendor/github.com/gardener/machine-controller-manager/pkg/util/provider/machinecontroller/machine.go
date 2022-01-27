@@ -234,6 +234,33 @@ func (c *controller) addNodeToMachine(obj interface{}) {
 }
 
 func (c *controller) updateNodeToMachine(oldObj, newObj interface{}) {
+
+	node := newObj.(*corev1.Node)
+	if node == nil {
+		klog.Errorf("Couldn't convert to node from object")
+		return
+	}
+
+	// check for the TriggerDeletionByMCM annotation on the node object
+	// if it is present then mark the machine object for deletion
+	if value, ok := node.Annotations[machineutils.TriggerDeletionByMCM]; ok && value == "true" {
+
+		machine, err := c.getMachineFromNode(node.Name)
+		if err != nil {
+			klog.Errorf("Couldn't fetch machine %s, Error: %s", machine.Name, err)
+			return
+		}
+
+		if machine.DeletionTimestamp == nil {
+			klog.Infof("Node %s is annotated to trigger deletion by MCM.", node.Name)
+			if err := c.controlMachineClient.Machines(c.namespace).Delete(context.Background(), machine.Name, metav1.DeleteOptions{}); err != nil {
+				klog.Errorf("Machine object %s backing the node %s could not be marked for deletion.", machine.Name, node.Name)
+				return
+			}
+			klog.Infof("Machine object %s backing the node %s marked for deletion.", machine.Name, node.Name)
+		}
+	}
+
 	c.addNodeToMachine(newObj)
 }
 
@@ -302,10 +329,12 @@ func (c *controller) getMachineFromNode(nodeName string) (*v1alpha1.Machine, err
 func (c *controller) triggerCreationFlow(ctx context.Context, createMachineRequest *driver.CreateMachineRequest) (machineutils.RetryPeriod, error) {
 
 	var (
+		//Declarations
+		nodeName, providerID string
+
+		//Initializations
 		machine     = createMachineRequest.Machine
 		machineName = createMachineRequest.Machine.Name
-		nodeName    = ""
-		providerID  = ""
 	)
 
 	// we should avoid mutating Secret, since it goes all the way into the Informer's store
@@ -325,14 +354,9 @@ func (c *controller) triggerCreationFlow(ctx context.Context, createMachineReque
 			Secret:       createMachineRequest.Secret,
 		},
 	)
-	if err == nil {
-		// Found VM with required machine name
-		klog.V(2).Infof("Found VM with required machine name. Adopting existing machine: %q with ProviderID: %s", machineName, getMachineStatusResponse.ProviderID)
-		nodeName = getMachineStatusResponse.NodeName
-		providerID = getMachineStatusResponse.ProviderID
-	} else {
-		// VM with required name is not found.
 
+	if err != nil {
+		// VM with required name is not found.
 		machineErr, ok := status.FromError(err)
 		if !ok {
 			// Error occurred with decoding machine error status, abort with retry.
@@ -359,13 +383,58 @@ func (c *controller) triggerCreationFlow(ctx context.Context, createMachineReque
 
 				nodeName = createMachineResponse.NodeName
 				providerID = createMachineResponse.ProviderID
+
+				// Creation was successful
+				klog.V(2).Infof("Created new VM for machine: %q with ProviderID: %q and backing node: %q", machine.Name, providerID, getNodeName(machine))
+
+				//if a stale node obj exists by the same nodeName
+				if _, err := c.nodeLister.Get(nodeName); err == nil {
+					//mark the machine obj as `Failed`
+					klog.Errorf("Stale node obj with name %q for machine %q has been found. Hence marking the created VM for deletion to trigger a new machine creation.", nodeName, machine.Name)
+
+					deleteMachineRequest := &driver.DeleteMachineRequest{
+						Machine: &v1alpha1.Machine{
+							ObjectMeta: machine.ObjectMeta,
+							Spec: v1alpha1.MachineSpec{
+								ProviderID: providerID,
+							},
+						},
+						MachineClass: createMachineRequest.MachineClass,
+						Secret:       secretCopy,
+					}
+
+					_, err := c.driver.DeleteMachine(ctx, deleteMachineRequest)
+
+					if err != nil {
+						klog.V(2).Infof("VM deletion in context of stale node obj failed for machine %q, will be retried. err=%q", machine.Name, err.Error())
+					} else {
+						klog.V(2).Infof("VM successfully deleted in context of stale node obj for machine %q", machine.Name)
+					}
+
+					//machine obj marked Failed for double surity
+					c.machineStatusUpdate(
+						ctx,
+						machine,
+						v1alpha1.LastOperation{
+							Description:    "VM using old node obj",
+							State:          v1alpha1.MachineStateFailed,
+							Type:           v1alpha1.MachineOperationCreate,
+							LastUpdateTime: metav1.Now(),
+						},
+						v1alpha1.CurrentStatus{
+							Phase:          v1alpha1.MachineFailed,
+							LastUpdateTime: metav1.Now(),
+						},
+						machine.Status.LastKnownState,
+					)
+
+					klog.V(2).Infof("Machine %q marked Failed as VM was referring to a stale node object", machine.Name)
+					return machineutils.ShortRetry, err
+				}
 			} else {
+				//if node label present that means there must be a backing VM ,without need of GetMachineStatus() call
 				nodeName = machine.Labels["node"]
 			}
-
-			// Creation was successful
-			klog.V(2).Infof("Created new VM for machine: %q with ProviderID: %q and backing node: %q", machine.Name, providerID, getNodeName(machine))
-			break
 
 		case codes.Unknown, codes.DeadlineExceeded, codes.Aborted, codes.Unavailable:
 			// GetMachineStatus() returned with one of the above error codes.
@@ -407,7 +476,14 @@ func (c *controller) triggerCreationFlow(ctx context.Context, createMachineReque
 
 			return machineutils.MediumRetry, err
 		}
+	} else {
+		if machine.Labels["node"] == "" || machine.Spec.ProviderID == "" {
+			klog.V(2).Infof("Found VM with required machine name. Adopting existing machine: %q with ProviderID: %s", machineName, getMachineStatusResponse.ProviderID)
+		}
+		nodeName = getMachineStatusResponse.NodeName
+		providerID = getMachineStatusResponse.ProviderID
 	}
+
 	_, machineNodeLabelPresent := createMachineRequest.Machine.Labels["node"]
 	_, machinePriorityAnnotationPresent := createMachineRequest.Machine.Annotations[machineutils.MachinePriority]
 

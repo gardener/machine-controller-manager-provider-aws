@@ -67,7 +67,7 @@ github.com/aws/aws-sdk-go/service/sts/stsiface
 ## explicit; go 1.11
 github.com/beorn7/perks/quantile
 # github.com/cenkalti/backoff/v4 v4.1.2
-## explicit
+## explicit; go 1.13
 github.com/cenkalti/backoff/v4
 # github.com/cespare/xxhash/v2 v2.1.1
 ## explicit; go 1.11
@@ -89,8 +89,8 @@ github.com/evanphx/json-patch
 # github.com/fsnotify/fsnotify v1.4.9
 ## explicit; go 1.13
 github.com/fsnotify/fsnotify
-# github.com/gardener/machine-controller-manager v0.40.1-0.20210913052707-0051cd1cccd0
-## explicit; go 1.16
+# github.com/gardener/machine-controller-manager v0.43.0
+## explicit; go 1.17
 github.com/gardener/machine-controller-manager/pkg/apis/machine
 github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1
 github.com/gardener/machine-controller-manager/pkg/apis/machine/validation
@@ -789,8 +789,8 @@ k8s.io/client-go/util/homedir
 k8s.io/client-go/util/keyutil
 k8s.io/client-go/util/retry
 k8s.io/client-go/util/workqueue
-# k8s.io/cluster-bootstrap v0.0.0-20190918163108-da9fdfce26bb
-## explicit; go 1.12
+# k8s.io/cluster-bootstrap v0.20.6
+## explicit; go 1.15
 k8s.io/cluster-bootstrap/token/api
 k8s.io/cluster-bootstrap/token/util
 # k8s.io/component-base v0.20.6

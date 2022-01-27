@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/aws/aws-sdk-go v1.36.0
 	github.com/cenkalti/backoff/v4 v4.1.2
-	github.com/gardener/machine-controller-manager v0.40.1-0.20210913052707-0051cd1cccd0
+	github.com/gardener/machine-controller-manager v0.43.0
 	github.com/onsi/ginkgo v1.16.2
 	github.com/onsi/gomega v1.11.0
 	github.com/spf13/pflag v1.0.5
@@ -73,7 +73,7 @@ require (
 	k8s.io/apiextensions-apiserver v0.20.6 // indirect
 	k8s.io/apiserver v0.20.6 // indirect
 	k8s.io/client-go v0.20.6 // indirect
-	k8s.io/cluster-bootstrap v0.0.0-20190918163108-da9fdfce26bb // indirect
+	k8s.io/cluster-bootstrap v0.20.6 // indirect
 	k8s.io/klog/v2 v2.4.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20201113171705-d219536bb9fd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.0.3 // indirect
