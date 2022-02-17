@@ -801,9 +801,6 @@ k8s.io/component-base/logs
 k8s.io/component-base/logs/datapol
 k8s.io/component-base/logs/json
 k8s.io/component-base/logs/sanitization
-# k8s.io/klog v0.4.0
-## explicit; go 1.12
-k8s.io/klog
 # k8s.io/klog/v2 v2.4.0
 ## explicit; go 1.13
 k8s.io/klog/v2
