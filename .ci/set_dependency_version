@@ -31,7 +31,7 @@ echo -n "${DEPENDENCY_VERSION}" > "${MCM_FILEPATH}"
 echo "set dependency-version of ${DEPENDENCY_NAME} to ${DEPENDENCY_VERSION}"
 
 cd ${MAIN_REPO_DIR}
-old_version=$(cat go.mod | grep github.com/gardener/machine-controller-manager | xargs)
+old_version=$(cat go.mod | grep "github.com/gardener/machine-controller-manager v" | xargs)
 new_version="github.com/gardener/machine-controller-manager ${DEPENDENCY_VERSION}"
 sed -i -- 's#'"${old_version}"'#'"${new_version}"'#g' go.mod
 
