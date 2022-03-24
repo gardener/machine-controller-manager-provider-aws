@@ -370,9 +370,9 @@ func (c *controller) triggerCreationFlow(ctx context.Context, createMachineReque
 			// Either VM is not found
 			// or GetMachineStatus() call is not implemented
 			// In this case, invoke a CreateMachine() call
-			klog.V(2).Infof("Creating a VM for machine %q, please wait!", machine.Name)
 			if _, present := machine.Labels["node"]; !present {
 				// If node label is not present
+				klog.V(2).Infof("Creating a VM for machine %q, please wait!", machine.Name)
 				klog.V(2).Infof("The machine creation is triggered with timeout of %s", c.getEffectiveCreationTimeout(createMachineRequest.Machine).Duration)
 				createMachineResponse, err := c.driver.CreateMachine(ctx, createMachineRequest)
 				if err != nil {
@@ -388,6 +388,8 @@ func (c *controller) triggerCreationFlow(ctx context.Context, createMachineReque
 				klog.V(2).Infof("Created new VM for machine: %q with ProviderID: %q and backing node: %q", machine.Name, providerID, getNodeName(machine))
 
 				//if a stale node obj exists by the same nodeName
+				// TODO: there is a case with Azure where VM reporting from infra is delayed but node joins
+				// in this case we would treat it as a stale node and trigger machine deletion.
 				if _, err := c.nodeLister.Get(nodeName); err == nil {
 					//mark the machine obj as `Failed`
 					klog.Errorf("Stale node obj with name %q for machine %q has been found. Hence marking the created VM for deletion to trigger a new machine creation.", nodeName, machine.Name)
