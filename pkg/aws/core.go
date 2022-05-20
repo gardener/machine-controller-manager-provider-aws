@@ -42,8 +42,9 @@ type Driver struct {
 }
 
 const (
-	resourceTypeInstance = "instance"
-	resourceTypeVolume   = "volume"
+	resourceTypeInstance         = "instance"
+	resourceTypeVolume           = "volume"
+	resourceTypeNetworkInterface = "network-interface"
 	// awsEBSDriverName is the name of the CSI driver for EBS
 	awsEBSDriverName = "ebs.csi.aws.com"
 	awsPlacement     = "machine.sapcloud.io/awsPlacement"
@@ -121,6 +122,11 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
+	tagNetworkInterface, err := d.generateTags(providerSpec.Tags, resourceTypeNetworkInterface, req.Machine.Name)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
 	var networkInterfaceSpecs []*ec2.InstanceNetworkInterfaceSpecification
 	for i, netIf := range providerSpec.NetworkInterfaces {
 		spec := &ec2.InstanceNetworkInterfaceSpecification{
@@ -157,7 +163,7 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 		KeyName:             aws.String(providerSpec.KeyName),
 		IamInstanceProfile:  iam,
 		NetworkInterfaces:   networkInterfaceSpecs,
-		TagSpecifications:   []*ec2.TagSpecification{tagInstance, tagVolume},
+		TagSpecifications:   []*ec2.TagSpecification{tagInstance, tagVolume, tagNetworkInterface},
 	}
 
 	// Set the AWS Capacity Reservation target. Using an 'open' preference means that if the reservation is not found, then
