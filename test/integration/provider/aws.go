@@ -97,14 +97,10 @@ func getOrphanedInstances(tagName string, tagValue string, machineClass *v1alpha
 	if err != nil {
 		return instancesID, err
 	}
-
 	if len(result.Reservations) != 0 {
 		for _, reservation := range result.Reservations {
 			for _, instance := range reservation.Instances {
-				// terminate the instance
-				if err = TerminateInstance(sess, *instance.InstanceId); err != nil {
-					instancesID = append(instancesID, *instance.InstanceId)
-				}
+				instancesID = append(instancesID, *instance.InstanceId)
 			}
 		}
 	}
@@ -160,10 +156,7 @@ func getOrphanedDisks(tagName string, tagValue string, machineClass *v1alpha1.Ma
 	}
 
 	for _, volume := range result.Volumes {
-		// delete the volume
-		if err = DeleteVolume(sess, *volume.VolumeId); err != nil {
-			availVolID = append(availVolID, *volume.VolumeId)
-		}
+		availVolID = append(availVolID, *volume.VolumeId)
 	}
 
 	return availVolID, nil
@@ -217,4 +210,42 @@ func getOrphanedNICs(tagName string, tagValue string, machineClass *v1alpha1.Mac
 	}
 	return orphanNICs, nil
 
+}
+
+// DeleteNetworkInterface deletes the specified volume
+func DeleteNetworkInterface(ses *session.Session, networkInterfaceID string) error {
+	svc := ec2.New(ses)
+	input := &ec2.DeleteNetworkInterfaceInput{
+		NetworkInterfaceId: aws.String(networkInterfaceID),
+	}
+
+	_, err := svc.DeleteNetworkInterface(input)
+	if err != nil {
+		fmt.Printf("can't delete Network Interface .%s\n", err.Error())
+		return err
+	}
+
+	fmt.Printf("Deleted an orphan NIC %s,", networkInterfaceID)
+
+	return nil
+}
+
+func cleanOrphanResources(orphanVms []string, orphanVolumes []string, orphanNics []string, machineClass *v1alpha1.MachineClass, secretData map[string][]byte) (delOrphanVms []string, delOrphanVolumes []string, delOrphanNics []string) {
+	sess := newSession(machineClass, &v1.Secret{Data: secretData})
+	for _, instanceId := range orphanVms {
+		if err := TerminateInstance(sess, instanceId); err != nil {
+			delOrphanVms = append(delOrphanVms, instanceId)
+		}
+	}
+	for _, volumeId := range orphanVolumes {
+		if err := DeleteVolume(sess, volumeId); err != nil {
+			delOrphanVolumes = append(delOrphanVolumes, volumeId)
+		}
+	}
+	for _, networkInterfaceId := range orphanNics {
+		if err := DeleteNetworkInterface(sess, networkInterfaceId); err != nil {
+			delOrphanNics = append(delOrphanNics, networkInterfaceId)
+		}
+	}
+	return
 }
