@@ -26,18 +26,19 @@ func (r *ResourcesTrackerImpl) InitializeResourcesTracker(machineClass *v1alpha1
 		fmt.Printf("Error in initial probe of orphaned resources: %s", err.Error())
 		return err
 	}
+
+	orphanVMs, orphanVolumes, orphanNics := cleanOrphanResources(initialVMs, initialVolumes, initialNICs, r.MachineClass, r.SecretData)
 	//TODO: create a cleanup function to delete the list of orphan resources.
-	// 1. get list of orphan resources.
-	// 2. Mark them for deletion and call cleanup.
-	// 3. Print the orphan resources which got error in deletion.
-	if initialVMs != nil || initialVolumes != nil || initialMachines != nil || initialNICs != nil {
-		err := fmt.Errorf("orphan resources are available. Clean them up before proceeding with the test.\nvirtual machines: %v\ndisks: %v\nmcm machines: %v\nnics: %v", initialVMs, initialVolumes, initialMachines, initialNICs)
+	// 1. get list of orphan resources. (done)
+	// 2. Mark them for deletion and call cleanup. (done)
+	// 3. Print the orphan resources which got error in deletion. (done)
+	// check what is VM vs machines
+	if orphanVMs != nil || orphanVolumes != nil || initialMachines != nil || orphanNics != nil {
+		err := fmt.Errorf("orphan resources are available. Clean them up before proceeding with the test.\nvirtual machines: %v\ndisks: %v\nmcm machines: %v\nnics: %v", orphanVMs, orphanVolumes, initialMachines, orphanNics)
 		return err
 	}
 	return nil
 }
-
-//TODO: Probe resources shouldn't delete the orphans only list them.
 
 // probeResources will look for resources currently available and returns them
 func (r *ResourcesTrackerImpl) probeResources() ([]string, []string, []string, []string, error) {
