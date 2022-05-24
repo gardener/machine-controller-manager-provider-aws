@@ -192,7 +192,7 @@ func getOrphanedNICs(tagName string, tagValue string, machineClass *v1alpha1.Mac
 	var orphanNICs []string
 	sess := newSession(machineClass, &v1.Secret{Data: secretData})
 	svc := ec2.New(sess)
-	inputNI := &ec2.DescribeNetworkInterfacesInput{
+	inputNIC := &ec2.DescribeNetworkInterfacesInput{
 		Filters: []*ec2.Filter{
 			{
 				Name: aws.String(tagName),
@@ -208,7 +208,7 @@ func getOrphanedNICs(tagName string, tagValue string, machineClass *v1alpha1.Mac
 			},
 		},
 	}
-	resultNetworkInterface, err := svc.DescribeNetworkInterfaces(inputNI)
+	resultNetworkInterface, err := svc.DescribeNetworkInterfaces(inputNIC)
 	if err != nil {
 		return orphanNICs, err
 	}
