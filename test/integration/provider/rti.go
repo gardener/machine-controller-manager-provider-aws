@@ -40,9 +40,6 @@ func (r *ResourcesTrackerImpl) probeResources() ([]string, []string, []string, [
 	// Describe volumes attached to VM instance & delete the volumes
 	// Finally delete the VM instance
 
-	//clusterTag := "tag:kubernetes.io/cluster/" + r.ClusterName
-	//clusterTagValue := "1"
-
 	integrationTestTag := "tag:kubernetes.io/role/integration-test"
 	integrationTestTagValue := "1"
 
