@@ -40,19 +40,16 @@ func (r *ResourcesTrackerImpl) probeResources() ([]string, []string, []string, [
 	// Describe volumes attached to VM instance & delete the volumes
 	// Finally delete the VM instance
 
-	clusterTag := "tag:kubernetes.io/cluster/" + r.ClusterName
-	clusterTagValue := "1"
-
-	integrationtestTag := "tag:kubernetes.io/role/integration-test"
+	integrationTestTag := "tag:kubernetes.io/role/integration-test"
 	integrationTestTagValue := "1"
 
-	orphanVMs, err := getOrphanedInstances(integrationtestTag, integrationTestTagValue, r.MachineClass, r.SecretData)
+	orphanVMs, err := getOrphanedInstances(integrationTestTag, integrationTestTagValue, r.MachineClass, r.SecretData)
 	if err != nil {
 		return orphanVMs, nil, nil, nil, err
 	}
 
 	// Check for available volumes in cloud provider with tag/label [Status:available]
-	orphanVols, err := getOrphanedDisks(integrationtestTag, integrationTestTagValue, r.MachineClass, r.SecretData)
+	orphanVols, err := getOrphanedDisks(integrationTestTag, integrationTestTagValue, r.MachineClass, r.SecretData)
 	if err != nil {
 		return orphanVMs, orphanVols, nil, nil, err
 	}
@@ -62,7 +59,7 @@ func (r *ResourcesTrackerImpl) probeResources() ([]string, []string, []string, [
 		return orphanVMs, orphanVols, availMachines, nil, err
 	}
 
-	orphanNICs, err := getOrphanedNICs(clusterTag, clusterTagValue, r.MachineClass, r.SecretData)
+	orphanNICs, err := getOrphanedNICs(integrationTestTag, integrationTestTagValue, r.MachineClass, r.SecretData)
 
 	return orphanVMs, orphanVols, availMachines, orphanNICs, err
 
