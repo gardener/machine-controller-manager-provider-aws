@@ -79,19 +79,15 @@ func (r *ResourcesTrackerImpl) IsOrphanedResourcesAvailable() bool {
 		fmt.Printf("Error probing orphaned resources: %s", err.Error())
 		return true
 	}
-
-	if afterTestExecutionVMs != nil || afterTestExecutionAvailDisks != nil || afterTestExecutionAvailmachines != nil {
-		fmt.Printf("attempting to delete orphan resrouces... the following resources are orphaned\n")
-		fmt.Printf("Virtual Machines: %v\nVolumes: %v\nMCM Machines: %v\n", afterTestExecutionVMs, afterTestExecutionAvailDisks, afterTestExecutionAvailmachines)
+	if afterTestExecutionVMs != nil || afterTestExecutionAvailDisks != nil || afterTestExecutionAvailmachines != nil || afterTestExecutionNICs != nil {
+		fmt.Printf("The following resources are orphans ... trying to delete them \n")
+		fmt.Printf("Virtual Machines: %v\nVolumes: %v\nNICs: %v\nMCM Machines %v\n ", afterTestExecutionVMs, afterTestExecutionAvailDisks, afterTestExecutionNICs, afterTestExecutionAvailmachines)
+	}
+	orphanVMs, orphanVolumes, orphanNICs := cleanOrphanResources(afterTestExecutionVMs, afterTestExecutionAvailDisks, afterTestExecutionNICs, r.MachineClass, r.SecretData)
+	if orphanVMs != nil || orphanVolumes != nil || orphanNICs != nil || afterTestExecutionAvailmachines != nil {
+		fmt.Printf("The following resources couldn't be deleted ... \n")
+		fmt.Printf("Virtual Machines: %v\nVolumes: %v\nNICs: %v\nMCM Machines %v\n ", orphanVMs, orphanVolumes, orphanNICs, afterTestExecutionAvailmachines)
 		return true
 	}
-
-	if afterTestExecutionNICs != nil {
-		fmt.Printf("Manually delete the orphan NICs after the test!\n")
-		fmt.Printf("NICs: %v\n", afterTestExecutionNICs)
-		return true
-	}
-
 	return false
-
 }
