@@ -208,7 +208,7 @@ func (d *Driver) generateBlockDevices(blockDevices []api.AWSBlockDeviceMappingSp
 			blkDeviceMapping.Ebs.DeleteOnTermination = aws.Bool(true)
 		}
 
-		if volumeType == "io1" {
+		if disk.Ebs.Iops > 0 {
 			blkDeviceMapping.Ebs.Iops = aws.Int64(disk.Ebs.Iops)
 		}
 

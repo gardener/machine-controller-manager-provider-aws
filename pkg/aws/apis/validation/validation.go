@@ -123,10 +123,9 @@ func validateBlockDevices(blockDevices []awsapi.AWSBlockDeviceMappingSpec, fldPa
 			allErrs = append(allErrs, field.Required(idxPath.Child("ebs.volumeSize"), "Please mention a valid EBS volume size"))
 		}
 
-		if disk.Ebs.VolumeType == awsapi.VolumeTypeIO1 && disk.Ebs.Iops <= 0 {
+		if disk.Ebs.Iops < 0 || (disk.Ebs.VolumeType == awsapi.VolumeTypeIO1 && disk.Ebs.Iops == 0) {
 			allErrs = append(allErrs, field.Required(idxPath.Child("ebs.iops"), "Please mention a valid EBS volume iops"))
 		}
-
 	}
 
 	if rootPartitionCount > 1 {
