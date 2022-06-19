@@ -230,22 +230,25 @@ func DeleteNetworkInterface(ses *session.Session, networkInterfaceID string) err
 	return nil
 }
 
-func cleanOrphanResources(orphanVms []string, orphanVolumes []string, orphanNics []string, machineClass *v1alpha1.MachineClass, secretData map[string][]byte) (delOrphanVms []string, delOrphanVolumes []string, delOrphanNics []string) {
+func cleanOrphanResources(orphanVms []string, orphanVolumes []string, orphanNICs []string, machineClass *v1alpha1.MachineClass, secretData map[string][]byte) (delErrOrphanVms []string, delErrOrphanVolumes []string, delErrOrphanNICs []string) {
 	sess := newSession(machineClass, &v1.Secret{Data: secretData})
 	for _, instanceId := range orphanVms {
 		if err := TerminateInstance(sess, instanceId); err != nil {
-			delOrphanVms = append(delOrphanVms, instanceId)
+			delErrOrphanVms = append(delErrOrphanVms, instanceId)
 		}
 	}
+
 	for _, volumeId := range orphanVolumes {
 		if err := DeleteVolume(sess, volumeId); err != nil {
-			delOrphanVolumes = append(delOrphanVolumes, volumeId)
+			delErrOrphanVolumes = append(delErrOrphanVolumes, volumeId)
 		}
 	}
-	for _, networkInterfaceId := range orphanNics {
+
+	for _, networkInterfaceId := range orphanNICs {
 		if err := DeleteNetworkInterface(sess, networkInterfaceId); err != nil {
-			delOrphanNics = append(delOrphanNics, networkInterfaceId)
+			delErrOrphanNICs = append(delErrOrphanNICs, networkInterfaceId)
 		}
 	}
+
 	return
 }

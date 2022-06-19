@@ -13,8 +13,12 @@ type ResourcesTrackerImpl struct {
 	ClusterName  string
 }
 
-//InitializeResourcesTracker initializes the type ResourcesTrackerImpl variable and tries
-//to delete the orphan resources present before the actual IT runs.
+// InitializeResourcesTracker initializes the type ResourcesTrackerImpl variable and tries
+// to delete the orphan resources present before the actual IT runs.
+// create a cleanup function to delete the list of orphan resources.
+// 1. get list of orphan resources.
+// 2. Mark them for deletion and call cleanup.
+// 3. Print the orphan resources which got error in deletion.
 func (r *ResourcesTrackerImpl) InitializeResourcesTracker(machineClass *v1alpha1.MachineClass, secretData map[string][]byte, clusterName string) error {
 
 	r.MachineClass = machineClass
@@ -27,16 +31,12 @@ func (r *ResourcesTrackerImpl) InitializeResourcesTracker(machineClass *v1alpha1
 		return err
 	}
 
-	orphanVMs, orphanVolumes, orphanNics := cleanOrphanResources(initialVMs, initialVolumes, initialNICs, r.MachineClass, r.SecretData)
-	//TODO: create a cleanup function to delete the list of orphan resources.
-	// 1. get list of orphan resources. (done)
-	// 2. Mark them for deletion and call cleanup. (done)
-	// 3. Print the orphan resources which got error in deletion. (done)
-	// check what is VM vs machines
-	if orphanVMs != nil || orphanVolumes != nil || initialMachines != nil || orphanNics != nil {
-		err := fmt.Errorf("orphan resources are available. Clean them up before proceeding with the test.\nvirtual machines: %v\ndisks: %v\nmcm machines: %v\nnics: %v", orphanVMs, orphanVolumes, initialMachines, orphanNics)
+	delErrOrphanVMs, delErrOrphanVolumes, delErrOrphanNICs := cleanOrphanResources(initialVMs, initialVolumes, initialNICs, r.MachineClass, r.SecretData)
+	if delErrOrphanVMs != nil || delErrOrphanVolumes != nil || initialMachines != nil || delErrOrphanNICs != nil {
+		err := fmt.Errorf("error in cleaning the following orphan resources. Clean them up before proceeding with the test.\nvirtual machines: %v\ndisks: %v\nmcm machines: %v\nnics: %v", delErrOrphanVMs, delErrOrphanVolumes, initialMachines, delErrOrphanNICs)
 		return err
 	}
+
 	return nil
 }
 
@@ -79,15 +79,12 @@ func (r *ResourcesTrackerImpl) IsOrphanedResourcesAvailable() bool {
 		fmt.Printf("Error probing orphaned resources: %s", err.Error())
 		return true
 	}
+
 	if afterTestExecutionVMs != nil || afterTestExecutionAvailDisks != nil || afterTestExecutionAvailmachines != nil || afterTestExecutionNICs != nil {
 		fmt.Printf("The following resources are orphans ... trying to delete them \n")
 		fmt.Printf("Virtual Machines: %v\nVolumes: %v\nNICs: %v\nMCM Machines %v\n ", afterTestExecutionVMs, afterTestExecutionAvailDisks, afterTestExecutionNICs, afterTestExecutionAvailmachines)
-	}
-	orphanVMs, orphanVolumes, orphanNICs := cleanOrphanResources(afterTestExecutionVMs, afterTestExecutionAvailDisks, afterTestExecutionNICs, r.MachineClass, r.SecretData)
-	if orphanVMs != nil || orphanVolumes != nil || orphanNICs != nil || afterTestExecutionAvailmachines != nil {
-		fmt.Printf("The following resources couldn't be deleted ... \n")
-		fmt.Printf("Virtual Machines: %v\nVolumes: %v\nNICs: %v\nMCM Machines %v\n ", orphanVMs, orphanVolumes, orphanNICs, afterTestExecutionAvailmachines)
 		return true
 	}
+
 	return false
 }
