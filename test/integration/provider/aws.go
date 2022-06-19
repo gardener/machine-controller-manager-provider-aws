@@ -232,21 +232,21 @@ func DeleteNetworkInterface(ses *session.Session, networkInterfaceID string) err
 
 func cleanOrphanResources(orphanVms []string, orphanVolumes []string, orphanNICs []string, machineClass *v1alpha1.MachineClass, secretData map[string][]byte) (delErrOrphanVms []string, delErrOrphanVolumes []string, delErrOrphanNICs []string) {
 	sess := newSession(machineClass, &v1.Secret{Data: secretData})
-	for _, instanceId := range orphanVms {
-		if err := TerminateInstance(sess, instanceId); err != nil {
-			delErrOrphanVms = append(delErrOrphanVms, instanceId)
+	for _, instanceID := range orphanVms {
+		if err := TerminateInstance(sess, instanceID); err != nil {
+			delErrOrphanVms = append(delErrOrphanVms, instanceID)
 		}
 	}
 
-	for _, volumeId := range orphanVolumes {
-		if err := DeleteVolume(sess, volumeId); err != nil {
-			delErrOrphanVolumes = append(delErrOrphanVolumes, volumeId)
+	for _, volumeID := range orphanVolumes {
+		if err := DeleteVolume(sess, volumeID); err != nil {
+			delErrOrphanVolumes = append(delErrOrphanVolumes, volumeID)
 		}
 	}
 
-	for _, networkInterfaceId := range orphanNICs {
-		if err := DeleteNetworkInterface(sess, networkInterfaceId); err != nil {
-			delErrOrphanNICs = append(delErrOrphanNICs, networkInterfaceId)
+	for _, networkInterfaceID := range orphanNICs {
+		if err := DeleteNetworkInterface(sess, networkInterfaceID); err != nil {
+			delErrOrphanNICs = append(delErrOrphanNICs, networkInterfaceID)
 		}
 	}
 
