@@ -834,6 +834,91 @@ var _ = Describe("Validation", func() {
 					},
 				},
 			}),
+			Entry("EBS volume of type gp3 is missing iops field", &data{
+				setup: setup{},
+				action: action{
+					spec: &awsapi.AWSProviderSpec{
+						AMI: "ami-123456789",
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
+									VolumeSize: 50,
+									VolumeType: "gp3",
+								},
+							},
+						},
+						IAM: awsapi.AWSIAMProfileSpec{
+							Name: "test-iam",
+						},
+						Region:      "eu-west-1",
+						MachineType: "m4.large",
+						KeyName:     "test-ssh-publickey",
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
+								SecurityGroupIDs: []string{
+									"sg-00002132323",
+								},
+								SubnetID: "subnet-123456",
+							},
+						},
+						Tags: map[string]string{
+							"kubernetes.io/cluster/shoot--test": "1",
+							"kubernetes.io/role/test":           "1",
+						},
+					},
+					secret: providerSecret,
+				},
+				expect: expect{
+					errToHaveOccurred: false,
+				},
+			}),
+			Entry("Invalid EBS volume iops", &data{
+				setup: setup{},
+				action: action{
+					spec: &awsapi.AWSProviderSpec{
+						AMI: "ami-123456789",
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
+									VolumeSize: 50,
+									Iops:       -100,
+									VolumeType: "gp3",
+								},
+							},
+						},
+						IAM: awsapi.AWSIAMProfileSpec{
+							Name: "test-iam",
+						},
+						Region:      "eu-west-1",
+						MachineType: "m4.large",
+						KeyName:     "test-ssh-publickey",
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
+								SecurityGroupIDs: []string{
+									"sg-00002132323",
+								},
+								SubnetID: "subnet-123456",
+							},
+						},
+						Tags: map[string]string{
+							"kubernetes.io/cluster/shoot--test": "1",
+							"kubernetes.io/role/test":           "1",
+						},
+					},
+					secret: providerSecret,
+				},
+				expect: expect{
+					errToHaveOccurred: true,
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueRequired",
+							Field:    "providerSpec.blockDevices[0].ebs.iops",
+							BadValue: "",
+							Detail:   "Please mention a valid EBS volume iops",
+						},
+					},
+				},
+			}),
 			Entry("Network Interfaces are missing", &data{
 				setup: setup{},
 				action: action{

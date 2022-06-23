@@ -124,6 +124,25 @@ var _ = Describe("CoreUtils", func() {
 						VolumeType: "io1",
 					},
 				},
+				{
+					DeviceName: "/dev/xvdg",
+					Ebs: api.AWSEbsBlockDeviceSpec{
+						DeleteOnTermination: aws.Bool(false),
+						Encrypted:           true,
+						Iops:                1000,
+						VolumeSize:          10,
+						VolumeType:          "gp3",
+					},
+				},
+				{
+					DeviceName: "/dev/xvdg",
+					Ebs: api.AWSEbsBlockDeviceSpec{
+						DeleteOnTermination: aws.Bool(false),
+						Encrypted:           true,
+						VolumeSize:          10,
+						VolumeType:          "gp3",
+					},
+				},
 			}
 
 			rootDevice := aws.String("/dev/sda")
@@ -157,6 +176,26 @@ var _ = Describe("CoreUtils", func() {
 						VolumeSize:          aws.Int64(64),
 						Iops:                aws.Int64(100),
 						VolumeType:          aws.String("io1"),
+					},
+				},
+				{
+					DeviceName: aws.String("/dev/xvdg"),
+					Ebs: &ec2.EbsBlockDevice{
+						DeleteOnTermination: aws.Bool(false),
+						Encrypted:           aws.Bool(true),
+						VolumeSize:          aws.Int64(10),
+						Iops:                aws.Int64(1000),
+						VolumeType:          aws.String("gp3"),
+					},
+				},
+				{
+					DeviceName: aws.String("/dev/xvdg"),
+					Ebs: &ec2.EbsBlockDevice{
+						DeleteOnTermination: aws.Bool(false),
+						Encrypted:           aws.Bool(true),
+						VolumeSize:          aws.Int64(10),
+						Iops:                nil,
+						VolumeType:          aws.String("gp3"),
 					},
 				},
 			}
