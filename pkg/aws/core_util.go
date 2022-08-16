@@ -212,6 +212,11 @@ func (d *Driver) generateBlockDevices(blockDevices []api.AWSBlockDeviceMappingSp
 			blkDeviceMapping.Ebs.Iops = aws.Int64(disk.Ebs.Iops)
 		}
 
+		// adding throughput
+		if disk.Ebs.Throughput != nil {
+			blkDeviceMapping.Ebs.Throughput = disk.Ebs.Throughput
+		}
+
 		if snapshotID != nil {
 			blkDeviceMapping.Ebs.SnapshotId = snapshotID
 		}

@@ -126,6 +126,11 @@ func validateBlockDevices(blockDevices []awsapi.AWSBlockDeviceMappingSpec, fldPa
 		if disk.Ebs.Iops < 0 || (disk.Ebs.VolumeType == awsapi.VolumeTypeIO1 && disk.Ebs.Iops == 0) {
 			allErrs = append(allErrs, field.Required(idxPath.Child("ebs.iops"), "Please mention a valid EBS volume iops"))
 		}
+
+		// validate throughput
+		if disk.Ebs.Throughput != nil && *disk.Ebs.Throughput <= 0 {
+			allErrs = append(allErrs, field.Invalid(idxPath.Child("ebs.throughput"), *disk.Ebs.Throughput, "Throughput should be a positive value"))
+		}
 	}
 
 	if rootPartitionCount > 1 {
