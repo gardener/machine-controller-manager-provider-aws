@@ -132,6 +132,7 @@ var _ = Describe("CoreUtils", func() {
 						Iops:                1000,
 						VolumeSize:          10,
 						VolumeType:          "gp3",
+						Throughput:          aws.Int64(200),
 					},
 				},
 				{
@@ -185,6 +186,7 @@ var _ = Describe("CoreUtils", func() {
 						Encrypted:           aws.Bool(true),
 						VolumeSize:          aws.Int64(10),
 						Iops:                aws.Int64(1000),
+						Throughput:          aws.Int64(200),
 						VolumeType:          aws.String("gp3"),
 					},
 				},

@@ -2,6 +2,7 @@ package validation
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
 
 	awsapi "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
 	. "github.com/onsi/ginkgo"
@@ -98,6 +99,46 @@ var _ = Describe("Validation", func() {
 									VolumeSize: 50,
 									VolumeType: "io1",
 									Iops:       1000,
+								},
+							},
+						},
+						IAM: awsapi.AWSIAMProfileSpec{
+							Name: "test-iam",
+						},
+						Region:      "eu-west-1",
+						MachineType: "m4.large",
+						KeyName:     "test-ssh-publickey",
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
+								SecurityGroupIDs: []string{
+									"sg-00002132323",
+								},
+								SubnetID: "subnet-123456",
+							},
+						},
+						Tags: map[string]string{
+							"kubernetes.io/cluster/shoot--test": "1",
+							"kubernetes.io/role/test":           "1",
+						},
+					},
+					secret: providerSecret,
+				},
+				expect: expect{
+					errToHaveOccurred: false,
+				},
+			}),
+			Entry("AWS machine class with gp3 type block device", &data{
+				setup: setup{},
+				action: action{
+					spec: &awsapi.AWSProviderSpec{
+						AMI: "ami-123456789",
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
+									VolumeSize: 50,
+									VolumeType: "gp3",
+									Iops:       3500,
+									Throughput: aws.Int64(200),
 								},
 							},
 						},
@@ -834,7 +875,7 @@ var _ = Describe("Validation", func() {
 					},
 				},
 			}),
-			Entry("EBS volume of type gp3 is missing iops field", &data{
+			Entry("EBS volume of type gp3 is missing iops and throughout field", &data{
 				setup: setup{},
 				action: action{
 					spec: &awsapi.AWSProviderSpec{
@@ -915,6 +956,54 @@ var _ = Describe("Validation", func() {
 							Field:    "providerSpec.blockDevices[0].ebs.iops",
 							BadValue: "",
 							Detail:   "Please mention a valid EBS volume iops",
+						},
+					},
+				},
+			}),
+			Entry("Invalid EBS volume throughput", &data{
+				setup: setup{},
+				action: action{
+					spec: &awsapi.AWSProviderSpec{
+						AMI: "ami-123456789",
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
+									VolumeSize: 50,
+									Iops:       100,
+									Throughput: aws.Int64(-200),
+									VolumeType: "gp3",
+								},
+							},
+						},
+						IAM: awsapi.AWSIAMProfileSpec{
+							Name: "test-iam",
+						},
+						Region:      "eu-west-1",
+						MachineType: "m4.large",
+						KeyName:     "test-ssh-publickey",
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
+								SecurityGroupIDs: []string{
+									"sg-00002132323",
+								},
+								SubnetID: "subnet-123456",
+							},
+						},
+						Tags: map[string]string{
+							"kubernetes.io/cluster/shoot--test": "1",
+							"kubernetes.io/role/test":           "1",
+						},
+					},
+					secret: providerSecret,
+				},
+				expect: expect{
+					errToHaveOccurred: true,
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueInvalid",
+							Field:    "providerSpec.blockDevices[0].ebs.throughput",
+							BadValue: int64(-200),
+							Detail:   "Throughput should be a positive value",
 						},
 					},
 				},
