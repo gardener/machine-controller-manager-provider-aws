@@ -61,7 +61,7 @@ func newMachine(
 			ProviderID: fmt.Sprintf("aws:///eu-west-1/i-0123456789-%d", setMachineIndex),
 		}
 		machine.Labels = map[string]string{
-			"Node": fmt.Sprintf("ip-%d", setMachineIndex),
+			v1alpha1.NodeLabelKey: fmt.Sprintf("ip-%d", setMachineIndex),
 		}
 	}
 
