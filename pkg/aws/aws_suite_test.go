@@ -3,7 +3,9 @@ Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-    http://www.apache.org/licenses/LICENSE-2.0
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -32,7 +34,7 @@ const (
 	testNamespace = "test"
 )
 
-//params is used to pass annotations to the machine spec
+// params is used to pass annotations to the machine spec
 func newMachine(
 	setMachineIndex int, annotations map[string]string,
 ) *v1alpha1.Machine {
@@ -53,13 +55,13 @@ func newMachine(
 		},
 	}
 
-	// Don't initialize providerID and node if setMachineIndex == -1
+	// Don't initialize providerID if setMachineIndex == -1
 	if setMachineIndex != -1 {
 		machine.Spec = v1alpha1.MachineSpec{
 			ProviderID: fmt.Sprintf("aws:///eu-west-1/i-0123456789-%d", setMachineIndex),
 		}
-		machine.Status = v1alpha1.MachineStatus{
-			Node: fmt.Sprintf("ip-%d", setMachineIndex),
+		machine.Labels = map[string]string{
+			v1alpha1.NodeLabelKey: fmt.Sprintf("ip-%d", setMachineIndex),
 		}
 	}
 

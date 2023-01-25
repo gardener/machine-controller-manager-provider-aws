@@ -92,8 +92,8 @@ github.com/evanphx/json-patch
 # github.com/fsnotify/fsnotify v1.4.9
 ## explicit; go 1.13
 github.com/fsnotify/fsnotify
-# github.com/gardener/machine-controller-manager v0.47.0
-## explicit; go 1.17
+# github.com/gardener/machine-controller-manager v0.48.0
+## explicit; go 1.19
 github.com/gardener/machine-controller-manager/pkg/apis/machine
 github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1
 github.com/gardener/machine-controller-manager/pkg/apis/machine/validation
