@@ -2,6 +2,7 @@ package validation
 
 import (
 	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws"
 
 	awsapi "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
@@ -392,51 +393,6 @@ var _ = Describe("Validation", func() {
 								ARN:  "bar",
 							},
 							Detail: "either IAM Name or ARN must be set",
-						},
-					},
-				},
-			}),
-			Entry("KeyName field missing", &data{
-				setup: setup{},
-				action: action{
-					spec: &awsapi.AWSProviderSpec{
-						AMI: "ami-123456789",
-						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
-							{
-								Ebs: awsapi.AWSEbsBlockDeviceSpec{
-									VolumeSize: 50,
-									VolumeType: "gp2",
-								},
-							},
-						},
-						IAM: awsapi.AWSIAMProfileSpec{
-							Name: "test-iam",
-						},
-						Region:      "eu-west-1",
-						MachineType: "m4.large",
-						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
-							{
-								SecurityGroupIDs: []string{
-									"sg-00002132323",
-								},
-								SubnetID: "subnet-123456",
-							},
-						},
-						Tags: map[string]string{
-							"kubernetes.io/cluster/shoot--test": "1",
-							"kubernetes.io/role/test":           "1",
-						},
-					},
-					secret: providerSecret,
-				},
-				expect: expect{
-					errToHaveOccurred: true,
-					errList: field.ErrorList{
-						{
-							Type:     "FieldValueRequired",
-							Field:    "providerSpec.keyName",
-							BadValue: "",
-							Detail:   "KeyName is required",
 						},
 					},
 				},

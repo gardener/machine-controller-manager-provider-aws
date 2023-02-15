@@ -160,10 +160,13 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 		MinCount:            aws.Int64(1),
 		MaxCount:            aws.Int64(1),
 		UserData:            &UserDataEnc,
-		KeyName:             aws.String(providerSpec.KeyName),
 		IamInstanceProfile:  iam,
 		NetworkInterfaces:   networkInterfaceSpecs,
 		TagSpecifications:   []*ec2.TagSpecification{tagInstance, tagVolume, tagNetworkInterface},
+	}
+
+	if len(providerSpec.KeyName) > 0 {
+		inputConfig.KeyName = aws.String(providerSpec.KeyName)
 	}
 
 	// Set the AWS Capacity Reservation target. Using an 'open' preference means that if the reservation is not found, then
@@ -240,7 +243,7 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 	return response, nil
 }
 
-//returns Placement Object required in ec2.RunInstancesInput
+// returns Placement Object required in ec2.RunInstancesInput
 func getPlacementObj(req *driver.CreateMachineRequest) (*ec2.Placement, error) {
 	placementobj := &ec2.Placement{}
 
