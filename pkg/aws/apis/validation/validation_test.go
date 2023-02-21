@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"k8s.io/utils/pointer"
 
 	awsapi "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
 	. "github.com/onsi/ginkgo"
@@ -69,7 +70,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     "test-ssh-publickey",
+						KeyName:     pointer.String("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -108,7 +109,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     "test-ssh-publickey",
+						KeyName:     pointer.String("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -148,7 +149,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     "test-ssh-publickey",
+						KeyName:     pointer.String("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -185,7 +186,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     "test-ssh-publickey",
+						KeyName:     pointer.String("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -230,7 +231,7 @@ var _ = Describe("Validation", func() {
 							Name: "test-iam",
 						},
 						MachineType: "m4.large",
-						KeyName:     "test-ssh-publickey",
+						KeyName:     pointer.String("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -275,7 +276,7 @@ var _ = Describe("Validation", func() {
 							Name: "test-iam",
 						},
 						Region:  "eu-west-1",
-						KeyName: "test-ssh-publickey",
+						KeyName: pointer.String("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -319,7 +320,7 @@ var _ = Describe("Validation", func() {
 						IAM:         awsapi.AWSIAMProfileSpec{},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     "test-ssh-publickey",
+						KeyName:     pointer.String("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -366,7 +367,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     "test-ssh-publickey",
+						KeyName:     pointer.String("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -415,7 +416,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     "test-ssh-publickey",
+						KeyName:     pointer.String("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -460,7 +461,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     "test-ssh-publickey",
+						KeyName:     pointer.String("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -513,7 +514,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     "test-ssh-publickey",
+						KeyName:     pointer.String("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -559,7 +560,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     "test-ssh-publickey",
+						KeyName:     pointer.String("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -620,7 +621,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     "test-ssh-publickey",
+						KeyName:     pointer.String("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -666,7 +667,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     "test-ssh-publickey",
+						KeyName:     pointer.String("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -711,7 +712,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     "test-ssh-publickey",
+						KeyName:     pointer.String("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -757,7 +758,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     "test-ssh-publickey",
+						KeyName:     pointer.String("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -803,7 +804,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     "test-ssh-publickey",
+						KeyName:     pointer.String("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -849,7 +850,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     "test-ssh-publickey",
+						KeyName:     pointer.String("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -888,7 +889,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     "test-ssh-publickey",
+						KeyName:     pointer.String("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -936,7 +937,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     "test-ssh-publickey",
+						KeyName:     pointer.String("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -982,7 +983,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     "test-ssh-publickey",
+						KeyName:     pointer.String("test-ssh-publickey"),
 						Tags: map[string]string{
 							"kubernetes.io/cluster/shoot--test": "1",
 							"kubernetes.io/role/test":           "1",
@@ -1020,7 +1021,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     "test-ssh-publickey",
+						KeyName:     pointer.String("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -1065,7 +1066,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     "test-ssh-publickey",
+						KeyName:     pointer.String("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SubnetID: "subnet-123456",
@@ -1108,7 +1109,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     "test-ssh-publickey",
+						KeyName:     pointer.String("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -1159,7 +1160,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     "test-ssh-publickey",
+						KeyName:     pointer.String("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -1210,7 +1211,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     "test-ssh-publickey",
+						KeyName:     pointer.String("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -1254,7 +1255,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     "test-ssh-publickey",
+						KeyName:     pointer.String("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -1305,7 +1306,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     "test-ssh-publickey",
+						KeyName:     pointer.String("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{

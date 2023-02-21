@@ -165,8 +165,8 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 		TagSpecifications:   []*ec2.TagSpecification{tagInstance, tagVolume, tagNetworkInterface},
 	}
 
-	if len(providerSpec.KeyName) > 0 {
-		inputConfig.KeyName = aws.String(providerSpec.KeyName)
+	if providerSpec.KeyName != nil && len(*providerSpec.KeyName) > 0 {
+		inputConfig.KeyName = aws.String(*providerSpec.KeyName)
 	}
 
 	// Set the AWS Capacity Reservation target. Using an 'open' preference means that if the reservation is not found, then
