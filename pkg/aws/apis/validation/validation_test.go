@@ -1367,7 +1367,7 @@ var _ = Describe("Validation", func() {
 							"kubernetes.io/cluster/shoot--test": "1",
 							"kubernetes.io/role/test":           "1",
 						},
-						InstanceMetadata: &awsapi.InstanceMetadata{
+						InstanceMetadataOptions: &awsapi.InstanceMetadataOptions{
 							HttpPutResponseHopLimit: pointer.Int64(32),
 						},
 					},
@@ -1410,7 +1410,7 @@ var _ = Describe("Validation", func() {
 							"kubernetes.io/cluster/shoot--test": "1",
 							"kubernetes.io/role/test":           "1",
 						},
-						InstanceMetadata: &awsapi.InstanceMetadata{
+						InstanceMetadataOptions: &awsapi.InstanceMetadataOptions{
 							HttpPutResponseHopLimit: pointer.Int64(72),
 						},
 					},

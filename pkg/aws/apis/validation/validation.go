@@ -59,7 +59,7 @@ func ValidateAWSProviderSpec(spec *awsapi.AWSProviderSpec, secret *corev1.Secret
 	allErrs = append(allErrs, validateNetworkInterfaces(spec.NetworkInterfaces, fldPath.Child("networkInterfaces"))...)
 	allErrs = append(allErrs, ValidateSecret(secret, field.NewPath("secretRef"))...)
 	allErrs = append(allErrs, validateSpecTags(spec.Tags, fldPath.Child("tags"))...)
-	allErrs = append(allErrs, validateInstanceMetadata(spec.InstanceMetadata, fldPath.Child("instanceMetadata"))...)
+	allErrs = append(allErrs, validateInstanceMetadata(spec.InstanceMetadataOptions, fldPath.Child("instanceMetadata"))...)
 
 	return allErrs
 }
@@ -190,7 +190,7 @@ func validateNetworkInterfaces(networkInterfaces []awsapi.AWSNetworkInterfaceSpe
 	return allErrs
 }
 
-func validateInstanceMetadata(metadata *awsapi.InstanceMetadata, fldPath *field.Path) field.ErrorList {
+func validateInstanceMetadata(metadata *awsapi.InstanceMetadataOptions, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if metadata == nil {
 		return allErrs
