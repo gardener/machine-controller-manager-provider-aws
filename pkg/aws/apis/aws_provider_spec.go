@@ -103,6 +103,8 @@ type AWSProviderSpec struct {
 
 	// Tags to be specified on the EC2 instances
 	Tags map[string]string `json:"tags,omitempty"`
+
+	InstanceMetadata *InstanceMetadata `json:"instanceMetadata,omitempty"`
 }
 
 // AWSBlockDeviceMappingSpec stores info about AWS block device mappings
@@ -239,4 +241,15 @@ type AWSNetworkInterfaceSpec struct {
 	// The ID of the subnet associated with the network string. Applies only if
 	// creating a network interface when launching an machine.
 	SubnetID string `json:"subnetID,omitempty"`
+}
+
+type InstanceMetadata struct {
+	// HttpEndpoint controls whether InstanceMetadata API is enabled. By default, access to the metadata API is enabled.
+	// Only valid value is "disabled".
+	HttpEndpoint *string `json:"httpEndpoint,omitempty"`
+	// HttpPutResponseHopLimit  is the response hop limit for instance metadata requests. It controls which metadata API
+	// version is enabled.
+	HttpPutResponseHopLimit *int64 `json:",omitempty"`
+	// HttpTokens enforces the use of metadata v2 API. Only valid value is "required".
+	HttpTokens *string `json:"httpTokens,omitempty"`
 }

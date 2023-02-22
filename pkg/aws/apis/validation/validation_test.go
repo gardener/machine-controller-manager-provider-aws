@@ -4,14 +4,14 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"k8s.io/utils/pointer"
-
-	awsapi "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/pointer"
+
+	awsapi "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
 )
 
 var _ = Describe("Validation", func() {
@@ -1333,6 +1333,99 @@ var _ = Describe("Validation", func() {
 						},
 					},
 				},
+			}),
+			Entry("AWS machine class with instanceMetadata", &data{
+				setup: setup{},
+				action: action{
+					spec: &awsapi.AWSProviderSpec{
+						AMI: "ami-123456789",
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
+									VolumeSize: 50,
+									VolumeType: "gp3",
+									Iops:       3500,
+									Throughput: aws.Int64(200),
+								},
+							},
+						},
+						IAM: awsapi.AWSIAMProfileSpec{
+							Name: "test-iam",
+						},
+						Region:      "eu-west-1",
+						MachineType: "m4.large",
+						KeyName:     "test-ssh-publickey",
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
+								SecurityGroupIDs: []string{
+									"sg-00002132323",
+								},
+								SubnetID: "subnet-123456",
+							},
+						},
+						Tags: map[string]string{
+							"kubernetes.io/cluster/shoot--test": "1",
+							"kubernetes.io/role/test":           "1",
+						},
+						InstanceMetadata: &awsapi.InstanceMetadata{
+							HttpPutResponseHopLimit: pointer.Int64(32),
+						},
+					},
+					secret: providerSecret,
+				},
+				expect: expect{
+					errToHaveOccurred: false,
+				},
+			}),
+			Entry("AWS machine class with invalid instanceMetadata.httpPutResponseHopLimit.", &data{
+				setup: setup{},
+				action: action{
+					spec: &awsapi.AWSProviderSpec{
+						AMI: "ami-123456789",
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
+									VolumeSize: 50,
+									VolumeType: "gp3",
+									Iops:       3500,
+									Throughput: aws.Int64(200),
+								},
+							},
+						},
+						IAM: awsapi.AWSIAMProfileSpec{
+							Name: "test-iam",
+						},
+						Region:      "eu-west-1",
+						MachineType: "m4.large",
+						KeyName:     "test-ssh-publickey",
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
+								SecurityGroupIDs: []string{
+									"sg-00002132323",
+								},
+								SubnetID: "subnet-123456",
+							},
+						},
+						Tags: map[string]string{
+							"kubernetes.io/cluster/shoot--test": "1",
+							"kubernetes.io/role/test":           "1",
+						},
+						InstanceMetadata: &awsapi.InstanceMetadata{
+							HttpPutResponseHopLimit: pointer.Int64(72),
+						},
+					},
+					secret: providerSecret,
+				},
+				expect: expect{
+					errToHaveOccurred: true,
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueInvalid",
+							Field:    "providerSpec.instanceMetadata.httpPutResponseHopLimit",
+							BadValue: int64(72),
+							Detail:   "Only values between 0 and 64 are accepted",
+						},
+					}},
 			}),
 		)
 	})

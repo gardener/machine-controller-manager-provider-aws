@@ -23,10 +23,11 @@ import (
 	"strconv"
 	"strings"
 
-	awsapi "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
 	corev1 "k8s.io/api/core/v1"
 	utilvalidation "k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+
+	awsapi "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
 )
 
 const nameFmt string = `[-a-z0-9]+`
@@ -58,6 +59,7 @@ func ValidateAWSProviderSpec(spec *awsapi.AWSProviderSpec, secret *corev1.Secret
 	allErrs = append(allErrs, validateNetworkInterfaces(spec.NetworkInterfaces, fldPath.Child("networkInterfaces"))...)
 	allErrs = append(allErrs, ValidateSecret(secret, field.NewPath("secretRef"))...)
 	allErrs = append(allErrs, validateSpecTags(spec.Tags, fldPath.Child("tags"))...)
+	allErrs = append(allErrs, validateInstanceMetadata(spec.InstanceMetadata, fldPath.Child("instanceMetadata"))...)
 
 	return allErrs
 }
@@ -185,6 +187,29 @@ func validateNetworkInterfaces(networkInterfaces []awsapi.AWSNetworkInterfaceSpe
 			}
 		}
 	}
+	return allErrs
+}
+
+func validateInstanceMetadata(metadata *awsapi.InstanceMetadata, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if metadata == nil {
+		return allErrs
+	}
+
+	if metadata.HttpPutResponseHopLimit != nil {
+		if *metadata.HttpPutResponseHopLimit < 0 || *metadata.HttpPutResponseHopLimit > 64 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("httpPutResponseHopLimit"), *metadata.HttpPutResponseHopLimit, "Only values between 0 and 64 are accepted"))
+		}
+
+		if metadata.HttpEndpoint != nil && *metadata.HttpEndpoint != "disabled" {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("httpEndpoint"), *metadata.HttpEndpoint, "Only 'disabled' is valid value"))
+		}
+
+		if metadata.HttpTokens != nil && *metadata.HttpTokens != "required" {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("httpTokens"), *metadata.HttpTokens, "Only 'required' is valid value"))
+		}
+	}
+
 	return allErrs
 }
 
