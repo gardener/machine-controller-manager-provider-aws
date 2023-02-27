@@ -48,7 +48,7 @@ func fillUpMachineClass(awsMachineClass *v1alpha1.AWSMachineClass, machineClass 
 		BlockDevices:      []api.AWSBlockDeviceMappingSpec{},
 		EbsOptimized:      awsMachineClass.Spec.EbsOptimized,
 		IAM:               iam,
-		KeyName:           awsMachineClass.Spec.KeyName,
+		KeyName:           &awsMachineClass.Spec.KeyName,
 		MachineType:       awsMachineClass.Spec.MachineType,
 		Monitoring:        awsMachineClass.Spec.Monitoring,
 		NetworkInterfaces: []api.AWSNetworkInterfaceSpec{},

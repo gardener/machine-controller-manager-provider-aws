@@ -59,7 +59,7 @@ var (
 	ValidVolumeTypes = []string{VolumeTypeGP2, VolumeTypeGP3, VolumeTypeIO1, VolumeTypeST1, VolumeTypeSC1, VolumeTypeStandard}
 )
 
-//AWSProviderSpec is the spec to be used while parsing the calls.
+// AWSProviderSpec is the spec to be used while parsing the calls.
 type AWSProviderSpec struct {
 	// APIVersion determines the APIversion for the provider APIs
 	APIVersion string `json:"apiVersion,omitempty"`
@@ -82,8 +82,8 @@ type AWSProviderSpec struct {
 	// MachineType contains the EC2 instance type
 	MachineType string `json:"machineType,omitempty"`
 
-	// KeyName contains the SSH keypair
-	KeyName string `json:"keyName,omitempty"`
+	// KeyName is an optional field that contains the SSH keypair
+	KeyName *string `json:"keyName,omitempty"`
 
 	// Monitoring specifies if monitoring is enabled
 	Monitoring bool `json:"monitoring,omitempty"`
