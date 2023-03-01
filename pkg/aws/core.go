@@ -157,9 +157,9 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 	var metadataOptions *ec2.InstanceMetadataOptionsRequest
 	if providerSpec.InstanceMetadataOptions != nil {
 		metadataOptions = &ec2.InstanceMetadataOptionsRequest{
-			HttpEndpoint:            providerSpec.InstanceMetadataOptions.HttpEndpoint,
-			HttpPutResponseHopLimit: providerSpec.InstanceMetadataOptions.HttpPutResponseHopLimit,
-			HttpTokens:              providerSpec.InstanceMetadataOptions.HttpTokens,
+			HttpEndpoint:            providerSpec.InstanceMetadataOptions.HTTPEndpoint,
+			HttpPutResponseHopLimit: providerSpec.InstanceMetadataOptions.HTTPPutResponseHopLimit,
+			HttpTokens:              providerSpec.InstanceMetadataOptions.HTTPTokens,
 		}
 	}
 

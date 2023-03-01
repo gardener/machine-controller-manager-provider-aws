@@ -196,18 +196,16 @@ func validateInstanceMetadata(metadata *awsapi.InstanceMetadataOptions, fldPath 
 		return allErrs
 	}
 
-	if metadata.HttpPutResponseHopLimit != nil {
-		if *metadata.HttpPutResponseHopLimit < 0 || *metadata.HttpPutResponseHopLimit > 64 {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("httpPutResponseHopLimit"), *metadata.HttpPutResponseHopLimit, "Only values between 0 and 64 are accepted"))
-		}
+	if metadata.HTTPPutResponseHopLimit != nil && (*metadata.HTTPPutResponseHopLimit < 0 || *metadata.HTTPPutResponseHopLimit > 64) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("httpPutResponseHopLimit"), *metadata.HTTPPutResponseHopLimit, "Only values between 0 and 64 are accepted"))
+	}
 
-		if metadata.HttpEndpoint != nil && *metadata.HttpEndpoint != "disabled" {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("httpEndpoint"), *metadata.HttpEndpoint, "Only 'disabled' is valid value"))
-		}
+	if metadata.HTTPEndpoint != nil {
+		allErrs = append(allErrs, validateStringValues(fldPath.Child("httpEndpoint"), *metadata.HTTPEndpoint, []string{awsapi.HTTPEndpointDisabled, awsapi.HTTPEndpointEnabled})...)
+	}
 
-		if metadata.HttpTokens != nil && *metadata.HttpTokens != "required" {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("httpTokens"), *metadata.HttpTokens, "Only 'required' is valid value"))
-		}
+	if metadata.HTTPTokens != nil {
+		allErrs = append(allErrs, validateStringValues(fldPath.Child("httpEndpoint"), *metadata.HTTPTokens, []string{awsapi.HTTPTokensRequired, awsapi.HTTPTokensOptional})...)
 	}
 
 	return allErrs
@@ -243,4 +241,12 @@ func contains(arr []string, checkValue string) bool {
 		}
 	}
 	return false
+}
+
+func validateStringValues(fld *field.Path, s string, accepted []string) field.ErrorList {
+	if contains(accepted, s) {
+		return field.ErrorList{}
+	}
+
+	return field.ErrorList{field.Invalid(fld, s, fmt.Sprintf("Accepted values: %v", accepted))}
 }

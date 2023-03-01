@@ -1368,7 +1368,7 @@ var _ = Describe("Validation", func() {
 							"kubernetes.io/role/test":           "1",
 						},
 						InstanceMetadataOptions: &awsapi.InstanceMetadataOptions{
-							HttpPutResponseHopLimit: pointer.Int64(32),
+							HTTPPutResponseHopLimit: pointer.Int64(32),
 						},
 					},
 					secret: providerSecret,
@@ -1411,7 +1411,7 @@ var _ = Describe("Validation", func() {
 							"kubernetes.io/role/test":           "1",
 						},
 						InstanceMetadataOptions: &awsapi.InstanceMetadataOptions{
-							HttpPutResponseHopLimit: pointer.Int64(72),
+							HTTPPutResponseHopLimit: pointer.Int64(72),
 						},
 					},
 					secret: providerSecret,
