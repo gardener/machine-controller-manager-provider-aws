@@ -1354,7 +1354,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     "test-ssh-publickey",
+						KeyName:     pointer.String("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -1397,7 +1397,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     "test-ssh-publickey",
+						KeyName:     pointer.String("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -1423,7 +1423,7 @@ var _ = Describe("Validation", func() {
 							Type:     "FieldValueInvalid",
 							Field:    "providerSpec.instanceMetadata.httpPutResponseHopLimit",
 							BadValue: int64(72),
-							Detail:   "Only values between 0 and 64 are accepted",
+							Detail:   "Only values between 0 and 64, both included, are accepted",
 						},
 					}},
 			}),

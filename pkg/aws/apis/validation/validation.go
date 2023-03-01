@@ -197,7 +197,7 @@ func validateInstanceMetadata(metadata *awsapi.InstanceMetadataOptions, fldPath 
 	}
 
 	if metadata.HTTPPutResponseHopLimit != nil && (*metadata.HTTPPutResponseHopLimit < 0 || *metadata.HTTPPutResponseHopLimit > 64) {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("httpPutResponseHopLimit"), *metadata.HTTPPutResponseHopLimit, "Only values between 0 and 64 are accepted"))
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("httpPutResponseHopLimit"), *metadata.HTTPPutResponseHopLimit, "Only values between 0 and 64, both included, are accepted"))
 	}
 
 	if metadata.HTTPEndpoint != nil {
