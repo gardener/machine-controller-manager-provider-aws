@@ -26,6 +26,7 @@ var _ = Describe("Validation", func() {
 
 	Describe("#ValidateAWSProviderSpec", func() {
 		type setup struct {
+			apply func(spec *awsapi.AWSProviderSpec)
 		}
 		type action struct {
 			spec   *awsapi.AWSProviderSpec
@@ -42,6 +43,9 @@ var _ = Describe("Validation", func() {
 		}
 		DescribeTable("##table",
 			func(data *data) {
+				if data.setup.apply != nil {
+					data.setup.apply(data.action.spec)
+				}
 				validationErr := ValidateAWSProviderSpec(data.action.spec, data.action.secret, field.NewPath("providerSpec"))
 
 				if data.expect.errToHaveOccurred {
@@ -1334,43 +1338,16 @@ var _ = Describe("Validation", func() {
 					},
 				},
 			}),
-			Entry("AWS machine class with instanceMetadata", &data{
-				setup: setup{},
-				action: action{
-					spec: &awsapi.AWSProviderSpec{
-						AMI: "ami-123456789",
-						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
-							{
-								Ebs: awsapi.AWSEbsBlockDeviceSpec{
-									VolumeSize: 50,
-									VolumeType: "gp3",
-									Iops:       3500,
-									Throughput: aws.Int64(200),
-								},
-							},
-						},
-						IAM: awsapi.AWSIAMProfileSpec{
-							Name: "test-iam",
-						},
-						Region:      "eu-west-1",
-						MachineType: "m4.large",
-						KeyName:     pointer.String("test-ssh-publickey"),
-						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
-							{
-								SecurityGroupIDs: []string{
-									"sg-00002132323",
-								},
-								SubnetID: "subnet-123456",
-							},
-						},
-						Tags: map[string]string{
-							"kubernetes.io/cluster/shoot--test": "1",
-							"kubernetes.io/role/test":           "1",
-						},
-						InstanceMetadataOptions: &awsapi.InstanceMetadataOptions{
+			Entry("AWS machine class with instanceMetadata with valid instanceMetadata.httpPutResponseHopLimit", &data{
+				setup: setup{
+					apply: func(spec *awsapi.AWSProviderSpec) {
+						spec.InstanceMetadataOptions = &awsapi.InstanceMetadataOptions{
 							HTTPPutResponseHopLimit: pointer.Int64(32),
-						},
+						}
 					},
+				},
+				action: action{
+					spec:   validAWSProviderSpec(),
 					secret: providerSecret,
 				},
 				expect: expect{
@@ -1378,42 +1355,15 @@ var _ = Describe("Validation", func() {
 				},
 			}),
 			Entry("AWS machine class with invalid instanceMetadata.httpPutResponseHopLimit.", &data{
-				setup: setup{},
-				action: action{
-					spec: &awsapi.AWSProviderSpec{
-						AMI: "ami-123456789",
-						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
-							{
-								Ebs: awsapi.AWSEbsBlockDeviceSpec{
-									VolumeSize: 50,
-									VolumeType: "gp3",
-									Iops:       3500,
-									Throughput: aws.Int64(200),
-								},
-							},
-						},
-						IAM: awsapi.AWSIAMProfileSpec{
-							Name: "test-iam",
-						},
-						Region:      "eu-west-1",
-						MachineType: "m4.large",
-						KeyName:     pointer.String("test-ssh-publickey"),
-						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
-							{
-								SecurityGroupIDs: []string{
-									"sg-00002132323",
-								},
-								SubnetID: "subnet-123456",
-							},
-						},
-						Tags: map[string]string{
-							"kubernetes.io/cluster/shoot--test": "1",
-							"kubernetes.io/role/test":           "1",
-						},
-						InstanceMetadataOptions: &awsapi.InstanceMetadataOptions{
+				setup: setup{
+					apply: func(spec *awsapi.AWSProviderSpec) {
+						spec.InstanceMetadataOptions = &awsapi.InstanceMetadataOptions{
 							HTTPPutResponseHopLimit: pointer.Int64(72),
-						},
+						}
 					},
+				},
+				action: action{
+					spec:   validAWSProviderSpec(),
 					secret: providerSecret,
 				},
 				expect: expect{
@@ -1425,8 +1375,121 @@ var _ = Describe("Validation", func() {
 							BadValue: int64(72),
 							Detail:   "Only values between 0 and 64, both included, are accepted",
 						},
-					}},
+					},
+				},
+			}),
+			Entry("AWS machine class with instanceMetadata with valid instanceMetadata.httpEndpoint", &data{
+				setup: setup{
+					apply: func(spec *awsapi.AWSProviderSpec) {
+						spec.InstanceMetadataOptions = &awsapi.InstanceMetadataOptions{
+							HTTPEndpoint: pointer.String(awsapi.HTTPEndpointDisabled),
+						}
+					},
+				},
+				action: action{
+					spec:   validAWSProviderSpec(),
+					secret: providerSecret,
+				},
+				expect: expect{
+					errToHaveOccurred: false,
+				},
+			}),
+			Entry("AWS machine class with invalid instanceMetadata.httpEndpoint", &data{
+				setup: setup{
+					apply: func(spec *awsapi.AWSProviderSpec) {
+						spec.InstanceMetadataOptions = &awsapi.InstanceMetadataOptions{
+							HTTPEndpoint: pointer.String("foobar"),
+						}
+					},
+				},
+				action: action{
+					spec:   validAWSProviderSpec(),
+					secret: providerSecret,
+				},
+				expect: expect{
+					errToHaveOccurred: true,
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueInvalid",
+							Field:    "providerSpec.instanceMetadata.httpEndpoint",
+							BadValue: "foobar",
+							Detail:   "Accepted values: [disabled enabled]",
+						},
+					},
+				},
+			}),
+			Entry("AWS machine class with instanceMetadata with valid instanceMetadata.httpTokens", &data{
+				setup: setup{
+					apply: func(spec *awsapi.AWSProviderSpec) {
+						spec.InstanceMetadataOptions = &awsapi.InstanceMetadataOptions{
+							HTTPTokens: pointer.String(awsapi.HTTPTokensRequired),
+						}
+					},
+				},
+				action: action{
+					spec:   validAWSProviderSpec(),
+					secret: providerSecret,
+				},
+				expect: expect{
+					errToHaveOccurred: false,
+				},
+			}),
+			Entry("AWS machine class with invalid instanceMetadata.httpTokens", &data{
+				setup: setup{
+					apply: func(spec *awsapi.AWSProviderSpec) {
+						spec.InstanceMetadataOptions = &awsapi.InstanceMetadataOptions{
+							HTTPTokens: pointer.String("foobar"),
+						}
+					},
+				},
+				action: action{
+					spec:   validAWSProviderSpec(),
+					secret: providerSecret,
+				},
+				expect: expect{
+					errToHaveOccurred: true,
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueInvalid",
+							Field:    "providerSpec.instanceMetadata.httpTokens",
+							BadValue: "foobar",
+							Detail:   "Accepted values: [required optional]",
+						},
+					},
+				},
 			}),
 		)
 	})
 })
+
+func validAWSProviderSpec() *awsapi.AWSProviderSpec {
+	return &awsapi.AWSProviderSpec{
+		AMI: "ami-123456789",
+		BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+			{
+				Ebs: awsapi.AWSEbsBlockDeviceSpec{
+					VolumeSize: 50,
+					VolumeType: "gp2",
+				},
+			},
+		},
+		IAM: awsapi.AWSIAMProfileSpec{
+			Name: "test-iam",
+		},
+		Region:      "eu-west-1",
+		MachineType: "m4.large",
+		KeyName:     pointer.String("test-ssh-publickey"),
+		NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+			{
+				SecurityGroupIDs: []string{
+					"sg-00002132323",
+				},
+				SubnetID: "subnet-123456",
+			},
+		},
+		Tags: map[string]string{
+			"kubernetes.io/cluster/shoot--test": "1",
+			"kubernetes.io/role/test":           "1",
+		},
+	}
+}

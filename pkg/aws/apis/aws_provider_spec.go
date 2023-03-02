@@ -104,6 +104,7 @@ type AWSProviderSpec struct {
 	// Tags to be specified on the EC2 instances
 	Tags map[string]string `json:"tags,omitempty"`
 
+	// InstanceMetadataOptions contains configuration for controlling access to the metadata API.
 	InstanceMetadataOptions *InstanceMetadataOptions `json:"instanceMetadataOptions,omitempty"`
 }
 

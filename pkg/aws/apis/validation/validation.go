@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"strings"
 
+	"golang.org/x/exp/slices"
 	corev1 "k8s.io/api/core/v1"
 	utilvalidation "k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -114,7 +115,7 @@ func validateBlockDevices(blockDevices []awsapi.AWSBlockDeviceMappingSpec, fldPa
 			deviceNames[disk.DeviceName] = 1
 		}
 
-		if !contains(awsapi.ValidVolumeTypes, disk.Ebs.VolumeType) {
+		if !slices.Contains(awsapi.ValidVolumeTypes, disk.Ebs.VolumeType) {
 			allErrs = append(allErrs, field.Required(idxPath.Child("ebs.volumeType"), fmt.Sprintf("Please mention a valid EBS volume type: %v", awsapi.ValidVolumeTypes)))
 		}
 
@@ -205,7 +206,7 @@ func validateInstanceMetadata(metadata *awsapi.InstanceMetadataOptions, fldPath 
 	}
 
 	if metadata.HTTPTokens != nil {
-		allErrs = append(allErrs, validateStringValues(fldPath.Child("httpEndpoint"), *metadata.HTTPTokens, []string{awsapi.HTTPTokensRequired, awsapi.HTTPTokensOptional})...)
+		allErrs = append(allErrs, validateStringValues(fldPath.Child("httpTokens"), *metadata.HTTPTokens, []string{awsapi.HTTPTokensRequired, awsapi.HTTPTokensOptional})...)
 	}
 
 	return allErrs
@@ -234,17 +235,8 @@ func ValidateSecret(secret *corev1.Secret, fldPath *field.Path) field.ErrorList 
 	return allErrs
 }
 
-func contains(arr []string, checkValue string) bool {
-	for _, value := range arr {
-		if value == checkValue {
-			return true
-		}
-	}
-	return false
-}
-
 func validateStringValues(fld *field.Path, s string, accepted []string) field.ErrorList {
-	if contains(accepted, s) {
+	if slices.Contains(accepted, s) {
 		return field.ErrorList{}
 	}
 
