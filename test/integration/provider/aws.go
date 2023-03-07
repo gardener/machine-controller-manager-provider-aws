@@ -26,11 +26,12 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	v1 "k8s.io/api/core/v1"
 
+	"github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	"github.com/gardener/machine-controller-manager/pkg/util/provider/driver"
+
 	providerDriver "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws"
 	api "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
 	"github.com/gardener/machine-controller-manager-provider-aws/pkg/spi"
-	v1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
-	"github.com/gardener/machine-controller-manager/pkg/util/provider/driver"
 )
 
 var _ aws.Config
@@ -180,7 +181,7 @@ func DeleteVolume(ses *session.Session, VolumeID string) error {
 	return nil
 }
 
-//getOrphanedNICs returns a list of orphaned NICs which are present
+// getOrphanedNICs returns a list of orphaned NICs which are present
 func getOrphanedNICs(tagName string, tagValue string, machineClass *v1alpha1.MachineClass, secretData map[string][]byte) ([]string, error) {
 	var orphanNICs []string
 	sess := newSession(machineClass, &v1.Secret{Data: secretData})

@@ -103,6 +103,9 @@ type AWSProviderSpec struct {
 
 	// Tags to be specified on the EC2 instances
 	Tags map[string]string `json:"tags,omitempty"`
+
+	// InstanceMetadataOptions contains configuration for controlling access to the metadata API.
+	InstanceMetadataOptions *InstanceMetadataOptions `json:"instanceMetadataOptions,omitempty"`
 }
 
 // AWSBlockDeviceMappingSpec stores info about AWS block device mappings
@@ -239,4 +242,29 @@ type AWSNetworkInterfaceSpec struct {
 	// The ID of the subnet associated with the network string. Applies only if
 	// creating a network interface when launching an machine.
 	SubnetID string `json:"subnetID,omitempty"`
+}
+
+const (
+	// HTTPTokensRequired enforces the use of tokens to access the metadata service. Effectively it enforces IMDSv2.
+	HTTPTokensRequired string = "required"
+	// HTTPTokensOptional allows the use of both IMDSv1 and IMDSv2.
+	HTTPTokensOptional string = "optional"
+)
+
+const (
+	// HTTPEndpointDisabled disables access to instance metadata endpoint.
+	HTTPEndpointDisabled string = "disabled"
+	// HTTPEndpointEnabled enables access to the instance metadata endpoint.
+	HTTPEndpointEnabled string = "enabled"
+)
+
+// InstanceMetadataOptions contains configuration for controlling access to the metadata API.
+type InstanceMetadataOptions struct {
+	// HTTPEndpoint controls whether InstanceMetadataOptions API is enabled. By default, access to the metadata API is enabled.
+	HTTPEndpoint *string `json:"httpEndpoint,omitempty"`
+	// HTTPPutResponseHopLimit  is the response hop limit for instance metadata requests. It controls which metadata API
+	// version is enabled.
+	HTTPPutResponseHopLimit *int64 `json:"httpPutResponseHopLimit,omitempty"`
+	// HTTPTokens enforces the use of metadata v2 API.
+	HTTPTokens *string `json:"httpTokens,omitempty"`
 }

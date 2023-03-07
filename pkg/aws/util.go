@@ -56,11 +56,12 @@ func (d *Driver) createSVC(secret *corev1.Secret, region string) (ec2iface.EC2AP
 
 // kubernetesVolumeIDToEBSVolumeID translates Kubernetes volume ID to EBS volume ID
 // KubernetsVolumeID forms:
-//  * aws://<zone>/<awsVolumeId>
-//  * aws:///<awsVolumeId>
-//  * <awsVolumeId>
+//   - aws://<zone>/<awsVolumeId>
+//   - aws:///<awsVolumeId>
+//   - <awsVolumeId>
+//
 // EBS Volume ID form:
-//  * vol-<alphanumberic>
+//   - vol-<alphanumberic>
 func kubernetesVolumeIDToEBSVolumeID(kubernetesID string) (string, error) {
 	// name looks like aws://availability-zone/awsVolumeId
 

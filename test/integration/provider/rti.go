@@ -6,7 +6,7 @@ import (
 	v1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 )
 
-//ResourcesTrackerImpl type keeps a note of resources which are initialized in MCM IT suite and are used in provider IT
+// ResourcesTrackerImpl type keeps a note of resources which are initialized in MCM IT suite and are used in provider IT
 type ResourcesTrackerImpl struct {
 	MachineClass *v1alpha1.MachineClass
 	SecretData   map[string][]byte
@@ -72,7 +72,7 @@ func (r *ResourcesTrackerImpl) probeResources() ([]string, []string, []string, [
 }
 
 // IsOrphanedResourcesAvailable checks whether there are any orphaned resources left.
-//If yes, then prints them and returns true. If not, then returns false
+// If yes, then prints them and returns true. If not, then returns false
 func (r *ResourcesTrackerImpl) IsOrphanedResourcesAvailable() bool {
 	afterTestExecutionVMs, afterTestExecutionAvailDisks, afterTestExecutionAvailmachines, afterTestExecutionNICs, err := r.probeResources()
 	if err != nil {

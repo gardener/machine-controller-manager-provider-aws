@@ -28,12 +28,13 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 
-	"github.com/gardener/machine-controller-manager-provider-aws/pkg/spi"
-	v1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	"github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/driver"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/codes"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/status"
 	"k8s.io/klog/v2"
+
+	"github.com/gardener/machine-controller-manager-provider-aws/pkg/spi"
 )
 
 // Driver is the driver struct for holding AWS machine information
@@ -153,6 +154,15 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 		iam.Arn = &providerSpec.IAM.ARN
 	}
 
+	var metadataOptions *ec2.InstanceMetadataOptionsRequest
+	if providerSpec.InstanceMetadataOptions != nil {
+		metadataOptions = &ec2.InstanceMetadataOptionsRequest{
+			HttpEndpoint:            providerSpec.InstanceMetadataOptions.HTTPEndpoint,
+			HttpPutResponseHopLimit: providerSpec.InstanceMetadataOptions.HTTPPutResponseHopLimit,
+			HttpTokens:              providerSpec.InstanceMetadataOptions.HTTPTokens,
+		}
+	}
+
 	inputConfig := ec2.RunInstancesInput{
 		BlockDeviceMappings: blkDeviceMappings,
 		ImageId:             aws.String(providerSpec.AMI),
@@ -163,6 +173,7 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 		IamInstanceProfile:  iam,
 		NetworkInterfaces:   networkInterfaceSpecs,
 		TagSpecifications:   []*ec2.TagSpecification{tagInstance, tagVolume, tagNetworkInterface},
+		MetadataOptions:     metadataOptions,
 	}
 
 	if providerSpec.KeyName != nil && len(*providerSpec.KeyName) > 0 {

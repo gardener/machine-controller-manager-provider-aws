@@ -23,10 +23,12 @@ import (
 	"strconv"
 	"strings"
 
-	awsapi "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
+	"golang.org/x/exp/slices"
 	corev1 "k8s.io/api/core/v1"
 	utilvalidation "k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+
+	awsapi "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
 )
 
 const nameFmt string = `[-a-z0-9]+`
@@ -58,6 +60,7 @@ func ValidateAWSProviderSpec(spec *awsapi.AWSProviderSpec, secret *corev1.Secret
 	allErrs = append(allErrs, validateNetworkInterfaces(spec.NetworkInterfaces, fldPath.Child("networkInterfaces"))...)
 	allErrs = append(allErrs, ValidateSecret(secret, field.NewPath("secretRef"))...)
 	allErrs = append(allErrs, validateSpecTags(spec.Tags, fldPath.Child("tags"))...)
+	allErrs = append(allErrs, validateInstanceMetadata(spec.InstanceMetadataOptions, fldPath.Child("instanceMetadata"))...)
 
 	return allErrs
 }
@@ -112,7 +115,7 @@ func validateBlockDevices(blockDevices []awsapi.AWSBlockDeviceMappingSpec, fldPa
 			deviceNames[disk.DeviceName] = 1
 		}
 
-		if !contains(awsapi.ValidVolumeTypes, disk.Ebs.VolumeType) {
+		if !slices.Contains(awsapi.ValidVolumeTypes, disk.Ebs.VolumeType) {
 			allErrs = append(allErrs, field.Required(idxPath.Child("ebs.volumeType"), fmt.Sprintf("Please mention a valid EBS volume type: %v", awsapi.ValidVolumeTypes)))
 		}
 
@@ -188,6 +191,27 @@ func validateNetworkInterfaces(networkInterfaces []awsapi.AWSNetworkInterfaceSpe
 	return allErrs
 }
 
+func validateInstanceMetadata(metadata *awsapi.InstanceMetadataOptions, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if metadata == nil {
+		return allErrs
+	}
+
+	if metadata.HTTPPutResponseHopLimit != nil && (*metadata.HTTPPutResponseHopLimit < 0 || *metadata.HTTPPutResponseHopLimit > 64) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("httpPutResponseHopLimit"), *metadata.HTTPPutResponseHopLimit, "Only values between 0 and 64, both included, are accepted"))
+	}
+
+	if metadata.HTTPEndpoint != nil {
+		allErrs = append(allErrs, validateStringValues(fldPath.Child("httpEndpoint"), *metadata.HTTPEndpoint, []string{awsapi.HTTPEndpointDisabled, awsapi.HTTPEndpointEnabled})...)
+	}
+
+	if metadata.HTTPTokens != nil {
+		allErrs = append(allErrs, validateStringValues(fldPath.Child("httpTokens"), *metadata.HTTPTokens, []string{awsapi.HTTPTokensRequired, awsapi.HTTPTokensOptional})...)
+	}
+
+	return allErrs
+}
+
 // ValidateSecret makes sure that the supplied secrets contains the required fields
 func ValidateSecret(secret *corev1.Secret, fldPath *field.Path) field.ErrorList {
 	var (
@@ -211,11 +235,10 @@ func ValidateSecret(secret *corev1.Secret, fldPath *field.Path) field.ErrorList 
 	return allErrs
 }
 
-func contains(arr []string, checkValue string) bool {
-	for _, value := range arr {
-		if value == checkValue {
-			return true
-		}
+func validateStringValues(fld *field.Path, s string, accepted []string) field.ErrorList {
+	if slices.Contains(accepted, s) {
+		return field.ErrorList{}
 	}
-	return false
+
+	return field.ErrorList{field.Invalid(fld, s, fmt.Sprintf("Accepted values: %v", accepted))}
 }
