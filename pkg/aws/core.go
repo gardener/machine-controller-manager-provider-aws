@@ -185,14 +185,12 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 	if providerSpec.CapacityReservationTarget != nil {
 		if providerSpec.CapacityReservationTarget.CapacityReservationResourceGroupArn != nil {
 			inputConfig.CapacityReservationSpecification = &ec2.CapacityReservationSpecification{
-				CapacityReservationPreference: aws.String("open"),
 				CapacityReservationTarget: &ec2.CapacityReservationTarget{
 					CapacityReservationResourceGroupArn: providerSpec.CapacityReservationTarget.CapacityReservationResourceGroupArn,
 				},
 			}
 		} else if providerSpec.CapacityReservationTarget.CapacityReservationID != nil {
 			inputConfig.CapacityReservationSpecification = &ec2.CapacityReservationSpecification{
-				CapacityReservationPreference: aws.String("open"),
 				CapacityReservationTarget: &ec2.CapacityReservationTarget{
 					CapacityReservationId: providerSpec.CapacityReservationTarget.CapacityReservationID,
 				},
