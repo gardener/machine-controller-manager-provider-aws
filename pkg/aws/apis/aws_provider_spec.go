@@ -138,6 +138,9 @@ type AWSBlockDeviceMappingSpec struct {
 // indirectly using an AWS Resource Group
 type AWSCapacityReservationTargetSpec struct {
 
+	// Indicates the instance's Capacity Reservation preferences (allowed values are 'open' or 'none')
+	CapacityReservationPreference *string `json:"capacityReservationPreference,omitempty"`
+
 	// The ID of the Capacity Reservation in which to run the instance.
 	CapacityReservationID *string `json:"capacityReservationId,omitempty"`
 
