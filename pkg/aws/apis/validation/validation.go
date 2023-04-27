@@ -155,7 +155,11 @@ func validateCapacityReservations(capacityReservation *awsapi.AWSCapacityReserva
 	)
 
 	if capacityReservation != nil {
-		if capacityReservation.CapacityReservationID != nil && capacityReservation.CapacityReservationResourceGroupArn != nil {
+		if capacityReservation.CapacityReservationPreference != nil {
+			if capacityReservation.CapacityReservationID != nil || capacityReservation.CapacityReservationResourceGroupArn != nil {
+				allErrs = append(allErrs, field.Required(fldPath, "CapacityReservationPreference cannot be set when also providing a CapacityReservationID or CapacityReservationResourceGroupArn"))
+			}
+		} else if capacityReservation.CapacityReservationID != nil && capacityReservation.CapacityReservationResourceGroupArn != nil {
 			allErrs = append(allErrs, field.Required(fldPath, "capacityReservationResourceGroupArn or capacityReservationId are optional but only one should be used"))
 		}
 	}

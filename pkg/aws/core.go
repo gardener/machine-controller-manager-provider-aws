@@ -183,15 +183,12 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 	// Set the AWS Capacity Reservation target. Using an 'open' preference means that if the reservation is not found, then
 	// instances are launched with regular on-demand capacity.
 	if providerSpec.CapacityReservationTarget != nil {
-		inputConfig.CapacityReservationSpecification = &ec2.CapacityReservationSpecification{}
-		if providerSpec.CapacityReservationTarget.CapacityReservationPreference != nil {
-			inputConfig.CapacityReservationSpecification.CapacityReservationPreference = providerSpec.CapacityReservationTarget.CapacityReservationPreference
-
-		} else if providerSpec.CapacityReservationTarget.CapacityReservationResourceGroupArn != nil {
-			inputConfig.CapacityReservationSpecification.CapacityReservationTarget.CapacityReservationResourceGroupArn = providerSpec.CapacityReservationTarget.CapacityReservationResourceGroupArn
-
-		} else if providerSpec.CapacityReservationTarget.CapacityReservationID != nil {
-			inputConfig.CapacityReservationSpecification.CapacityReservationTarget.CapacityReservationId = providerSpec.CapacityReservationTarget.CapacityReservationID
+		inputConfig.CapacityReservationSpecification = &ec2.CapacityReservationSpecification{
+			CapacityReservationPreference: providerSpec.CapacityReservationTarget.CapacityReservationPreference,
+			CapacityReservationTarget: &ec2.CapacityReservationTarget{
+				CapacityReservationId:               providerSpec.CapacityReservationTarget.CapacityReservationID,
+				CapacityReservationResourceGroupArn: providerSpec.CapacityReservationTarget.CapacityReservationResourceGroupArn,
+			},
 		}
 	}
 
