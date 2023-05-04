@@ -17,10 +17,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/gardener/machine-controller-manager-provider-aws/pkg/mockclient"
-	v1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/driver"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -28,7 +26,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 const (
@@ -1387,164 +1384,4 @@ var _ = Describe("MachineServer", func() {
 			}),
 		)
 	})
-
-	Describe("#GenerateMachineClassForMigration", func() {
-		type setup struct {
-		}
-		type action struct {
-			generateMachineClassForMigrationRequest *driver.GenerateMachineClassForMigrationRequest
-		}
-		type expect struct {
-			machineClass *v1alpha1.MachineClass
-		}
-		type data struct {
-			setup  setup
-			action action
-			expect expect
-		}
-		DescribeTable("##table",
-			func(data *data) {
-				mockPluginSPIImpl := &mockclient.MockPluginSPIImpl{FakeInstances: make([]ec2.Instance, 0)}
-				ms := NewAWSDriver(mockPluginSPIImpl)
-				ctx := context.Background()
-
-				_, _ = ms.GenerateMachineClassForMigration(
-					ctx,
-					data.action.generateMachineClassForMigrationRequest,
-				)
-
-				Expect(data.action.generateMachineClassForMigrationRequest.MachineClass).To(Equal(data.expect.machineClass))
-			},
-			Entry("Simple migration request with all fields set", &data{
-				action: action{
-					generateMachineClassForMigrationRequest: &driver.GenerateMachineClassForMigrationRequest{
-						ProviderSpecificMachineClass: &v1alpha1.AWSMachineClass{
-							ObjectMeta: v1.ObjectMeta{
-								Name: "test-mc",
-								Labels: map[string]string{
-									"key1": "value1",
-									"key2": "value2",
-								},
-								Annotations: map[string]string{
-									"key1": "value1",
-									"key2": "value2",
-								},
-								Finalizers: []string{
-									"mcm/finalizer",
-								},
-							},
-							TypeMeta: v1.TypeMeta{},
-							Spec: v1alpha1.AWSMachineClassSpec{
-								AMI: "ami-123",
-								BlockDevices: []v1alpha1.AWSBlockDeviceMappingSpec{
-									{
-										DeviceName: "bd-1",
-										Ebs: v1alpha1.AWSEbsBlockDeviceSpec{
-											DeleteOnTermination: aws.Bool(true),
-											Encrypted:           false,
-											Iops:                50,
-											KmsKeyID:            aws.String("kms-123"),
-											SnapshotID:          aws.String("snapid-123"),
-											VolumeSize:          50,
-											VolumeType:          "ebs",
-										},
-										NoDevice:    "bd-1",
-										VirtualName: "bd-1",
-									},
-									{
-										DeviceName: "bd-2",
-										Ebs: v1alpha1.AWSEbsBlockDeviceSpec{
-											DeleteOnTermination: aws.Bool(true),
-											Encrypted:           false,
-											Iops:                50,
-											KmsKeyID:            aws.String("kms-123"),
-											SnapshotID:          aws.String("snapid-123"),
-											VolumeSize:          50,
-											VolumeType:          "ebs",
-										},
-										NoDevice:    "bd-2",
-										VirtualName: "bd-2",
-									},
-								},
-								CredentialsSecretRef: &corev1.SecretReference{
-									Name:      "test-credentials",
-									Namespace: "test-namespace",
-								},
-								EbsOptimized: true,
-								IAM: v1alpha1.AWSIAMProfileSpec{
-									ARN:  "arn-123",
-									Name: "name-123",
-								},
-								MachineType: "x-large",
-								KeyName:     "keyname-123",
-								Monitoring:  false,
-								NetworkInterfaces: []v1alpha1.AWSNetworkInterfaceSpec{
-									{
-										AssociatePublicIPAddress: aws.Bool(false),
-										DeleteOnTermination:      aws.Bool(true),
-										Description:              aws.String("description-123"),
-										SecurityGroupIDs: []string{
-											"sg-1",
-											"sg-2",
-										},
-										SubnetID: "test-subnet-id",
-									},
-								},
-								Region:    "region-123",
-								SpotPrice: aws.String("500"),
-								SecretRef: &corev1.SecretReference{
-									Name:      "test-secret",
-									Namespace: "test-namespace",
-								},
-								Tags: map[string]string{
-									"key1": "value1",
-									"key2": "value2",
-								},
-							},
-						},
-						MachineClass: &v1alpha1.MachineClass{
-							Provider: ProviderAWS,
-						},
-						ClassSpec: &v1alpha1.ClassSpec{
-							// APIGroup: "",
-							Kind: AWSMachineClassKind,
-							Name: "test-mc",
-						},
-					},
-				},
-				expect: expect{
-					machineClass: &v1alpha1.MachineClass{
-						TypeMeta: v1.TypeMeta{},
-						ObjectMeta: v1.ObjectMeta{
-							Name: "test-mc",
-							Labels: map[string]string{
-								"key1": "value1",
-								"key2": "value2",
-							},
-							Annotations: map[string]string{
-								"key1": "value1",
-								"key2": "value2",
-							},
-							Finalizers: []string{
-								"mcm/finalizer",
-							},
-						},
-						ProviderSpec: runtime.RawExtension{
-							Raw: []byte("{\"apiVersion\":\"mcm.gardener.cloud/v1alpha1\",\"ami\":\"ami-123\",\"blockDevices\":[{\"deviceName\":\"bd-1\",\"ebs\":{\"deleteOnTermination\":true,\"iops\":50,\"kmsKeyID\":\"kms-123\",\"snapshotID\":\"snapid-123\",\"volumeSize\":50,\"volumeType\":\"ebs\"},\"noDevice\":\"bd-1\",\"virtualName\":\"bd-1\"},{\"deviceName\":\"bd-2\",\"ebs\":{\"deleteOnTermination\":true,\"iops\":50,\"kmsKeyID\":\"kms-123\",\"snapshotID\":\"snapid-123\",\"volumeSize\":50,\"volumeType\":\"ebs\"},\"noDevice\":\"bd-2\",\"virtualName\":\"bd-2\"}],\"ebsOptimized\":true,\"iam\":{\"arn\":\"arn-123\",\"name\":\"name-123\"},\"machineType\":\"x-large\",\"keyName\":\"keyname-123\",\"networkInterfaces\":[{\"associatePublicIPAddress\":false,\"deleteOnTermination\":true,\"description\":\"description-123\",\"securityGroupIDs\":[\"sg-1\",\"sg-2\"],\"subnetID\":\"test-subnet-id\"}],\"region\":\"region-123\",\"spotPrice\":\"500\",\"tags\":{\"key1\":\"value1\",\"key2\":\"value2\"}}"),
-						},
-						SecretRef: &corev1.SecretReference{
-							Name:      "test-secret",
-							Namespace: "test-namespace",
-						},
-						CredentialsSecretRef: &corev1.SecretReference{
-							Name:      "test-credentials",
-							Namespace: "test-namespace",
-						},
-						Provider: ProviderAWS,
-					},
-				},
-			}),
-		)
-	})
-
 })
