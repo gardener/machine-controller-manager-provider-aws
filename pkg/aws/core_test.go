@@ -204,6 +204,22 @@ var _ = Describe("MachineServer", func() {
 					errMessage:        "machine codes error: code = [Internal] message = [Error while validating ProviderSpec providerSpec.capacityReservation: Required value: capacityReservationResourceGroupArn or capacityReservationId are optional but only one should be used]",
 				},
 			}),
+			Entry("Machine creation request for an AWS Capacity Reservation Group with capacityReservationPreference only", &data{
+				action: action{
+					machineRequest: &driver.CreateMachineRequest{
+						Machine:      newMachine(-1, nil),
+						MachineClass: newMachineClass([]byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"capacityReservation\":{\"capacityReservationPreference\":\"open\"},\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
+						Secret:       providerSecret,
+					},
+				},
+				expect: expect{
+					machineResponse: &driver.CreateMachineResponse{
+						ProviderID: "aws:///eu-west-1/i-0123456789-0",
+						NodeName:   "ip-0",
+					},
+					errToHaveOccurred: false,
+				},
+			}),
 			Entry("Machine creation request for capacity reservations with capacityReservationId", &data{
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
