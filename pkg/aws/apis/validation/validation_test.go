@@ -1678,7 +1678,7 @@ var _ = Describe("Validation", func() {
 							Type:     "FieldValueRequired",
 							Field:    "providerSpec.capacityReservation",
 							BadValue: "",
-							Detail:   "capacityReservationResourceGroupArn or capacityReservationId are optional but only one should be used",
+							Detail:   "CapacityReservationResourceGroupArn or CapacityReservationId are optional but only one should be used",
 						},
 					},
 				},
