@@ -134,7 +134,7 @@ type AWSBlockDeviceMappingSpec struct {
 	VirtualName string `json:"virtualName,omitempty"`
 }
 
-// AWSCapacityReservationTargetSpec allows to target an AWS Capacity Reservation directly or indirectly using an AWS Resource Group.
+// AWSCapacityReservationTargetSpec allows to target an AWS Capacity Reservation directly or indirectly using an AWS Capacity Reservation.
 // See https://docs.aws.amazon.com/sdk-for-go/api/service/ec2/#CapacityReservationSpecification for additional information.
 type AWSCapacityReservationTargetSpec struct {
 
@@ -144,7 +144,7 @@ type AWSCapacityReservationTargetSpec struct {
 	// CapacityReservationID ID of the Capacity Reservation in which to run the instance.
 	CapacityReservationID *string `json:"capacityReservationId,omitempty"`
 
-	// CapacityReservationResourceGroupArn The ARN of the Capacity Reservation resource group in which to run the instance.
+	// CapacityReservationResourceGroupArn The ARN of the Capacity Reservation in which to run the instance.
 	CapacityReservationResourceGroupArn *string `json:"capacityReservationResourceGroupArn,omitempty"`
 }
 
