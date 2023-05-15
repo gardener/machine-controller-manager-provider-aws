@@ -9,4 +9,5 @@ bin/
 .cache_ggshield
 .vscode
 *.test
+.DS_Store
 /tmp
