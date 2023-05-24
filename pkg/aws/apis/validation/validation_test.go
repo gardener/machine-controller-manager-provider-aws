@@ -1458,6 +1458,325 @@ var _ = Describe("Validation", func() {
 					},
 				},
 			}),
+			Entry("CapacityReservationTargetSpec invalid spec configuring both preference, target id and arn", &data{
+				setup: setup{},
+				action: action{
+					spec: &awsapi.AWSProviderSpec{
+						AMI: "ami-123456789",
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
+									VolumeSize: 50,
+									VolumeType: "gp2",
+								},
+							},
+						},
+						CapacityReservationTarget: &awsapi.AWSCapacityReservationTargetSpec{
+							CapacityReservationPreference:       pointer.String("open"),
+							CapacityReservationID:               pointer.String("capacity-reservation-id-abcd1234"),
+							CapacityReservationResourceGroupArn: pointer.String("arn:01234:/my-resource-group"),
+						},
+						IAM: awsapi.AWSIAMProfileSpec{
+							Name: "test-iam",
+						},
+						Region:      "eu-west-1",
+						MachineType: "m4.large",
+						KeyName:     pointer.String("test-ssh-publickey"),
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
+								SecurityGroupIDs: []string{
+									"sg-00002132323",
+								},
+								SubnetID: "subnet-123456",
+							},
+						},
+						Tags: map[string]string{
+							"kubernetes.io/cluster/shoot--test": "1",
+							"kubernetes.io/role/test":           "1",
+						},
+					},
+					secret: &corev1.Secret{
+						Data: map[string][]byte{
+							"providerAccessKeyId":     []byte("dummy-id"),
+							"userData":                []byte("dummy-user-data"),
+							"providerSecretAccessKey": []byte("dummy-secret"),
+						},
+					},
+				},
+				expect: expect{
+					errToHaveOccurred: true,
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueRequired",
+							Field:    "providerSpec.capacityReservation",
+							BadValue: "",
+							Detail:   "CapacityReservationPreference cannot be set when also providing a CapacityReservationID or CapacityReservationResourceGroupArn",
+						},
+					},
+				},
+			}),
+			Entry("CapacityReservationTargetSpec invalid spec configuring both preference and target id", &data{
+				setup: setup{},
+				action: action{
+					spec: &awsapi.AWSProviderSpec{
+						AMI: "ami-123456789",
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
+									VolumeSize: 50,
+									VolumeType: "gp2",
+								},
+							},
+						},
+						CapacityReservationTarget: &awsapi.AWSCapacityReservationTargetSpec{
+							CapacityReservationPreference: pointer.String("open"),
+							CapacityReservationID:         pointer.String("capacity-reservation-id-abcd1234"),
+						},
+						IAM: awsapi.AWSIAMProfileSpec{
+							Name: "test-iam",
+						},
+						Region:      "eu-west-1",
+						MachineType: "m4.large",
+						KeyName:     pointer.String("test-ssh-publickey"),
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
+								SecurityGroupIDs: []string{
+									"sg-00002132323",
+								},
+								SubnetID: "subnet-123456",
+							},
+						},
+						Tags: map[string]string{
+							"kubernetes.io/cluster/shoot--test": "1",
+							"kubernetes.io/role/test":           "1",
+						},
+					},
+					secret: &corev1.Secret{
+						Data: map[string][]byte{
+							"providerAccessKeyId":     []byte("dummy-id"),
+							"userData":                []byte("dummy-user-data"),
+							"providerSecretAccessKey": []byte("dummy-secret"),
+						},
+					},
+				},
+				expect: expect{
+					errToHaveOccurred: true,
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueRequired",
+							Field:    "providerSpec.capacityReservation",
+							BadValue: "",
+							Detail:   "CapacityReservationPreference cannot be set when also providing a CapacityReservationID or CapacityReservationResourceGroupArn",
+						},
+					},
+				},
+			}),
+			Entry("CapacityReservationTargetSpec invalid spec configuring both preference and arn", &data{
+				setup: setup{},
+				action: action{
+					spec: &awsapi.AWSProviderSpec{
+						AMI: "ami-123456789",
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
+									VolumeSize: 50,
+									VolumeType: "gp2",
+								},
+							},
+						},
+						CapacityReservationTarget: &awsapi.AWSCapacityReservationTargetSpec{
+							CapacityReservationPreference:       pointer.String("open"),
+							CapacityReservationResourceGroupArn: pointer.String("arn:01234:/my-resource-group"),
+						},
+						IAM: awsapi.AWSIAMProfileSpec{
+							Name: "test-iam",
+						},
+						Region:      "eu-west-1",
+						MachineType: "m4.large",
+						KeyName:     pointer.String("test-ssh-publickey"),
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
+								SecurityGroupIDs: []string{
+									"sg-00002132323",
+								},
+								SubnetID: "subnet-123456",
+							},
+						},
+						Tags: map[string]string{
+							"kubernetes.io/cluster/shoot--test": "1",
+							"kubernetes.io/role/test":           "1",
+						},
+					},
+					secret: &corev1.Secret{
+						Data: map[string][]byte{
+							"providerAccessKeyId":     []byte("dummy-id"),
+							"userData":                []byte("dummy-user-data"),
+							"providerSecretAccessKey": []byte("dummy-secret"),
+						},
+					},
+				},
+				expect: expect{
+					errToHaveOccurred: true,
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueRequired",
+							Field:    "providerSpec.capacityReservation",
+							BadValue: "",
+							Detail:   "CapacityReservationPreference cannot be set when also providing a CapacityReservationID or CapacityReservationResourceGroupArn",
+						},
+					},
+				},
+			}),
+			Entry("CapacityReservationTargetSpec invalid spec configuring both id and arn", &data{
+				setup: setup{},
+				action: action{
+					spec: &awsapi.AWSProviderSpec{
+						AMI: "ami-123456789",
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
+									VolumeSize: 50,
+									VolumeType: "gp2",
+								},
+							},
+						},
+						CapacityReservationTarget: &awsapi.AWSCapacityReservationTargetSpec{
+							CapacityReservationID:               pointer.String("capacity-reservation-id-abcd1234"),
+							CapacityReservationResourceGroupArn: pointer.String("arn:01234:/my-resource-group"),
+						},
+						IAM: awsapi.AWSIAMProfileSpec{
+							Name: "test-iam",
+						},
+						Region:      "eu-west-1",
+						MachineType: "m4.large",
+						KeyName:     pointer.String("test-ssh-publickey"),
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
+								SecurityGroupIDs: []string{
+									"sg-00002132323",
+								},
+								SubnetID: "subnet-123456",
+							},
+						},
+						Tags: map[string]string{
+							"kubernetes.io/cluster/shoot--test": "1",
+							"kubernetes.io/role/test":           "1",
+						},
+					},
+					secret: &corev1.Secret{
+						Data: map[string][]byte{
+							"providerAccessKeyId":     []byte("dummy-id"),
+							"userData":                []byte("dummy-user-data"),
+							"providerSecretAccessKey": []byte("dummy-secret"),
+						},
+					},
+				},
+				expect: expect{
+					errToHaveOccurred: true,
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueRequired",
+							Field:    "providerSpec.capacityReservation",
+							BadValue: "",
+							Detail:   "CapacityReservationResourceGroupArn or CapacityReservationId are optional but only one should be used",
+						},
+					},
+				},
+			}),
+			Entry("CapacityReservationTargetSpec valid spec configuring only CapacityReservationID", &data{
+				setup: setup{},
+				action: action{
+					spec: &awsapi.AWSProviderSpec{
+						AMI: "ami-123456789",
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
+									VolumeSize: 50,
+									VolumeType: "gp2",
+								},
+							},
+						},
+						CapacityReservationTarget: &awsapi.AWSCapacityReservationTargetSpec{
+							CapacityReservationID: pointer.String("capacity-reservation-id-abcd1234"),
+						},
+						IAM: awsapi.AWSIAMProfileSpec{
+							Name: "test-iam",
+						},
+						Region:      "eu-west-1",
+						MachineType: "m4.large",
+						KeyName:     pointer.String("test-ssh-publickey"),
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
+								SecurityGroupIDs: []string{
+									"sg-00002132323",
+								},
+								SubnetID: "subnet-123456",
+							},
+						},
+						Tags: map[string]string{
+							"kubernetes.io/cluster/shoot--test": "1",
+							"kubernetes.io/role/test":           "1",
+						},
+					},
+					secret: &corev1.Secret{
+						Data: map[string][]byte{
+							"providerAccessKeyId":     []byte("dummy-id"),
+							"userData":                []byte("dummy-user-data"),
+							"providerSecretAccessKey": []byte("dummy-secret"),
+						},
+					},
+				},
+				expect: expect{
+					errToHaveOccurred: false,
+				},
+			}),
+			Entry("CapacityReservationTargetSpec valid spec configuring only CapacityReservationResourceGroupArn", &data{
+				setup: setup{},
+				action: action{
+					spec: &awsapi.AWSProviderSpec{
+						AMI: "ami-123456789",
+						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
+							{
+								Ebs: awsapi.AWSEbsBlockDeviceSpec{
+									VolumeSize: 50,
+									VolumeType: "gp2",
+								},
+							},
+						},
+						CapacityReservationTarget: &awsapi.AWSCapacityReservationTargetSpec{
+							CapacityReservationResourceGroupArn: pointer.String("arn:01234:/my-resource-group"),
+						},
+						IAM: awsapi.AWSIAMProfileSpec{
+							Name: "test-iam",
+						},
+						Region:      "eu-west-1",
+						MachineType: "m4.large",
+						KeyName:     pointer.String("test-ssh-publickey"),
+						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
+							{
+								SecurityGroupIDs: []string{
+									"sg-00002132323",
+								},
+								SubnetID: "subnet-123456",
+							},
+						},
+						Tags: map[string]string{
+							"kubernetes.io/cluster/shoot--test": "1",
+							"kubernetes.io/role/test":           "1",
+						},
+					},
+					secret: &corev1.Secret{
+						Data: map[string][]byte{
+							"providerAccessKeyId":     []byte("dummy-id"),
+							"userData":                []byte("dummy-user-data"),
+							"providerSecretAccessKey": []byte("dummy-secret"),
+						},
+					},
+				},
+				expect: expect{
+					errToHaveOccurred: false,
+				},
+			}),
 		)
 	})
 })
@@ -1472,6 +1791,9 @@ func validAWSProviderSpec() *awsapi.AWSProviderSpec {
 					VolumeType: "gp2",
 				},
 			},
+		},
+		CapacityReservationTarget: &awsapi.AWSCapacityReservationTargetSpec{
+			CapacityReservationPreference: pointer.String("open"),
 		},
 		IAM: awsapi.AWSIAMProfileSpec{
 			Name: "test-iam",

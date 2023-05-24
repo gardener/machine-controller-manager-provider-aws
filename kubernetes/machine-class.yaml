@@ -25,9 +25,10 @@ providerSpec:
         volumeType: gp2 # Type of the root block device
         encrypted: true
         deleteOnTermination: true
-#  capacityReservation: # Optional - allows targeting of an AWS Capacity reservation or an AWS Resource Group containing reservations. Only one needs to be specified.
-#  capacityReservationId: "cr-05c28b843c05acc11"
-#  capacityReservationResourceGroupArn: "arn:aws:resource-groups:us-west-1:123456789012:group/my-cr-group"
+#  capacityReservation: # Optional - allows targeting of an AWS Capacity reservation preference, ID or an AWS Resource Group containing reservations. Only one needs to be specified.
+#    capacityReservationPreference: "open"
+#    capacityReservationId: "cr-05c28b843c05acc11"
+#    capacityReservationResourceGroupArn: "arn:aws:resource-groups:us-west-1:123456789012:group/my-cr-group"
   iam: # either <name> or <arn> must be specified
     name: iam-name # Name of the AWS instance profile that shall be used for the machines
 #   arn: arn # ARN of the AWS instance profile that shall be used for the machines

@@ -9,3 +9,4 @@ bin/
 .cache_ggshield
 .vscode
 *.test
+/tmp
