@@ -28,7 +28,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 
-	"github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/driver"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/codes"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/status"
@@ -43,6 +42,8 @@ type Driver struct {
 }
 
 const (
+	// ProviderAWS string const to identify AWS provider
+	ProviderAWS                  = "AWS"
 	resourceTypeInstance         = "instance"
 	resourceTypeVolume           = "volume"
 	resourceTypeNetworkInterface = "network-interface"
@@ -517,20 +518,4 @@ func (d *Driver) GetVolumeIDs(ctx context.Context, req *driver.GetVolumeIDsReque
 		VolumeIDs: volumeIDs,
 	}
 	return resp, nil
-}
-
-// GenerateMachineClassForMigration converts providerSpecificMachineClass to (generic) MachineClass
-func (d *Driver) GenerateMachineClassForMigration(ctx context.Context, req *driver.GenerateMachineClassForMigrationRequest) (*driver.GenerateMachineClassForMigrationResponse, error) {
-	klog.V(1).Infof("Migrate request has been recieved for %v", req.MachineClass.Name)
-	defer klog.V(1).Infof("Migrate request has been processed for %v", req.MachineClass.Name)
-
-	awsMachineClass := req.ProviderSpecificMachineClass.(*v1alpha1.AWSMachineClass)
-
-	// Check if incoming CR is valid CR for migration
-	// In this case, the MachineClassKind to be matching
-	if req.ClassSpec.Kind != AWSMachineClassKind {
-		return nil, status.Error(codes.Internal, "Migration cannot be done for this machineClass kind")
-	}
-
-	return &driver.GenerateMachineClassForMigrationResponse{}, fillUpMachineClass(awsMachineClass, req.MachineClass)
 }
