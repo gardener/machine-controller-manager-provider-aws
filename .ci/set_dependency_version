@@ -2,14 +2,11 @@
 
 set -eu
 
-# set root as the working directory first
-cd /
-
-if [ -z "${MAIN_REPO_DIR:-}" ]; then
-  export MAIN_REPO_DIR="$(readlink -f "$(dirname "${0}")/..")"
+if [ -z "${REPO_DIR:-}" ]; then
+  export REPO_DIR="$(readlink -f "$(dirname "${0}")/..")"
 fi
 
-echo "repo-dir: ${MAIN_REPO_DIR}"
+echo "repo-dir: ${REPO_DIR}"
 
 if [ "${DEPENDENCY_NAME}" != "github.com/gardener/machine-controller-manager" ]; then
   echo "error: do not know how to upgrade ${DEPENDENCY_NAME}"
@@ -23,7 +20,7 @@ fi
 
 # for now, we only know how to upgrade github.com/gardener/machine-controller-manager, as checked above
 
-MCM_FILEPATH="${MAIN_REPO_DIR}/MCM_VERSION"
+MCM_FILEPATH="${REPO_DIR}/MCM_VERSION"
 
 if [ ! -f "${MCM_FILEPATH}" ]; then
   echo "error: no such file: {MCM_FILEPATH}"
@@ -33,7 +30,7 @@ fi
 echo -n "${DEPENDENCY_VERSION}" > "${MCM_FILEPATH}"
 echo "set dependency-version of ${DEPENDENCY_NAME} to ${DEPENDENCY_VERSION}"
 
-cd ${MAIN_REPO_DIR}
+cd ${REPO_DIR}
 old_version=$(cat go.mod | grep "github.com/gardener/machine-controller-manager v" | xargs)
 new_version="github.com/gardener/machine-controller-manager ${DEPENDENCY_VERSION}"
 sed -i -- 's#'"${old_version}"'#'"${new_version}"'#g' go.mod
