@@ -2,6 +2,8 @@
 
 set -eu
 
+export PATH=/go/bin:/usr/local/go/bin:$PATH
+
 if [ -z "${REPO_DIR:-}" ]; then
   export REPO_DIR="$(readlink -f "$(dirname "${0}")/..")"
 fi
