@@ -2,6 +2,9 @@
 
 set -eu
 
+# set root as the working directory first
+cd /
+
 if [ -z "${MAIN_REPO_DIR:-}" ]; then
   export MAIN_REPO_DIR="$(readlink -f "$(dirname "${0}")/..")"
 fi
