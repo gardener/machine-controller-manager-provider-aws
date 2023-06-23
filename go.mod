@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/aws/aws-sdk-go v1.36.0
 	github.com/cenkalti/backoff/v4 v4.1.3
-	github.com/gardener/machine-controller-manager v0.49.1
+	github.com/gardener/machine-controller-manager v0.49.3
 	github.com/onsi/ginkgo v1.16.2
 	github.com/onsi/gomega v1.23.0
 	github.com/spf13/pflag v1.0.5
