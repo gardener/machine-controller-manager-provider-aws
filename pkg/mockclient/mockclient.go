@@ -122,6 +122,9 @@ func (ms *MockEC2Client) RunInstances(input *ec2.RunInstancesInput) (*ec2.Reserv
 	newInstance := ec2.Instance{
 		InstanceId:     &instanceID,
 		PrivateDnsName: &privateDNSName,
+		NetworkInterfaces: []*ec2.InstanceNetworkInterface{{
+			NetworkInterfaceId: aws.String("i-123456789"),
+		}},
 		State: &ec2.InstanceState{
 			Code: aws.Int64(16),
 			Name: aws.String("running"),

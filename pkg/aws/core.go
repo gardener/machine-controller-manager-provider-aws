@@ -249,13 +249,15 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 
 	for i, netIf := range providerSpec.NetworkInterfaces {
 		networkInterfaceID := runResult.Instances[0].NetworkInterfaces[i].NetworkInterfaceId
-		input := &ec2.AssignIpv6AddressesInput{
-			NetworkInterfaceId: networkInterfaceID,
-			Ipv6PrefixCount:    aws.Int64(*netIf.Ipv6PrefixCount),
-		}
-		_, err = svc.AssignIpv6Addresses(input)
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
+		if netIf.Ipv6PrefixCount != nil {
+			input := &ec2.AssignIpv6AddressesInput{
+				NetworkInterfaceId: networkInterfaceID,
+				Ipv6PrefixCount:    aws.Int64(*netIf.Ipv6PrefixCount),
+			}
+			_, err = svc.AssignIpv6Addresses(input)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
 		}
 	}
 
