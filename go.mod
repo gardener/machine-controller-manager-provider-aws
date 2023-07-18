@@ -3,7 +3,7 @@ module github.com/gardener/machine-controller-manager-provider-aws
 go 1.20
 
 require (
-	github.com/aws/aws-sdk-go v1.36.0
+	github.com/aws/aws-sdk-go v1.44.300
 	github.com/cenkalti/backoff/v4 v4.1.3
 	github.com/gardener/machine-controller-manager v0.49.1
 	github.com/onsi/ginkgo v1.16.2
