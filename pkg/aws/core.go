@@ -248,14 +248,16 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 	}
 
 	for i, netIf := range providerSpec.NetworkInterfaces {
-		if netIf.Ipv6PrefixCount != nil {
-			input := &ec2.AssignIpv6AddressesInput{
-				NetworkInterfaceId: runResult.Instances[0].NetworkInterfaces[i].NetworkInterfaceId,
-				Ipv6PrefixCount:    netIf.Ipv6PrefixCount,
-			}
-			_, err = svc.AssignIpv6Addresses(input)
-			if err != nil {
-				return nil, status.Error(codes.Internal, err.Error())
+		for _, instanceNetIf := range runResult.Instances[0].NetworkInterfaces {
+			if netIf.Ipv6PrefixCount != nil && *instanceNetIf.Attachment.DeviceIndex == int64(i) {
+				input := &ec2.AssignIpv6AddressesInput{
+					NetworkInterfaceId: instanceNetIf.NetworkInterfaceId,
+					Ipv6PrefixCount:    netIf.Ipv6PrefixCount,
+				}
+				_, err = svc.AssignIpv6Addresses(input)
+				if err != nil {
+					return nil, status.Error(codes.Internal, err.Error())
+				}
 			}
 		}
 	}
