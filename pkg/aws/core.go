@@ -248,10 +248,9 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 	}
 
 	for i, netIf := range providerSpec.NetworkInterfaces {
-		networkInterfaceID := runResult.Instances[0].NetworkInterfaces[i].NetworkInterfaceId
 		if netIf.Ipv6PrefixCount != nil {
 			input := &ec2.AssignIpv6AddressesInput{
-				NetworkInterfaceId: networkInterfaceID,
+				NetworkInterfaceId: runResult.Instances[0].NetworkInterfaces[i].NetworkInterfaceId,
 				Ipv6PrefixCount:    aws.Int64(*netIf.Ipv6PrefixCount),
 			}
 			_, err = svc.AssignIpv6Addresses(input)
