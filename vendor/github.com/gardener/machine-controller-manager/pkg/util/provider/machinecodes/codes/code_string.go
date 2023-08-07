@@ -46,6 +46,8 @@ func (c Code) String() string {
 		return "PermissionDenied"
 	case ResourceExhausted:
 		return "ResourceExhausted"
+	case QuotaExhausted:
+		return "QuotaExhausted"
 	case FailedPrecondition:
 		return "FailedPrecondition"
 	case Aborted:

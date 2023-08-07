@@ -70,9 +70,14 @@ const (
 	// instead for those errors).
 	PermissionDenied Code = 7
 
-	// ResourceExhausted indicates some resource has been exhausted, perhaps
-	// a per-user quota, or perhaps the entire file system is out of space.
+	// ResourceExhausted indicates some resource has been exhausted from
+	// the cloud provider side. Example:- If AWS does not have instance capacity
+	// to create a VM, then this error should be returned.
 	ResourceExhausted Code = 8
+
+	// QuotaExhausted indicates that the quota reserved for a particular resource is exhausted
+	// because of which the resource can no longer be created unless the quota is increased.
+	QuotaExhausted Code = 9
 
 	// FailedPrecondition indicates operation was rejected because the
 	// system is not in a state required for the operation's execution.
@@ -93,7 +98,7 @@ const (
 	//      REST Get/Update/Delete on a resource and the resource on the
 	//      server does not match the condition. E.g., conflicting
 	//      read-modify-write on the same resource.
-	FailedPrecondition Code = 9
+	FailedPrecondition Code = 10
 
 	// Aborted indicates the operation was aborted, typically due to a
 	// concurrency issue like sequencer check failures, transaction aborts,
@@ -101,7 +106,7 @@ const (
 	//
 	// See litmus test above for deciding between FailedPrecondition,
 	// Aborted, and Unavailable.
-	Aborted Code = 10
+	Aborted Code = 11
 
 	// OutOfRange means operation was attempted past the valid range.
 	// E.g., seeking or reading past end of file.
@@ -118,16 +123,16 @@ const (
 	// error) when it applies so that callers who are iterating through
 	// a space can easily look for an OutOfRange error to detect when
 	// they are done.
-	OutOfRange Code = 11
+	OutOfRange Code = 12
 
 	// Unimplemented indicates operation is not implemented or not
 	// supported/enabled in this service.
-	Unimplemented Code = 12
+	Unimplemented Code = 13
 
 	// Internal errors. Means some invariants expected by underlying
 	// system has been broken. If you see one of these errors,
 	// something is very broken.
-	Internal Code = 13
+	Internal Code = 14
 
 	// Unavailable indicates the service is currently unavailable.
 	// This is a most likely a transient condition and may be corrected
@@ -136,14 +141,14 @@ const (
 	//
 	// See litmus test above for deciding between FailedPrecondition,
 	// Aborted, and Unavailable.
-	Unavailable Code = 14
+	Unavailable Code = 15
 
 	// DataLoss indicates unrecoverable data loss or corruption.
-	DataLoss Code = 15
+	DataLoss Code = 16
 
 	// Unauthenticated indicates the request does not have valid
 	// authentication credentials for the operation.
-	Unauthenticated Code = 16
+	Unauthenticated Code = 17
 )
 
 var strToCode = map[string]Code{
@@ -156,6 +161,7 @@ var strToCode = map[string]Code{
 	"AlreadyExists":      AlreadyExists,
 	"PermissionDenied":   PermissionDenied,
 	"ResourceExhausted":  ResourceExhausted,
+	"QuotaExhausted":     QuotaExhausted,
 	"FailedPrecondition": FailedPrecondition,
 	"Aborted":            Aborted,
 	"OutOfRange":         OutOfRange,
