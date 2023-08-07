@@ -15,6 +15,8 @@ package aws
 
 import (
 	"context"
+	"fmt"
+	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/codes"
 	"time"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -29,12 +31,16 @@ import (
 )
 
 const (
-	awsAccessKeyIDIsMissing               = "machine codes error: code = [Internal] message = [Error while validating ProviderSpec secretRef.AWSAccessKeyID: Required value: Mention atleast providerAccessKeyId or accessKeyID]"
-	awsSecretAccessKeyIsMissing           = "machine codes error: code = [Internal] message = [Error while validating ProviderSpec secretRef.AWSSecretAccessKey: Required value: Mention atleast providerSecretAccessKey or secretAccessKey]"
-	awsSecretAccessKeyNUserDataAreMissing = "machine codes error: code = [Internal] message = [Error while validating ProviderSpec [secretRef.AWSSecretAccessKey: Required value: Mention atleast providerSecretAccessKey or secretAccessKey, secretRef.userData: Required value: Mention userData]]"
-	regionNAMIMissing                     = "machine codes error: code = [Internal] message = [Error while validating ProviderSpec [providerSpec.ami: Required value: AMI is required, providerSpec.region: Required value: Region is required]]"
-	userDataIsMissing                     = "machine codes error: code = [Internal] message = [Error while validating ProviderSpec secretRef.userData: Required value: Mention userData]"
-	cloudProviderReturnedError            = "machine codes error: code = [Internal] message = [Cloud provider returned error]"
+	awsAccessKeyIDIsMissing               = "machine codes error: code = [InvalidArgument] message = [Error while validating ProviderSpec secretRef.AWSAccessKeyID: Required value: Mention atleast providerAccessKeyId or accessKeyID]"
+	awsSecretAccessKeyIsMissing           = "machine codes error: code = [InvalidArgument] message = [Error while validating ProviderSpec secretRef.AWSSecretAccessKey: Required value: Mention atleast providerSecretAccessKey or secretAccessKey]"
+	awsSecretAccessKeyNUserDataAreMissing = "machine codes error: code = [InvalidArgument] message = [Error while validating ProviderSpec [secretRef.AWSSecretAccessKey: Required value: Mention atleast providerSecretAccessKey or secretAccessKey, secretRef.userData: Required value: Mention userData]]"
+	regionNAMIMissing                     = "machine codes error: code = [InvalidArgument] message = [Error while validating ProviderSpec [providerSpec.ami: Required value: AMI is required, providerSpec.region: Required value: Region is required]]"
+	userDataIsMissing                     = "machine codes error: code = [InvalidArgument] message = [Error while validating ProviderSpec secretRef.userData: Required value: Mention userData]"
+)
+
+var (
+	regionDoesNotExist                     = fmt.Sprintf("machine codes error: code = [Internal] message = [%s]", mockclient.AWSInvalidRegionError)
+	cloudProviderErrorForDescribeInstances = fmt.Sprintf("machine codes error: code = [Internal] message = [%s]", mockclient.AWSInternalErrorForDescribeInstances)
 )
 
 var _ = Describe("MachineServer", func() {
@@ -198,7 +204,7 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        "machine codes error: code = [Internal] message = [Error while validating ProviderSpec providerSpec.capacityReservation: Required value: CapacityReservationResourceGroupArn or CapacityReservationId are optional but only one should be used]",
+					errMessage:        "machine codes error: code = [InvalidArgument] message = [Error while validating ProviderSpec providerSpec.capacityReservation: Required value: CapacityReservationResourceGroupArn or CapacityReservationId are optional but only one should be used]",
 				},
 			}),
 			Entry("Machine creation request for an AWS Capacity Reservation Group with capacityReservationPreference only", &data{
@@ -339,7 +345,7 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        "machine codes error: code = [Internal] message = [Region doesn't exist while trying to create session]",
+					errMessage:        regionDoesNotExist,
 				},
 			}),
 			Entry("Placement object with affinity, tenancy and availablityZone set", &data{
@@ -362,13 +368,13 @@ var _ = Describe("MachineServer", func() {
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
 						Machine:      newMachine(-1, nil),
-						MachineClass: newMachineClass([]byte("{\"ami\":\"" + mockclient.FailQueryAtDescribeImages + "\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
+						MachineClass: newMachineClass([]byte(fmt.Sprintf("{\"ami\":\"%s\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}", mockclient.FailQueryAtDescribeImages))),
 						Secret:       providerSecret,
 					},
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        "machine codes error: code = [Internal] message = [Couldn't find image with given ID]",
+					errMessage:        fmt.Sprintf("machine codes error: code = [Internal] message = [%s]", mockclient.AWSImageNotFoundError),
 				},
 			}),
 			Entry("Name tag cannot be set on AWS instances", &data{
@@ -387,17 +393,56 @@ var _ = Describe("MachineServer", func() {
 					errToHaveOccurred: false,
 				},
 			}),
-			Entry("RunInstance call fails", &data{
+			Entry("RunInstance call fails with error code as Internal", &data{
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
 						Machine:      newMachine(-1, nil),
-						MachineClass: newMachineClass([]byte("{\"ami\":\"" + mockclient.FailQueryAtRunInstances + "\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
+						MachineClass: newMachineClass([]byte(fmt.Sprintf("{\"ami\":\"%s\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}", mockclient.FailQueryAtRunInstances))),
 						Secret:       providerSecret,
 					},
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        "machine codes error: code = [Internal] message = [Couldn't run instance with given ID]",
+					errMessage:        fmt.Sprintf("machine codes error: code = [Internal] message = [%s]", mockclient.AWSInternalErrorForRunInstances),
+				},
+			}),
+			Entry("RunInstance call fails with error code as TagLimitExceeded", &data{
+				action: action{
+					machineRequest: &driver.CreateMachineRequest{
+						Machine:      newMachine(-1, nil),
+						MachineClass: newMachineClass([]byte(fmt.Sprintf("{\"ami\":\"%s\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"%s\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}", mockclient.FailQueryAtRunInstances, mockclient.TagLimitExceeded))),
+						Secret:       providerSecret,
+					},
+				},
+				expect: expect{
+					errToHaveOccurred: true,
+					errMessage:        fmt.Sprintf("machine codes error: code = [%s] message = [%s]", codes.InvalidArgument, mockclient.AWSTagLimitExceededError),
+				},
+			}),
+			Entry("RunInstance call fails with error code as InsufficientCapacity", &data{
+				action: action{
+					machineRequest: &driver.CreateMachineRequest{
+						Machine:      newMachine(-1, nil),
+						MachineClass: newMachineClass([]byte(fmt.Sprintf("{\"ami\":\"%s\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"%s\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}", mockclient.FailQueryAtRunInstances, mockclient.InsufficientCapacity))),
+						Secret:       providerSecret,
+					},
+				},
+				expect: expect{
+					errToHaveOccurred: true,
+					errMessage:        fmt.Sprintf("machine codes error: code = [%s] message = [%s]", codes.ResourceExhausted, mockclient.AWSInsufficientCapacityError),
+				},
+			}),
+			Entry("RunInstance call fails with error code as VolumeLimitExceeded", &data{
+				action: action{
+					machineRequest: &driver.CreateMachineRequest{
+						Machine:      newMachine(-1, nil),
+						MachineClass: newMachineClass([]byte(fmt.Sprintf("{\"ami\":\"%s\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"%s\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}", mockclient.FailQueryAtRunInstances, mockclient.VolumeLimitExceeded))),
+						Secret:       providerSecret,
+					},
+				},
+				expect: expect{
+					errToHaveOccurred: true,
+					errMessage:        fmt.Sprintf("machine codes error: code = [%s] message = [%s]", codes.QuotaExhausted, mockclient.AWSVolumeLimitExceededError),
 				},
 			}),
 			Entry("Should Fail when APIs are not consistent for 10sec(in real situation its 5min)", &data{
@@ -786,7 +831,7 @@ var _ = Describe("MachineServer", func() {
 				expect: expect{
 					deleteMachineResponse: &driver.DeleteMachineResponse{},
 					errToHaveOccurred:     true,
-					errMessage:            cloudProviderReturnedError,
+					errMessage:            cloudProviderErrorForDescribeInstances,
 				},
 			}),
 			Entry("Termination of machine with any backing instance but no providerID", &data{
@@ -1180,7 +1225,7 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        "machine codes error: code = [Internal] message = [Region doesn't exist while trying to create session]",
+					errMessage:        regionDoesNotExist,
 				},
 			}),
 			Entry("Cluster details missing in machine class", &data{
@@ -1192,7 +1237,7 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        "machine codes error: code = [Internal] message = [Error while validating ProviderSpec providerSpec.tags[]: Required value: Tag required of the form kubernetes.io/cluster/****]",
+					errMessage:        "machine codes error: code = [InvalidArgument] message = [Error while validating ProviderSpec providerSpec.tags[]: Required value: Tag required of the form kubernetes.io/cluster/****]",
 				},
 			}),
 			Entry("Cloud provider returned error while describing instance", &data{
@@ -1204,7 +1249,7 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        cloudProviderReturnedError,
+					errMessage:        cloudProviderErrorForDescribeInstances,
 				},
 			}),
 			Entry("List request without a create request", &data{

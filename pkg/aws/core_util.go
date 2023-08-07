@@ -16,6 +16,7 @@ package aws
 import (
 	"encoding/json"
 	"fmt"
+	awserror "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/errors"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -49,7 +50,7 @@ func decodeProviderSpecAndSecret(machineClass *v1alpha1.MachineClass, secret *co
 
 	// Extract providerSpec
 	if machineClass == nil {
-		return nil, status.Error(codes.Internal, "MachineClass ProviderSpec is nil")
+		return nil, status.Error(codes.NotFound, "MachineClass ProviderSpec is nil")
 	}
 
 	err := json.Unmarshal(machineClass.ProviderSpec.Raw, &providerSpec)
@@ -63,7 +64,7 @@ func decodeProviderSpecAndSecret(machineClass *v1alpha1.MachineClass, secret *co
 		err = fmt.Errorf("Error while validating ProviderSpec %v", validationErr.ToAggregate().Error())
 		klog.V(2).Infof("Validation of AWSMachineClass failed %s", err)
 
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	return providerSpec, nil
@@ -97,7 +98,7 @@ func (d *Driver) getInstancesFromMachineName(machineName string, providerSpec *a
 
 	svc, err := d.createSVC(secret, providerSpec.Region)
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, status.Error(awserror.GetMCMErrorCode(err), err.Error())
 	}
 
 	for key := range providerSpec.Tags {
@@ -143,7 +144,7 @@ func (d *Driver) getInstancesFromMachineName(machineName string, providerSpec *a
 	runResult, err := svc.DescribeInstances(&input)
 	if err != nil {
 		klog.Errorf("AWS plugin is returning error while describe instances request is sent: %s", err)
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, status.Error(awserror.GetMCMErrorCode(err), err.Error())
 	}
 
 	for _, reservation := range runResult.Reservations {
@@ -274,7 +275,7 @@ func terminateInstance(req *driver.DeleteMachineRequest, svc ec2iface.EC2API, ma
 			req.Machine.Name,
 			err.Error(),
 		)
-		return status.Error(codes.Internal, err.Error())
+		return status.Error(awserror.GetMCMErrorCode(err), err.Error())
 	}
 
 	return nil
