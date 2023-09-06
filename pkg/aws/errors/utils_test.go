@@ -13,15 +13,24 @@ type input struct {
 	expectedCode codes.Code
 }
 
-func TestGetMCMErrorCode(t *testing.T) {
+func TestGetMCMErrorCodeForCreateMachine(t *testing.T) {
 	table := []input{
-		{inputError: awserr.New(InstanceLimitExceeded, "instance-limit-exceeded", errors.New("instance limit exceeded")), expectedCode: codes.QuotaExhausted},
 		{inputError: awserr.New(InsufficientCapacity, "insufficient-capacity", errors.New("insufficient capacity")), expectedCode: codes.ResourceExhausted},
-		{inputError: awserr.New(TagLimitExceeded, "tag-limit-exceeded", errors.New("tag limit exceeded")), expectedCode: codes.InvalidArgument},
 		{inputError: awserr.New("UnknownError", "unknown-error", errors.New("unknown error")), expectedCode: codes.Internal},
 	}
 	g := NewWithT(t)
 	for _, entry := range table {
-		g.Expect(GetMCMErrorCode(entry.inputError)).To(Equal(entry.expectedCode))
+		g.Expect(GetMCMErrorCodeForCreateMachine(entry.inputError)).To(Equal(entry.expectedCode))
+	}
+}
+
+func TestGetMCMErrorCodeForTerminateInstances(t *testing.T) {
+	table := []input{
+		{inputError: awserr.New(InstanceIdNotFound, "instance-id-not-found", errors.New("instance id not found")), expectedCode: codes.NotFound},
+		{inputError: awserr.New("UnknownError", "unknown-error", errors.New("unknown error")), expectedCode: codes.Internal},
+	}
+	g := NewWithT(t)
+	for _, entry := range table {
+		g.Expect(GetMCMErrorCodeForTerminateInstances(entry.inputError)).To(Equal(entry.expectedCode))
 	}
 }

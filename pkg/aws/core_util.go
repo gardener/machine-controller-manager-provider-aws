@@ -98,7 +98,7 @@ func (d *Driver) getInstancesFromMachineName(machineName string, providerSpec *a
 
 	svc, err := d.createSVC(secret, providerSpec.Region)
 	if err != nil {
-		return nil, status.Error(awserror.GetMCMErrorCode(err), err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	for key := range providerSpec.Tags {
@@ -144,7 +144,7 @@ func (d *Driver) getInstancesFromMachineName(machineName string, providerSpec *a
 	runResult, err := svc.DescribeInstances(&input)
 	if err != nil {
 		klog.Errorf("AWS plugin is returning error while describe instances request is sent: %s", err)
-		return nil, status.Error(awserror.GetMCMErrorCode(err), err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	for _, reservation := range runResult.Reservations {
@@ -266,16 +266,18 @@ func terminateInstance(req *driver.DeleteMachineRequest, svc ec2iface.EC2API, ma
 	_, err := svc.TerminateInstances(input)
 	if err != nil {
 		// if InvalidInstanceID.NotFound error from AWS, then assume VM is terminated
-		if strings.Contains(err.Error(), ec2.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceIdNotFound) {
+		errcode := awserror.GetMCMErrorCodeForTerminateInstances(err)
+		if errcode == codes.NotFound {
+			klog.V(2).Infof("no backing VM for %s machine found", req.Machine.Name)
 			return nil
+		} else {
+			klog.Errorf("VM %q for Machine %q couldn't be terminated: %s",
+				req.Machine.Spec.ProviderID,
+				req.Machine.Name,
+				err.Error(),
+			)
 		}
-
-		klog.Errorf("VM %q for Machine %q couldn't be terminated: %s",
-			req.Machine.Spec.ProviderID,
-			req.Machine.Name,
-			err.Error(),
-		)
-		return status.Error(awserror.GetMCMErrorCode(err), err.Error())
+		return status.Error(errcode, err.Error())
 	}
 
 	return nil
