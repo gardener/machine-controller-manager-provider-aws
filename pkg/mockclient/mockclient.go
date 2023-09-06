@@ -62,10 +62,9 @@ var (
 	AWSInvalidRegionError                = awserr.New("InvalidRegion", "region doesn't exist while trying to create session", fmt.Errorf("region doesn't exist while trying to create session"))
 	AWSImageNotFoundError                = awserr.New("ImageNotFound", "couldn't find image with given ID", fmt.Errorf("couldn't find image with given ID"))
 	AWSInternalErrorForRunInstances      = awserr.New("Internal", "couldn't run instance with given ID", fmt.Errorf("couldn't run instance with given ID"))
-	AWSTagLimitExceededError             = awserr.New(awserror.TagLimitExceeded, "tag limit exceeded", fmt.Errorf("tag limit exceeded"))
-	AWSVolumeLimitExceededError          = awserr.New(awserror.VolumeLimitExceeded, "volume limit exceeded", fmt.Errorf("volume limit exceeded"))
 	AWSInsufficientCapacityError         = awserr.New(awserror.InsufficientCapacity, "insufficient capacity on cloud provider side", fmt.Errorf("insufficient capacity on cloud provider side"))
 	AWSInternalErrorForDescribeInstances = awserr.New("Internal", "cloud provider returned error", fmt.Errorf("cloud provider returned error"))
+	AWSInstanceNotFoundError             = awserr.New(awserror.InstanceIdNotFound, "InvalidInstanceID.NotFound: The instance IDs do not exist", fmt.Errorf("InvalidInstanceID.NotFound: The instance IDs do not exist"))
 )
 
 // MockPluginSPIImpl is the mock implementation of PluginSPI interface that makes dummy calls
@@ -119,10 +118,6 @@ func (ms *MockEC2Client) RunInstances(input *ec2.RunInstancesInput) (*ec2.Reserv
 	if *input.ImageId == FailQueryAtRunInstances {
 		if *input.KeyName == InsufficientCapacity {
 			return nil, AWSInsufficientCapacityError
-		} else if *input.KeyName == TagLimitExceeded {
-			return nil, AWSTagLimitExceededError
-		} else if *input.KeyName == VolumeLimitExceeded {
-			return nil, AWSVolumeLimitExceededError
 		}
 		return nil, AWSInternalErrorForRunInstances
 	}
@@ -199,7 +194,7 @@ func (ms *MockEC2Client) DescribeInstances(input *ec2.DescribeInstancesInput) (*
 			}
 		}
 		if !found {
-			return nil, fmt.Errorf("InvalidInstanceID.NotFound: The instance IDs do not exist")
+			return nil, AWSInstanceNotFoundError
 		}
 	} else {
 
@@ -247,7 +242,7 @@ func (ms *MockEC2Client) TerminateInstances(input *ec2.TerminateInstancesInput) 
 	ms.FakeInstances = &newInstanceList
 
 	if !found {
-		return nil, fmt.Errorf("InvalidInstanceID.NotFound: The instance IDs do not exist")
+		return nil, AWSInstanceNotFoundError
 	}
 
 	return &ec2.TerminateInstancesOutput{
@@ -293,7 +288,7 @@ func (ms *MockEC2Client) StopInstances(input *ec2.StopInstancesInput) (*ec2.Stop
 	}
 
 	if !found {
-		return nil, fmt.Errorf("InvalidInstanceID.NotFound: The instance IDs do not exist")
+		return nil, AWSInstanceNotFoundError
 	}
 
 	return &ec2.StopInstancesOutput{

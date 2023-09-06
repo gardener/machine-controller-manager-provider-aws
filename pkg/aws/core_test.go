@@ -406,19 +406,6 @@ var _ = Describe("MachineServer", func() {
 					errMessage:        fmt.Sprintf("machine codes error: code = [Internal] message = [%s]", mockclient.AWSInternalErrorForRunInstances),
 				},
 			}),
-			Entry("RunInstance call fails with error code as TagLimitExceeded", &data{
-				action: action{
-					machineRequest: &driver.CreateMachineRequest{
-						Machine:      newMachine(-1, nil),
-						MachineClass: newMachineClass([]byte(fmt.Sprintf("{\"ami\":\"%s\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"%s\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}", mockclient.FailQueryAtRunInstances, mockclient.TagLimitExceeded))),
-						Secret:       providerSecret,
-					},
-				},
-				expect: expect{
-					errToHaveOccurred: true,
-					errMessage:        fmt.Sprintf("machine codes error: code = [%s] message = [%s]", codes.InvalidArgument, mockclient.AWSTagLimitExceededError),
-				},
-			}),
 			Entry("RunInstance call fails with error code as InsufficientCapacity", &data{
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
@@ -430,19 +417,6 @@ var _ = Describe("MachineServer", func() {
 				expect: expect{
 					errToHaveOccurred: true,
 					errMessage:        fmt.Sprintf("machine codes error: code = [%s] message = [%s]", codes.ResourceExhausted, mockclient.AWSInsufficientCapacityError),
-				},
-			}),
-			Entry("RunInstance call fails with error code as VolumeLimitExceeded", &data{
-				action: action{
-					machineRequest: &driver.CreateMachineRequest{
-						Machine:      newMachine(-1, nil),
-						MachineClass: newMachineClass([]byte(fmt.Sprintf("{\"ami\":\"%s\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"%s\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}", mockclient.FailQueryAtRunInstances, mockclient.VolumeLimitExceeded))),
-						Secret:       providerSecret,
-					},
-				},
-				expect: expect{
-					errToHaveOccurred: true,
-					errMessage:        fmt.Sprintf("machine codes error: code = [%s] message = [%s]", codes.QuotaExhausted, mockclient.AWSVolumeLimitExceededError),
 				},
 			}),
 			Entry("Should Fail when APIs are not consistent for 10sec(in real situation its 5min)", &data{

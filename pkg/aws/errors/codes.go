@@ -1,26 +1,10 @@
 package errors
 
+import "github.com/aws/aws-sdk-go/service/ec2"
+
 // See https://docs.aws.amazon.com/AWSEC2/latest/APIReference/errors-overview.html# for more information on the various error codes
 // returned by the amazon EC2 API
 const (
-	// TagLimitExceeded is returned when you've reached the limit on the number of tags that you can assign to the specified resource
-	// For more information check https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_Tags.html#tag-restrictions.
-	TagLimitExceeded = "TagLimitExceeded"
-
-	// NetworkInterfaceLimitExceeded is returned when you've reached the limit on the number of network interfaces that you can create.
-	NetworkInterfaceLimitExceeded = "NetworkInterfaceLimitExceeded"
-
-	// AttachmentLimitExceeded is returned when you've reached the limit on the number of Amazon EBS volumes or network interfaces
-	// that can be attached to a single instance.
-	AttachmentLimitExceeded = "AttachmentLimitExceeded"
-
-	// VolumeIOPSLimit is returned when the maximum IOPS limit for the volume has been reached.
-	// For more information, see https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html.
-	VolumeIOPSLimit = "VolumeIOPSLimit"
-
-	// PrivateIpAddressLimitExceeded is returned when you've reached the limit on the number of private IP addresses
-	// that you can assign to the specified network interface for that type of instance.
-	PrivateIpAddressLimitExceeded = "PrivateIpAddressLimitExceeded"
 
 	// InstanceLimitExceeded is returned when you've reached the limit on the number of instances you can run concurrently.
 	// This error can occur if you are launching an instance or if you are creating a Capacity Reservation.
@@ -60,4 +44,11 @@ const (
 	// InsufficientVolumeCapacity is returned when there is not enough capacity to fulfill your EBS volume provision request.
 	// You can try to provision a different volume type, EBS volume in a different availability zone, or you can wait for additional capacity to become available.
 	InsufficientVolumeCapacity = "InsufficientVolumeCapacity"
+
+	// RouteLimitExceeded is returned when you've reached the limit on the number of routes that you can add to a route table.
+	RouteLimitExceeded = "RouteLimitExceeded"
+
+	// InstanceIdNotFound is returned when the specified instance does not exist. This error might occur because the ID of a recently created instance has not propagated through the system.
+	// For more information, see Eventual consistency(https://docs.aws.amazon.com/AWSEC2/latest/APIReference/query-api-troubleshooting.html#eventual-consistency).
+	InstanceIdNotFound = ec2.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceIdNotFound
 )
