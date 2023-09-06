@@ -48,7 +48,7 @@ const (
 	// RouteLimitExceeded is returned when you've reached the limit on the number of routes that you can add to a route table.
 	RouteLimitExceeded = "RouteLimitExceeded"
 
-	// InstanceIdNotFound is returned when the specified instance does not exist. This error might occur because the ID of a recently created instance has not propagated through the system.
+	// InstanceIDNotFound is returned when the specified instance does not exist. This error might occur because the ID of a recently created instance has not propagated through the system.
 	// For more information, see Eventual consistency(https://docs.aws.amazon.com/AWSEC2/latest/APIReference/query-api-troubleshooting.html#eventual-consistency).
-	InstanceIdNotFound = ec2.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceIdNotFound
+	InstanceIDNotFound = ec2.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceIdNotFound
 )

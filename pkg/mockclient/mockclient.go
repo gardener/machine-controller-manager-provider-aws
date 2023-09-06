@@ -53,12 +53,18 @@ const (
 )
 
 var (
-	AWSInvalidRegionError                = awserr.New("InvalidRegion", "region doesn't exist while trying to create session", fmt.Errorf("region doesn't exist while trying to create session"))
-	AWSImageNotFoundError                = awserr.New("ImageNotFound", "couldn't find image with given ID", fmt.Errorf("couldn't find image with given ID"))
-	AWSInternalErrorForRunInstances      = awserr.New("Internal", "couldn't run instance with given ID", fmt.Errorf("couldn't run instance with given ID"))
-	AWSInsufficientCapacityError         = awserr.New(awserror.InsufficientCapacity, "insufficient capacity on cloud provider side", fmt.Errorf("insufficient capacity on cloud provider side"))
+	// AWSInvalidRegionError denotes an error with an InvalidRegion error code.
+	AWSInvalidRegionError = awserr.New("InvalidRegion", "region doesn't exist while trying to create session", fmt.Errorf("region doesn't exist while trying to create session"))
+	// AWSImageNotFoundError denotes an error with an ImageNotFound error code.
+	AWSImageNotFoundError = awserr.New("ImageNotFound", "couldn't find image with given ID", fmt.Errorf("couldn't find image with given ID"))
+	// AWSInternalErrorForRunInstances denotes an error returned by RunInstances call with Internal error code
+	AWSInternalErrorForRunInstances = awserr.New("Internal", "couldn't run instance with given ID", fmt.Errorf("couldn't run instance with given ID"))
+	// AWSInsufficientCapacityError denotes an error with an InsufficientCapacity error code.
+	AWSInsufficientCapacityError = awserr.New(awserror.InsufficientCapacity, "insufficient capacity on cloud provider side", fmt.Errorf("insufficient capacity on cloud provider side"))
+	// AWSInternalErrorForDescribeInstances denotes an error returned by DescribeInstances call with an Internal error code
 	AWSInternalErrorForDescribeInstances = awserr.New("Internal", "cloud provider returned error", fmt.Errorf("cloud provider returned error"))
-	AWSInstanceNotFoundError             = awserr.New(awserror.InstanceIdNotFound, "InvalidInstanceID.NotFound: The instance IDs do not exist", fmt.Errorf("InvalidInstanceID.NotFound: The instance IDs do not exist"))
+	// AWSInstanceNotFoundError returns denotes an error with InvalidInstanceID.NotFound error code
+	AWSInstanceNotFoundError = awserr.New(awserror.InstanceIDNotFound, "InvalidInstanceID.NotFound: The instance IDs do not exist", fmt.Errorf("InvalidInstanceID.NotFound: The instance IDs do not exist"))
 )
 
 // MockPluginSPIImpl is the mock implementation of PluginSPI interface that makes dummy calls

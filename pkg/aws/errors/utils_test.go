@@ -26,7 +26,7 @@ func TestGetMCMErrorCodeForCreateMachine(t *testing.T) {
 
 func TestGetMCMErrorCodeForTerminateInstances(t *testing.T) {
 	table := []input{
-		{inputError: awserr.New(InstanceIdNotFound, "instance-id-not-found", errors.New("instance id not found")), expectedCode: codes.NotFound},
+		{inputError: awserr.New(InstanceIDNotFound, "instance-id-not-found", errors.New("instance id not found")), expectedCode: codes.NotFound},
 		{inputError: awserr.New("UnknownError", "unknown-error", errors.New("unknown error")), expectedCode: codes.Internal},
 	}
 	g := NewWithT(t)

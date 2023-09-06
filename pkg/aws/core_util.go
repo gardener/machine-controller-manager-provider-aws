@@ -270,13 +270,12 @@ func terminateInstance(req *driver.DeleteMachineRequest, svc ec2iface.EC2API, ma
 		if errcode == codes.NotFound {
 			klog.V(2).Infof("no backing VM for %s machine found", req.Machine.Name)
 			return nil
-		} else {
-			klog.Errorf("VM %q for Machine %q couldn't be terminated: %s",
-				req.Machine.Spec.ProviderID,
-				req.Machine.Name,
-				err.Error(),
-			)
 		}
+		klog.Errorf("VM %q for Machine %q couldn't be terminated: %s",
+			req.Machine.Spec.ProviderID,
+			req.Machine.Name,
+			err.Error(),
+		)
 		return status.Error(errcode, err.Error())
 	}
 
