@@ -36,8 +36,6 @@ const (
 	FailQueryAtRunInstances string = "aws:///eu-west-1/i-fail-query-at-RunInstances"
 	// FailQueryAtTerminateInstances string to fail call at TerminateInstances call
 	FailQueryAtTerminateInstances string = "fail-query-at-TerminateInstances"
-	// InstanceTerminateError string returns instance terminated error
-	InstanceTerminateError string = "i-instance-terminate-error"
 	// InstanceDoesntExistError string returns instance doesn't exist error
 	InstanceDoesntExistError string = "i-instance-doesnt-exist"
 	// InstanceStopError string returns error mentioning instance has been stopped
@@ -50,12 +48,8 @@ const (
 	SetInstanceID string = "set-instance-id"
 	// InconsistencyInAPIs string makes RunInstances and DescribeInstances APIs out of sync
 	InconsistencyInAPIs string = "apis-are-inconsistent"
-	// TagLimitExceeded string makes RunInstances return a TagLimitExceeded error code
-	TagLimitExceeded = "tag-limit-exceeded"
 	// InsufficientCapacity string makes RunInstances return an InsufficientCapacity error code
 	InsufficientCapacity = "insufficient-capacity"
-	// VolumeLimitExceeded string makes RunInstances return a VolumeLimitExceeded error code
-	VolumeLimitExceeded = "volume-limit-exceeded"
 )
 
 var (
