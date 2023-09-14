@@ -265,10 +265,12 @@ func terminateInstance(req *driver.DeleteMachineRequest, svc ec2iface.EC2API, ma
 
 	_, err := svc.TerminateInstances(input)
 	if err != nil {
-		// if error code is NotFound, then assume VM is terminated
+		// if error code is NotFound, then assume VM is terminated.
+		// In case of eventual consistency, the VM might be present and still we get a NotFound error.
+		// Such cases will be handled by the orphan collection logic.
 		errcode := awserror.GetMCMErrorCodeForTerminateInstances(err)
 		if errcode == codes.NotFound {
-			klog.V(2).Infof("no backing VM for %s machine found while trying to terminate instance", req.Machine.Name)
+			klog.V(2).Infof("no backing VM for %s machine found while trying to terminate instance. Orphan collection will remove the VM if it is due to eventual consistency", req.Machine.Name)
 			return nil
 		}
 		klog.Errorf("VM %q for Machine %q couldn't be terminated: %s",
