@@ -38,11 +38,6 @@ const (
 	userDataIsMissing                     = "machine codes error: code = [InvalidArgument] message = [Error while validating ProviderSpec secretRef.userData: Required value: Mention userData]"
 )
 
-var (
-	regionDoesNotExist                     = fmt.Sprintf("machine codes error: code = [Internal] message = [%s]", mockclient.AWSInvalidRegionError)
-	cloudProviderErrorForDescribeInstances = fmt.Sprintf("machine codes error: code = [Internal] message = [%s]", mockclient.AWSInternalErrorForDescribeInstances)
-)
-
 var _ = Describe("MachineServer", func() {
 
 	// Some initializations
@@ -345,7 +340,7 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        regionDoesNotExist,
+					errMessage:        fmt.Sprintf("machine codes error: code = [Internal] message = [%s]", mockclient.AWSInvalidRegionError),
 				},
 			}),
 			Entry("Placement object with affinity, tenancy and availablityZone set", &data{
@@ -805,7 +800,7 @@ var _ = Describe("MachineServer", func() {
 				expect: expect{
 					deleteMachineResponse: &driver.DeleteMachineResponse{},
 					errToHaveOccurred:     true,
-					errMessage:            cloudProviderErrorForDescribeInstances,
+					errMessage:            fmt.Sprintf("machine codes error: code = [Internal] message = [%s]", mockclient.AWSInternalErrorForDescribeInstances),
 				},
 			}),
 			Entry("Termination of machine with any backing instance but no providerID", &data{
@@ -1199,7 +1194,7 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        regionDoesNotExist,
+					errMessage:        fmt.Sprintf("machine codes error: code = [Internal] message = [%s]", mockclient.AWSInvalidRegionError),
 				},
 			}),
 			Entry("Cluster details missing in machine class", &data{
@@ -1223,7 +1218,7 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        cloudProviderErrorForDescribeInstances,
+					errMessage:        fmt.Sprintf("machine codes error: code = [Internal] message = [%s]", mockclient.AWSInternalErrorForDescribeInstances),
 				},
 			}),
 			Entry("List request without a create request", &data{

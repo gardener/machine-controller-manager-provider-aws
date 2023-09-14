@@ -16,7 +16,6 @@ package aws
 import (
 	"encoding/json"
 	"fmt"
-	awserror "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/errors"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -24,6 +23,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	api "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
 	validation "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis/validation"
+	awserror "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/errors"
 	v1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/driver"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/codes"
@@ -50,7 +50,7 @@ func decodeProviderSpecAndSecret(machineClass *v1alpha1.MachineClass, secret *co
 
 	// Extract providerSpec
 	if machineClass == nil {
-		return nil, status.Error(codes.NotFound, "MachineClass ProviderSpec is nil")
+		return nil, status.Error(codes.InvalidArgument, "MachineClass ProviderSpec is nil")
 	}
 
 	err := json.Unmarshal(machineClass.ProviderSpec.Raw, &providerSpec)
@@ -265,10 +265,10 @@ func terminateInstance(req *driver.DeleteMachineRequest, svc ec2iface.EC2API, ma
 
 	_, err := svc.TerminateInstances(input)
 	if err != nil {
-		// if InvalidInstanceID.NotFound error from AWS, then assume VM is terminated
+		// if error code is NotFound, then assume VM is terminated
 		errcode := awserror.GetMCMErrorCodeForTerminateInstances(err)
 		if errcode == codes.NotFound {
-			klog.V(2).Infof("no backing VM for %s machine found", req.Machine.Name)
+			klog.V(2).Infof("no backing VM for %s machine found while trying to terminate instance", req.Machine.Name)
 			return nil
 		}
 		klog.Errorf("VM %q for Machine %q couldn't be terminated: %s",

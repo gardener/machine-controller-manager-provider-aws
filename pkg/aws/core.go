@@ -112,7 +112,7 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 
 	blkDeviceMappings, err := d.generateBlockDevices(providerSpec.BlockDevices, output.Images[0].RootDeviceName)
 	if err != nil {
-		return nil, status.Error(codes.NotFound, err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	tagInstance, err := d.generateTags(providerSpec.Tags, resourceTypeInstance, req.Machine.Name)
