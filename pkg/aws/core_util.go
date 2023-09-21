@@ -23,6 +23,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	api "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
 	validation "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis/validation"
+	awserror "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/errors"
 	v1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/driver"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/codes"
@@ -49,7 +50,7 @@ func decodeProviderSpecAndSecret(machineClass *v1alpha1.MachineClass, secret *co
 
 	// Extract providerSpec
 	if machineClass == nil {
-		return nil, status.Error(codes.Internal, "MachineClass ProviderSpec is nil")
+		return nil, status.Error(codes.InvalidArgument, "MachineClass ProviderSpec is nil")
 	}
 
 	err := json.Unmarshal(machineClass.ProviderSpec.Raw, &providerSpec)
@@ -63,7 +64,7 @@ func decodeProviderSpecAndSecret(machineClass *v1alpha1.MachineClass, secret *co
 		err = fmt.Errorf("Error while validating ProviderSpec %v", validationErr.ToAggregate().Error())
 		klog.V(2).Infof("Validation of AWSMachineClass failed %s", err)
 
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	return providerSpec, nil
@@ -264,17 +265,20 @@ func terminateInstance(req *driver.DeleteMachineRequest, svc ec2iface.EC2API, ma
 
 	_, err := svc.TerminateInstances(input)
 	if err != nil {
-		// if InvalidInstanceID.NotFound error from AWS, then assume VM is terminated
-		if strings.Contains(err.Error(), ec2.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceIdNotFound) {
+		// if error code is NotFound, then assume VM is terminated.
+		// In case of eventual consistency, the VM might be present and still we get a NotFound error.
+		// Such cases will be handled by the orphan collection logic.
+		errcode := awserror.GetMCMErrorCodeForTerminateInstances(err)
+		if errcode == codes.NotFound {
+			klog.V(2).Infof("no backing VM for %s machine found while trying to terminate instance. Orphan collection will remove the VM if it is due to eventual consistency", req.Machine.Name)
 			return nil
 		}
-
 		klog.Errorf("VM %q for Machine %q couldn't be terminated: %s",
 			req.Machine.Spec.ProviderID,
 			req.Machine.Name,
 			err.Error(),
 		)
-		return status.Error(codes.Internal, err.Error())
+		return status.Error(errcode, err.Error())
 	}
 
 	return nil

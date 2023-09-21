@@ -15,6 +15,7 @@ package mockclient
 
 import (
 	"fmt"
+	awserror "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/errors"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -35,8 +36,6 @@ const (
 	FailQueryAtRunInstances string = "aws:///eu-west-1/i-fail-query-at-RunInstances"
 	// FailQueryAtTerminateInstances string to fail call at TerminateInstances call
 	FailQueryAtTerminateInstances string = "fail-query-at-TerminateInstances"
-	// InstanceTerminateError string returns instance terminated error
-	InstanceTerminateError string = "i-instance-terminate-error"
 	// InstanceDoesntExistError string returns instance doesn't exist error
 	InstanceDoesntExistError string = "i-instance-doesnt-exist"
 	// InstanceStopError string returns error mentioning instance has been stopped
@@ -49,6 +48,23 @@ const (
 	SetInstanceID string = "set-instance-id"
 	// InconsistencyInAPIs string makes RunInstances and DescribeInstances APIs out of sync
 	InconsistencyInAPIs string = "apis-are-inconsistent"
+	// InsufficientCapacity string makes RunInstances return an InsufficientCapacity error code
+	InsufficientCapacity = "insufficient-capacity"
+)
+
+var (
+	// AWSInvalidRegionError denotes an error with an InvalidRegion error code.
+	AWSInvalidRegionError = awserr.New("InvalidRegion", "region doesn't exist while trying to create session", fmt.Errorf("region doesn't exist while trying to create session"))
+	// AWSImageNotFoundError denotes an error with an ImageNotFound error code.
+	AWSImageNotFoundError = awserr.New("ImageNotFound", "couldn't find image with given ID", fmt.Errorf("couldn't find image with given ID"))
+	// AWSInternalErrorForRunInstances denotes an error returned by RunInstances call with Internal error code
+	AWSInternalErrorForRunInstances = awserr.New("Internal", "couldn't run instance with given ID", fmt.Errorf("couldn't run instance with given ID"))
+	// AWSInsufficientCapacityError denotes an error with an InsufficientCapacity error code.
+	AWSInsufficientCapacityError = awserr.New(awserror.InsufficientCapacity, "insufficient capacity on cloud provider side", fmt.Errorf("insufficient capacity on cloud provider side"))
+	// AWSInternalErrorForDescribeInstances denotes an error returned by DescribeInstances call with an Internal error code
+	AWSInternalErrorForDescribeInstances = awserr.New("Internal", "cloud provider returned error", fmt.Errorf("cloud provider returned error"))
+	// AWSInstanceNotFoundError returns denotes an error with InvalidInstanceID.NotFound error code
+	AWSInstanceNotFoundError = awserr.New(awserror.InstanceIDNotFound, "InvalidInstanceID.NotFound: The instance IDs do not exist", fmt.Errorf("InvalidInstanceID.NotFound: The instance IDs do not exist"))
 )
 
 // MockPluginSPIImpl is the mock implementation of PluginSPI interface that makes dummy calls
@@ -59,7 +75,7 @@ type MockPluginSPIImpl struct {
 // NewSession starts a new AWS session
 func (ms *MockPluginSPIImpl) NewSession(secret *corev1.Secret, region string) (*awssession.Session, error) {
 	if region == FailAtRegion {
-		return nil, fmt.Errorf("Region doesn't exist while trying to create session")
+		return nil, AWSInvalidRegionError
 	}
 	return &awssession.Session{}, nil
 }
@@ -81,7 +97,7 @@ type MockEC2Client struct {
 func (ms *MockEC2Client) DescribeImages(input *ec2.DescribeImagesInput) (*ec2.DescribeImagesOutput, error) {
 
 	if *input.ImageIds[0] == FailQueryAtDescribeImages {
-		return nil, fmt.Errorf("Couldn't find image with given ID")
+		return nil, AWSImageNotFoundError
 	}
 
 	rootDeviceName := "test-root-disk"
@@ -100,7 +116,10 @@ func (ms *MockEC2Client) DescribeImages(input *ec2.DescribeImagesInput) (*ec2.De
 func (ms *MockEC2Client) RunInstances(input *ec2.RunInstancesInput) (*ec2.Reservation, error) {
 
 	if *input.ImageId == FailQueryAtRunInstances {
-		return nil, fmt.Errorf("Couldn't run instance with given ID")
+		if *input.KeyName == InsufficientCapacity {
+			return nil, AWSInsufficientCapacityError
+		}
+		return nil, AWSInternalErrorForRunInstances
 	}
 
 	instanceID := fmt.Sprintf("i-0123456789-%d", len(*ms.FakeInstances))
@@ -144,7 +163,7 @@ func (ms *MockEC2Client) DescribeInstances(input *ec2.DescribeInstancesInput) (*
 
 	for _, filter := range input.Filters {
 		if *filter.Values[0] == "kubernetes.io/cluster/"+ReturnErrorAtDescribeInstances {
-			return nil, fmt.Errorf("Cloud provider returned error")
+			return nil, AWSInternalErrorForDescribeInstances
 		}
 	}
 
@@ -175,7 +194,7 @@ func (ms *MockEC2Client) DescribeInstances(input *ec2.DescribeInstancesInput) (*
 			}
 		}
 		if !found {
-			return nil, fmt.Errorf("InvalidInstanceID.NotFound: The instance IDs do not exist")
+			return nil, AWSInstanceNotFoundError
 		}
 	} else {
 
@@ -223,7 +242,7 @@ func (ms *MockEC2Client) TerminateInstances(input *ec2.TerminateInstancesInput) 
 	ms.FakeInstances = &newInstanceList
 
 	if !found {
-		return nil, fmt.Errorf("InvalidInstanceID.NotFound: The instance IDs do not exist")
+		return nil, AWSInstanceNotFoundError
 	}
 
 	return &ec2.TerminateInstancesOutput{
@@ -269,7 +288,7 @@ func (ms *MockEC2Client) StopInstances(input *ec2.StopInstancesInput) (*ec2.Stop
 	}
 
 	if !found {
-		return nil, fmt.Errorf("InvalidInstanceID.NotFound: The instance IDs do not exist")
+		return nil, AWSInstanceNotFoundError
 	}
 
 	return &ec2.StopInstancesOutput{

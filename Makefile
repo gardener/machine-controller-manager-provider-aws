@@ -37,6 +37,8 @@ MACHINE_CONTROLLER_MANAGER_DEPLOYMENT_NAME := machine-controller-manager
 # Rules for running helper scripts
 #########################################
 
+include hack/tools.mk
+
 .PHONY: rename-provider
 rename-provider:
 	@./hack/rename-provider ${PROVIDER_NAME}
@@ -146,3 +148,7 @@ clean:
 	@rm -rf bin/
 	@rm -f *linux-amd64
 	@rm -f *darwin-amd64
+
+.PHONY: add-license-headers
+add-license-headers: $(GO_ADD_LICENSE)
+	@./hack/add_license_headers.sh

@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/status"
 	"k8s.io/klog/v2"
 
+	awserror "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/errors"
 	"github.com/gardener/machine-controller-manager-provider-aws/pkg/spi"
 )
 
@@ -87,7 +88,7 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 
 	svc, err := d.createSVC(secret, providerSpec.Region)
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, status.Error(awserror.GetMCMErrorCodeForCreateMachine(err), err.Error())
 	}
 
 	if userData, exists = secret.Data["userData"]; !exists {
@@ -104,14 +105,14 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 	}
 	output, err := svc.DescribeImages(&describeImagesRequest)
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, status.Error(awserror.GetMCMErrorCodeForCreateMachine(err), err.Error())
 	} else if len(output.Images) < 1 {
-		return nil, status.Error(codes.Internal, fmt.Sprintf("Image %s not found", *imageID))
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("Image %s not found", *imageID))
 	}
 
 	blkDeviceMappings, err := d.generateBlockDevices(providerSpec.BlockDevices, output.Images[0].RootDeviceName)
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	tagInstance, err := d.generateTags(providerSpec.Tags, resourceTypeInstance, req.Machine.Name)
@@ -215,7 +216,7 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 
 	runResult, err := svc.RunInstances(&inputConfig)
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, status.Error(awserror.GetMCMErrorCodeForCreateMachine(err), err.Error())
 	}
 
 	response := &driver.CreateMachineResponse{
@@ -239,7 +240,7 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 	if providerSpec.SrcAndDstChecksEnabled != nil && !*providerSpec.SrcAndDstChecksEnabled {
 		err := disableSrcAndDestCheck(svc, runResult.Instances[0].InstanceId)
 		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
+			return nil, status.Error(awserror.GetMCMErrorCodeForCreateMachine(err), err.Error())
 		}
 	}
 
@@ -299,14 +300,14 @@ func (d *Driver) DeleteMachine(ctx context.Context, req *driver.DeleteMachineReq
 
 		_, instanceID, err := decodeRegionAndInstanceID(req.Machine.Spec.ProviderID)
 		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
+			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
 
 		err = terminateInstance(req, svc, instanceID)
 		if err != nil {
 			return nil, err
 		}
-		klog.V(3).Infof("VM %q for Machine %q was terminated succesfully", req.Machine.Spec.ProviderID, req.Machine.Name)
+		klog.V(3).Infof("VM %q for Machine %q was terminated successfully", req.Machine.Spec.ProviderID, req.Machine.Name)
 
 	} else {
 		// ProviderID doesn't exist, hence check for any existing machine and then delete if exists
@@ -315,7 +316,7 @@ func (d *Driver) DeleteMachine(ctx context.Context, req *driver.DeleteMachineReq
 		if err != nil {
 			status, ok := status.FromError(err)
 			if ok && status.Code() == codes.NotFound {
-				klog.V(3).Infof("No matching VM found. Termination succesful for machine object %q", req.Machine.Name)
+				klog.V(3).Infof("No matching VM found. Termination successful for machine object %q", req.Machine.Name)
 				return &driver.DeleteMachineResponse{}, nil
 			}
 			return nil, err
