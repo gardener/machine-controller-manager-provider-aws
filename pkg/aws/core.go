@@ -145,6 +145,10 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 			spec.DeleteOnTermination = aws.Bool(true)
 		}
 
+		if netIf.Ipv6AddressCount != nil {
+			spec.Ipv6AddressCount = netIf.Ipv6AddressCount
+		}
+
 		networkInterfaceSpecs = append(networkInterfaceSpecs, spec)
 	}
 
@@ -241,6 +245,21 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 		err := disableSrcAndDestCheck(svc, runResult.Instances[0].InstanceId)
 		if err != nil {
 			return nil, status.Error(awserror.GetMCMErrorCodeForCreateMachine(err), err.Error())
+		}
+	}
+
+	for i, netIf := range providerSpec.NetworkInterfaces {
+		for _, instanceNetIf := range runResult.Instances[0].NetworkInterfaces {
+			if netIf.Ipv6PrefixCount != nil && *instanceNetIf.Attachment.DeviceIndex == int64(i) {
+				input := &ec2.AssignIpv6AddressesInput{
+					NetworkInterfaceId: instanceNetIf.NetworkInterfaceId,
+					Ipv6PrefixCount:    netIf.Ipv6PrefixCount,
+				}
+				_, err = svc.AssignIpv6Addresses(input)
+				if err != nil {
+					return nil, status.Error(codes.Internal, err.Error())
+				}
+			}
 		}
 	}
 
