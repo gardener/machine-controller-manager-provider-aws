@@ -1,3 +1,17 @@
+// Copyright 2023 SAP SE or an SAP affiliate company
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package common
 
 import (
@@ -1043,7 +1057,7 @@ func (c *IntegrationTestFramework) ControllerTests() {
 									},
 								).Stream(ctx)
 							gomega.Expect(err).NotTo(gomega.HaveOccurred())
-							gomega.Expect(io.Copy(mcOutputFile, readCloser)).NotTo(gomega.HaveOccurred())
+							_, err = io.Copy(mcOutputFile, readCloser)
 							gomega.Expect(err).NotTo(gomega.HaveOccurred())
 						} else {
 							readCloser, err := c.ControlCluster.Clientset.CoreV1().
@@ -1052,7 +1066,7 @@ func (c *IntegrationTestFramework) ControllerTests() {
 									Container: containers[i].Name,
 								}).Stream(ctx)
 							gomega.Expect(err).NotTo(gomega.HaveOccurred())
-							gomega.Expect(io.Copy(mcmOutputFile, readCloser)).NotTo(gomega.HaveOccurred())
+							_, err = io.Copy(mcmOutputFile, readCloser)
 							gomega.Expect(err).NotTo(gomega.HaveOccurred())
 						}
 					}
