@@ -223,7 +223,7 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 		NodeName:   *runResult.Instances[0].PrivateDnsName,
 	}
 
-	klog.V(3).Infof("Waiting for VM with Provider-ID %q to be visible to all AWS endpoints", response.ProviderID)
+	klog.V(2).Infof("Waiting for VM with Provider-ID %q, for machine %q to be visible to all AWS endpoints", response.ProviderID, machine.Name)
 
 	operation := func() error {
 		_, err := confirmInstanceByID(svc, *runResult.Instances[0].InstanceId)
@@ -231,9 +231,10 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 	}
 
 	if err := retryWithExponentialBackOff(operation, maxElapsedTimeInBackoff); err != nil {
-		klog.V(3).Infof("Timed out waiting for VM %q to be visible to all AWS endpoints. Multiple VM backing machine obj %q might spawn, they will be orphan collected", response.ProviderID, machine.Name)
-		return nil, fmt.Errorf("creation of VM : %q Failed, timed out waiting for eventual consistency", response.ProviderID)
+		return nil, status.Error(codes.Internal, fmt.Sprintf("creation of VM : %q Failed, timed out waiting for eventual consistency. Multiple VMs backing machine obj might spawn, they will be orphan collected", response.ProviderID))
 	}
+
+	klog.V(2).Infof("VM with Provider-ID %q, for machine %q should be visible to all AWS endpoints now", response.ProviderID, machine.Name)
 
 	// if SrcAnDstCheckEnabled is false then disable the SrcAndDestCheck on running NAT instance
 	if providerSpec.SrcAndDstChecksEnabled != nil && !*providerSpec.SrcAndDstChecksEnabled {

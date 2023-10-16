@@ -83,7 +83,7 @@ func disableSrcAndDestCheck(svc ec2iface.EC2API, instanceID *string) error {
 	if err != nil {
 		return err
 	}
-	klog.V(3).Infof("Successfully disabled Source/Destination check on instance %s.", *instanceID)
+	klog.V(2).Infof("Successfully disabled Source/Destination check on instance %s.", *instanceID)
 	return nil
 }
 
