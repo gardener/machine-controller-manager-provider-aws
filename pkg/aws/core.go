@@ -231,7 +231,7 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 	}
 
 	if err := retryWithExponentialBackOff(operation, maxElapsedTimeInBackoff); err != nil {
-		return nil, status.Error(codes.Internal, fmt.Sprintf("creation of VM : %q Failed, timed out waiting for eventual consistency. Multiple VMs backing machine obj might spawn, they will be orphan collected", response.ProviderID))
+		return nil, status.Error(codes.Internal, fmt.Sprintf("creation of VM %q failed, timed out waiting for eventual consistency. Multiple VMs backing machine obj might spawn, they will be orphan collected", response.ProviderID))
 	}
 
 	klog.V(2).Infof("VM with Provider-ID %q, for machine %q should be visible to all AWS endpoints now", response.ProviderID, machine.Name)
