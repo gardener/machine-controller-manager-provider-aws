@@ -427,7 +427,7 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        "creation of VM : \"aws:///eu-west-1/i-instance-doesnt-exist\" Failed, timed out waiting for eventual consistency",
+					errMessage:        "machine codes error: code = [Internal] message = [creation of VM : \"aws:///eu-west-1/i-instance-doesnt-exist\" Failed, timed out waiting for eventual consistency. Multiple VMs backing machine obj might spawn, they will be orphan collected]",
 				},
 			}),
 		)
