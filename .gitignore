@@ -11,3 +11,4 @@ bin/
 *.test
 .DS_Store
 /tmp
+.env
