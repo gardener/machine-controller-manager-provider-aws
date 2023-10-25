@@ -28,7 +28,7 @@ MACHINE_CONTROLLER_MANAGER_DEPLOYMENT_NAME := machine-controller-manager
 #########################################
 
 include hack/tools.mk
-include .env
+-include .env
 
 .PHONY: rename-provider
 rename-provider:
