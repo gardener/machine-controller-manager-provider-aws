@@ -85,19 +85,6 @@ update-dependencies:
 # Rules for testing
 #########################################
 
-.PHONY: test-setup
-test-setup:
-	@echo "enter project name"; \
-	read PROJECT; \
-	echo "enter control-cluster name"; \
-	read CONTROL_CLUSTER; \
-	echo "enter target-cluster name"; \
-	read TARGET_CLUSTER; \
-	echo "enter cluster provider(gcp|aws|azure|vsphere|openstack|alicloud|metal|equinix-metal)"; \
-	read PROVIDER; \
-	./hack/test_local_setup.sh --control-cluster $$CONTROL_CLUSTER --target-cluster $$TARGET_CLUSTER --project $$PROJECT --provider $$PROVIDER
-
-
 .PHONY: test-unit
 test-unit:
 	@SKIP_INTEGRATION_TESTS=X .ci/test
