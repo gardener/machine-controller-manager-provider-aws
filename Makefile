@@ -18,17 +18,7 @@ IMAGE_REPOSITORY    := eu.gcr.io/gardener-project/gardener/machine-controller-ma
 IMAGE_TAG           := $(shell cat VERSION)
 PROVIDER_NAME       := AWS
 PROJECT_NAME        := gardener
-CONTROL_NAMESPACE	:=
-CONTROL_KUBECONFIG  := 
-TARGET_KUBECONFIG   := 
 
-# Below ones are used in tests
-MACHINECLASS_V1 	:= dev/machineclassv1.yaml
-MACHINECLASS_V2 	:= 
-MCM_IMAGE			:= 
-MC_IMAGE			:= 
-# MCM_IMAGE			:= eu.gcr.io/gardener-project/gardener/machine-controller-manager:v0.39.0
-# MC_IMAGE			:= $(IMAGE_REPOSITORY):v0.7.0
 LEADER_ELECT 	    := "true"
 # If Integration Test Suite is to be run locally against clusters then export the below variable
 # with MCM deployment name in the cluster
@@ -37,6 +27,7 @@ MACHINE_CONTROLLER_MANAGER_DEPLOYMENT_NAME := machine-controller-manager
 # Rules for running helper scripts
 #########################################
 
+-include .env
 include hack/tools.mk
 
 .PHONY: rename-provider
@@ -93,6 +84,19 @@ update-dependencies:
 #########################################
 # Rules for testing
 #########################################
+
+.PHONY: test-setup
+test-setup:
+	@echo "enter project name"; \
+	read PROJECT; \
+	echo "enter control-cluster name"; \
+	read CONTROL_CLUSTER; \
+	echo "enter target-cluster name"; \
+	read TARGET_CLUSTER; \
+	echo "enter cluster provider(gcp|aws|azure|vsphere|openstack|alicloud|metal|equinix-metal)"; \
+	read PROVIDER; \
+	./hack/test_local_setup.sh --control-cluster $$CONTROL_CLUSTER --target-cluster $$TARGET_CLUSTER --project $$PROJECT --provider $$PROVIDER
+
 
 .PHONY: test-unit
 test-unit:
