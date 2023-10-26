@@ -12,13 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+-include .env
+include hack/tools.mk
+
 BINARY_PATH         := bin/
 COVERPROFILE        := test/output/coverprofile.out
 IMAGE_REPOSITORY    := eu.gcr.io/gardener-project/gardener/machine-controller-manager-provider-aws
 IMAGE_TAG           := $(shell cat VERSION)
 PROVIDER_NAME       := AWS
 PROJECT_NAME        := gardener
-
 LEADER_ELECT 	    := "true"
 # If Integration Test Suite is to be run locally against clusters then export the below variable
 # with MCM deployment name in the cluster
@@ -26,9 +28,6 @@ MACHINE_CONTROLLER_MANAGER_DEPLOYMENT_NAME := machine-controller-manager
 #########################################
 # Rules for running helper scripts
 #########################################
-
--include .env
-include hack/tools.mk
 
 .PHONY: rename-provider
 rename-provider:
