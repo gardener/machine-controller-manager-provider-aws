@@ -79,6 +79,22 @@ function setup_ginkgo() {
     echo "Successfully installed Ginkgo."
 }
 
+# Fetch service account kubeconfig
+function fetch_service_account_kubeconfig() {
+    ${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-garden-dev-virtual --key kubeconfig  > dev/sa_kubeconfig.yaml
+    cat dev/sa_kubeconfig.yaml
+}
+
+# Fetch *-oot-target and *-oot-control cluster kubeconfig
+function fetch_oot_cluster_kubeconfig() {
+    NAMESPACE=garden-mcm-ci
+    SHOOT_NAME=ali-oot-target
+    kubectl --kubeconfig=dev/sa_kubeconfig.yaml create -f <(printf '{"spec":{"expirationSeconds":3600}}') --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME}/adminkubeconfig | jq -r ".status.kubeconfig" | base64 -d > dev/oot_target_kubeconfig.yaml
+
+    SHOOT_NAME=ali-oot-control
+    kubectl --kubeconfig=dev/sa_kubeconfig.yaml create -f <(printf '{"spec":{"expirationSeconds":3600}}') --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME}/adminkubeconfig | jq -r ".status.kubeconfig" | base64 -d > dev/oot_control_kubeconfig.yaml
+}
+
 function fetch_control_kubeconfig() {
     ${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-control --key kubeconfig  > dev/control_kubeconfig.yaml
 }
@@ -118,6 +134,8 @@ function setup_environment() {
     fi
 
     #fetching kubeconfigs and machineClass from secret_server
+    fetch_service_account_kubeconfig
+    fetch_oot_cluster_kubeconfig
     fetch_control_kubeconfig
     fetch_target_kubeconfig
     fetch_machine_class
