@@ -82,7 +82,7 @@ function setup_ginkgo() {
 # Fetch sa kubeconfig
 function fetch_service_account_kubeconfig() {
     # ${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-garden-dev-virtual --key kubeconfig  > dev/sa_kubeconfig.yaml
-    cat ./sa_kubeconfig.yaml
+    cat .ci/sa_kubeconfig.yaml
 }
 
 function fetch_control_kubeconfig() {
