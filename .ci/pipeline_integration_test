@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 ############################################## <Color> ##############################################
 RED='\033[0;31m'
 NC='\033[0m' # No Color
@@ -143,6 +142,7 @@ function setup_environment() {
     fetch_control_kubeconfig
     fetch_target_kubeconfig
     fetch_service_account_kubeconfig
+    fetch_oot_cluster_kubeconfig
     fetch_machine_class
 }
 
