@@ -124,21 +124,21 @@ function fetch_userdata(){
 }
 
 function fetch_credentials(){
-    yq --help
    #export KUBECONFIG=dev/sa_kubeconfig.yaml
-   #accessKeyID=$(kubectl --kubeconfig=dev/sa_kubeconfig.yaml get secret shoot-operator-aws-team -n garden-core -oyaml | yq '.data.accessKeyID')
-   kubectl --kubeconfig=dev/sa_kubeconfig.yaml get secret shoot-operator-aws-team -n garden-core -o yaml > dev/tmp_secret.yaml
-   echo "Printing the secret."
-   cat dev/tmp_secret.yaml
-   echo "End. Printed it."
-   accessKeyID=$(yq '.data.accessKeyID' dev/tmp_secret.yaml)
-   secretAccessKey=$(kubectl --kubeconfig=dev/sa_kubeconfig.yaml get secret shoot-operator-aws-team -n garden-core -oyaml | yq '.data.secretAccessKey')
+   accessKeyID=$(kubectl --kubeconfig=dev/sa_kubeconfig.yaml get secret shoot-operator-aws-team -n garden-core -oyaml | yq eval '.data.accessKeyID')
+   # kubectl --kubeconfig=dev/sa_kubeconfig.yaml get secret shoot-operator-aws-team -n garden-core -o yaml > dev/tmp_secret.yaml
+   # accessKeyID=$(yq eval '.data.accessKeyID' dev/tmp_secret.yaml)
+   secretAccessKey=$(kubectl --kubeconfig=dev/sa_kubeconfig.yaml get secret shoot-operator-aws-team -n garden-core -oyaml | yq eval '.data.secretAccessKey')
    echo $accessKeyID
    echo $secretAccessKey
 }
 
 function  create_test_mc_secret() {
     result=$(fetch_credentials)
+    yq --help
+    echo "Printing the secret."
+    cat dev/tmp_secret.yaml
+    echo "End. Printed it."
     accessKeyID=$(echo "$result" | head -n 1)
     secretAccessKey=$(echo "$result" | tail -n 1)
     userData=$(fetch_userdata)
