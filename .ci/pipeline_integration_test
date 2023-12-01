@@ -82,7 +82,7 @@ function setup_ginkgo() {
 # Fetch service account kubeconfig
 function fetch_service_account_kubeconfig() {
     ${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-garden-dev-virtual --key kubeconfig  > dev/sa_kubeconfig.yaml
-    cat dev/sa_kubeconfig.yaml
+    # cat dev/sa_kubeconfig.yaml
 }
 
 # Fetch *-oot-target and *-oot-control cluster kubeconfig
@@ -94,7 +94,7 @@ function fetch_oot_cluster_kubeconfig() {
     SHOOT_NAME=ali-oot-control
     kubectl --kubeconfig=dev/sa_kubeconfig.yaml create -f <(printf '{"spec":{"expirationSeconds":3600}}') --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME}/adminkubeconfig | jq -r ".status.kubeconfig" | base64 -d > dev/oot_control_kubeconfig.yaml
 
-    cat dev/oot_control_kubeconfig.yaml
+    # cat dev/oot_control_kubeconfig.yaml
 }
 
 function fetch_control_kubeconfig() {
@@ -124,9 +124,11 @@ function fetch_userdata(){
 }
 
 function fetch_credentials(){
+    yq --help
    #export KUBECONFIG=dev/sa_kubeconfig.yaml
    #accessKeyID=$(kubectl --kubeconfig=dev/sa_kubeconfig.yaml get secret shoot-operator-aws-team -n garden-core -oyaml | yq '.data.accessKeyID')
    kubectl --kubeconfig=dev/sa_kubeconfig.yaml get secret shoot-operator-aws-team -n garden-core -oyaml > dev/tmp_secret.yaml
+   cat dev/tmp_secret.yaml
    accessKeyID=$(yq '.data.accessKeyID' dev/tmp_secret.yaml)
    secretAccessKey=$(kubectl --kubeconfig=dev/sa_kubeconfig.yaml get secret shoot-operator-aws-team -n garden-core -oyaml | yq '.data.secretAccessKey')
    echo $accessKeyID
