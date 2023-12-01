@@ -116,17 +116,17 @@ function fetch_machine_class() {
 function fetch_userdata(){
     NAMESPACE='garden'
     SHOOT_NAME='aws-ha'
-    kubectl create -f <(printf '{"spec":{"expirationSeconds":3600}}') --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME}/adminkubeconfig | jq -r ".status.kubeconfig" | base64 -d > dev/seed_kubeconfig.yaml
-    export KUBECONFIG=dev/seed_kubeconfig.yaml
-    userData=$(kubectl get secret shoot--mcm-ci--aws-oot-target-worker-1-z1-18556 -n shoot--mcm-ci--aws-oot-target -oyaml | yq '.data.userData')
+    kubectl --kubeconfig=dev/sa_kubeconfig.yaml create -f <(printf '{"spec":{"expirationSeconds":3600}}') --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME}/adminkubeconfig | jq -r ".status.kubeconfig" | base64 -d > dev/seed_kubeconfig.yaml
+    #export KUBECONFIG=dev/seed_kubeconfig.yaml
+    userData=$(kubectl --kubeconfig=dev/seed_kubeconfig.yaml get secret shoot--mcm-ci--aws-oot-target-worker-1-z1-18556 -n shoot--mcm-ci--aws-oot-target -oyaml | yq '.data.userData')
     echo $userData
     export KUBECONFIG=dev/sa_kubeconfig.yaml
 }
 
 function fetch_credentials(){
-   export KUBECONFIG=dev/sa_kubeconfig.yaml
-   accessKeyID=$(kubectl get secret shoot-operator-aws-team -n garden-core -oyaml | yq '.data.accessKeyID')
-   secretAccessKey=$(kubectl get secret shoot-operator-aws-team -n garden-core -oyaml | yq '.data.secretAccessKey')
+   #export KUBECONFIG=dev/sa_kubeconfig.yaml
+   accessKeyID=$(kubectl --kubeconfig=dev/sa_kubeconfig.yaml get secret shoot-operator-aws-team -n garden-core -oyaml | yq '.data.accessKeyID')
+   secretAccessKey=$(kubectl --kubeconfig=dev/sa_kubeconfig.yaml get secret shoot-operator-aws-team -n garden-core -oyaml | yq '.data.secretAccessKey')
    echo $accessKeyID
    echo $secretAccessKey
 }
@@ -136,7 +136,7 @@ function  create_test_mc_secret() {
     accessKeyID=$(echo "$result" | head -n 1)
     secretAccessKey=$(echo "$result" | tail -n 1)
     userData=$(fetch_userdata)
-    export KUBECONFIG=$CONTROL_KUBECONFIG
+    #export KUBECONFIG=$CONTROL_KUBECONFIG
 secret_yaml=$(cat <<EOF
 apiVersion: v1
 data:
@@ -152,7 +152,7 @@ EOF
 )
     echo "################## TEST_MC_SECRET ########################"
     echo "$secret_yaml"
-    #echo "$secret_yaml" | kubectl apply -f -
+    #echo "$secret_yaml" | kubectl --kubeconfig=$CONTROL_KUBECONFIG apply -f -
 }
 
 function setup_environment() {
