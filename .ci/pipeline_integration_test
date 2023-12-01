@@ -93,6 +93,8 @@ function fetch_oot_cluster_kubeconfig() {
 
     SHOOT_NAME=ali-oot-control
     kubectl --kubeconfig=dev/sa_kubeconfig.yaml create -f <(printf '{"spec":{"expirationSeconds":3600}}') --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME}/adminkubeconfig | jq -r ".status.kubeconfig" | base64 -d > dev/oot_control_kubeconfig.yaml
+
+    cat dev/oot_control_kubeconfig.yaml
 }
 
 function fetch_control_kubeconfig() {
