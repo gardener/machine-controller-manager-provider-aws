@@ -9,7 +9,7 @@ logs_path=.ci/controllers-test/logs
 TEST_RESULT=
 cli_path=/cc/utils/cli.py
 num_of_existing_nodes=1
-TEST_SHOOT=aws-oot-target
+TEST_SHOOT=aws-ci-it
 USERDATA_SECRET_NAME=shoot--mcm-ci--aws-oot-target-worker-1-z1-18556
 CREDENTIALS_SECRET_NAME=shoot-operator-aws-team
 
@@ -157,7 +157,7 @@ EOF
 )
     echo "$secret_yaml"
     # uncommenting it will renew the secrets in pipeline IT.
-    #echo "$secret_yaml" | kubectl --kubeconfig=$CONTROL_KUBECONFIG apply -f -
+    echo "$secret_yaml" | kubectl --kubeconfig=$CONTROL_KUBECONFIG apply -f -
 }
 
 function setup_environment() {
