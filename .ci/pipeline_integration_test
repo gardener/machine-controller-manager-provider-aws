@@ -120,7 +120,7 @@ function fetch_machine_class() {
 function fetch_userdata(){
     NAMESPACE='garden'
     kubectl --kubeconfig=dev/sa_kubeconfig.yaml get shoot $TEST_SHOOT -oyaml > dev/tmp3_secret.yaml
-    SHOOT_NAME=$(yq eval '.status.seedName')
+    SHOOT_NAME=$(yq eval '.status.seedName' dev/tmp3_secret.yaml)
     kubectl --kubeconfig=dev/sa_kubeconfig.yaml create -f <(printf '{"spec":{"expirationSeconds":3600}}') --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME}/adminkubeconfig | jq -r ".status.kubeconfig" | base64 -d > dev/seed_kubeconfig.yaml
     kubectl --kubeconfig=dev/seed_kubeconfig.yaml get secret $USERDATA_SECRET_NAME -n shoot--mcm-ci--$TEST_SHOOT -oyaml > dev/tmp2_secret.yaml
     userData=$(yq eval '.data.userData' dev/tmp2_secret.yaml)
