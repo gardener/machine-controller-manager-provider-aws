@@ -123,7 +123,7 @@ function fetch_userdata(){
     kubectl --kubeconfig=dev/sa_kubeconfig.yaml get shoot $TEST_SHOOT -oyaml > dev/tmp3_secret.yaml
     SHOOT_NAME=$(yq eval '.status.seedName' dev/tmp3_secret.yaml)
     kubectl --kubeconfig=dev/sa_kubeconfig.yaml create -f <(printf '{"spec":{"expirationSeconds":3600}}') --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME}/adminkubeconfig | jq -r ".status.kubeconfig" | base64 -d > dev/seed_kubeconfig.yaml
-    USERDATA_SECRET_NAME=$(kubectl --kubeconfig=dev/seed_kubeconfig.yaml get secrets -o custom-columns=Name:.metadata.name --no-headers | grep shoot--mcm-ci)
+    USERDATA_SECRET_NAME=$(kubectl --kubeconfig=dev/seed_kubeconfig.yaml get secrets -n shoot--mcm-ci--aws-ci-it -o custom-columns=Name:.metadata.name --no-headers | grep shoot--mcm-ci)
     kubectl --kubeconfig=dev/seed_kubeconfig.yaml get secret $USERDATA_SECRET_NAME -n shoot--mcm-ci--$TEST_SHOOT -oyaml > dev/tmp2_secret.yaml
     userData=$(yq eval '.data.userData' dev/tmp2_secret.yaml)
     echo $userData
