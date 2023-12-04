@@ -9,6 +9,9 @@ logs_path=.ci/controllers-test/logs
 TEST_RESULT=
 cli_path=/cc/utils/cli.py
 num_of_existing_nodes=1
+TEST_SHOOT=aws-oot-target
+USERDATA_SECRET_NAME=shoot--mcm-ci--aws-oot-target-worker-1-z1-18556
+CREDENTIALS_SECRET_NAME=shoot-operator-aws-team
 
 #these variables are accessed in test/integration/controller so prefixed by ${SOURCE_PATH} for absolute path
 declare CONTROL_KUBECONFIG=${SOURCE_PATH}/dev/control_kubeconfig.yaml
@@ -112,15 +115,16 @@ function fetch_machine_class() {
 
 function fetch_userdata(){
     NAMESPACE='garden'
-    SHOOT_NAME='aws-ha'
+    kubectl --kubeconfig=dev/sa_kubeconfig.yaml get shoot $TEST_SHOOT -oyaml > dev/tmp3_secret.yaml
+    SHOOT_NAME=$(yq eval '.status.seedName')
     kubectl --kubeconfig=dev/sa_kubeconfig.yaml create -f <(printf '{"spec":{"expirationSeconds":3600}}') --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME}/adminkubeconfig | jq -r ".status.kubeconfig" | base64 -d > dev/seed_kubeconfig.yaml
-    kubectl --kubeconfig=dev/seed_kubeconfig.yaml get secret shoot--mcm-ci--aws-oot-target-worker-1-z1-18556 -n shoot--mcm-ci--aws-oot-target -oyaml > dev/tmp2_secret.yaml
+    kubectl --kubeconfig=dev/seed_kubeconfig.yaml get secret $USERDATA_SECRET_NAME -n shoot--mcm-ci--$TEST_SHOOT -oyaml > dev/tmp2_secret.yaml
     userData=$(yq eval '.data.userData' dev/tmp2_secret.yaml)
     echo $userData
 }
 
 function fetch_credentials(){
-   kubectl --kubeconfig=dev/sa_kubeconfig.yaml get secret shoot-operator-aws-team -n garden-core -o yaml > dev/tmp_secret.yaml
+   kubectl --kubeconfig=dev/sa_kubeconfig.yaml get secret $CREDENTIALS_SECRET_NAME -n garden-core -o yaml > dev/tmp_secret.yaml
    accessKeyID=$(yq eval '.data.accessKeyID' dev/tmp_secret.yaml)
    secretAccessKey=$(yq eval '.data.secretAccessKey' dev/tmp_secret.yaml)
    echo $accessKeyID
@@ -147,6 +151,7 @@ metadata:
 type: Opaque
 EOF
 )
+    echo "$secret_yaml"
     # uncommenting it will renew the secrets in pipeline IT.
     #echo "$secret_yaml" | kubectl --kubeconfig=$CONTROL_KUBECONFIG apply -f -
 }
