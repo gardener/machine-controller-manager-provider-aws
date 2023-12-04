@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 ############################################## <Color> ##############################################
 RED='\033[0;31m'
 NC='\033[0m' # No Color
@@ -101,14 +100,14 @@ function fetch_oot_cluster_kubeconfig() {
 #    kubectl --kubeconfig=dev/sa_kubeconfig.yaml create -f <(printf '{"spec":{"expirationSeconds":3600}}') --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME}/adminkubeconfig | jq -r ".status.kubeconfig" | base64 -d > dev/oot_control_kubeconfig.yaml
     kubectl --kubeconfig=dev/sa_kubeconfig.yaml create -f <(printf '{"spec":{"expirationSeconds":3600}}') --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME}/adminkubeconfig | jq -r ".status.kubeconfig" | base64 -d > dev/control_kubeconfig.yaml
 }
-
-function fetch_control_kubeconfig() {
-    # ${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-control --key kubeconfig  > dev/control_kubeconfig.yaml
-}
-
-function fetch_target_kubeconfig() {
-    # ${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-target --key kubeconfig > dev/target_kubeconfig.yaml
-}
+#
+#function fetch_control_kubeconfig() {
+#     ${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-control --key kubeconfig  > dev/control_kubeconfig.yaml
+#}
+#
+#function fetch_target_kubeconfig() {
+#     ${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-target --key kubeconfig > dev/target_kubeconfig.yaml
+#}
 
 function fetch_machine_class() {
     #bringing machineclass from secret server
@@ -186,8 +185,8 @@ function setup_environment() {
     #fetching kubeconfigs and machineClass from secret_server
     fetch_service_account_kubeconfig
     fetch_oot_cluster_kubeconfig
-    fetch_control_kubeconfig
-    fetch_target_kubeconfig
+#    fetch_control_kubeconfig
+#    fetch_target_kubeconfig
     fetch_machine_class
     create_test_mc_secret
 }
