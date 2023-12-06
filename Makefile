@@ -17,7 +17,7 @@ include hack/tools.mk
 
 BINARY_PATH         := bin/
 COVERPROFILE        := test/output/coverprofile.out
-IMAGE_REPOSITORY    := eu.gcr.io/gardener-project/gardener/machine-controller-manager-provider-aws
+IMAGE_REPOSITORY    := europe-docker.pkg.dev/gardener-project/public/gardener/machine-controller-manager-provider-aws
 IMAGE_TAG           := $(shell cat VERSION)
 PROVIDER_NAME       := AWS
 PROJECT_NAME        := gardener

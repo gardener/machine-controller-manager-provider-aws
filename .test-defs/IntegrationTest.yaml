@@ -11,4 +11,4 @@ spec:
   args:
   - >-
     make MC_IMAGE_TAG=$(shell cat VERSION) CONTROL_KUBECONFIG=${TM_KUBECONFIG_PATH}/seed.config TARGET_KUBECONFIG=${TM_KUBECONFIG_PATH}/shoot.config test-integration 
-  image: eu.gcr.io/gardener-project/cc/job-image-golang:0.11.0
+  image: europe-docker.pkg.dev/gardener-project/releases/cicd/legacy/job-image-golang:0.11.0
