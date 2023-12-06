@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 ############################################## <Color> ##############################################
 RED='\033[0;31m'
 NC='\033[0m' # No Color
@@ -91,7 +93,6 @@ function fetch_oot_cluster_kubeconfig() {
     NAMESPACE=garden-mcm-ci
 #    SHOOT_NAME=aws-oot-target
     SHOOT_NAME=aws-ci-it
-    # kubectl --kubeconfig=dev/sa_kubeconfig.yaml create -f <(printf '{"spec":{"expirationSeconds":3600}}') --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME}/adminkubeconfig | jq -r ".status.kubeconfig" | base64 -d > dev/oot_target_kubeconfig.yaml
     kubectl --kubeconfig=dev/sa_kubeconfig.yaml create -f <(printf '{"spec":{"expirationSeconds":3600}}') --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME}/adminkubeconfig | jq -r ".status.kubeconfig" | base64 -d > dev/target_kubeconfig.yaml
 
 #    SHOOT_NAME=aws-oot-control
