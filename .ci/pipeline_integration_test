@@ -139,10 +139,14 @@ metadata:
 type: Opaque
 EOF
 )
-    echo "############ TEST_MC_SECRET ##############"
+    echo "################################# TEST_MC_SECRET #################################"
     echo "$secret_yaml"
     # uncommenting it will renew the secrets in pipeline IT.
     echo "$secret_yaml" | kubectl --kubeconfig=$CONTROL_KUBECONFIG apply -f -
+}
+
+function delete_test_mc_secret() {
+   kubectl --kubeconfig=$CONTROL_KUBECONFIG delete secret test-mc-secret
 }
 
 function setup_environment() {
@@ -170,11 +174,11 @@ function setup_environment() {
     #fetching kubeconfigs and machineClass from secret_server
     fetch_service_account_kubeconfig
     fetch_oot_cluster_kubeconfig
-    echo "######## Cluster Kubeconfig ##########"
+    echo "############################ Cluster Kubeconfig ############################"
     cat dev/target_kubeconfig.yaml
 #    fetch_machine_class
     create_test_mc_secret
-    echo "######## MACHINE CLASS #########"
+    echo "########################### MACHINE CLASS ############################"
     cat dev/v1machineclass_converted.yaml
 }
 
@@ -242,6 +246,7 @@ if [ ${result} -ne 0 ]; then
 exit $result
 fi
 run_integration_tests
+delete_test_mc_secret
 print_controller_logs
 printf "\n\t\t\t----- End of Test Script -----------\n"
 
