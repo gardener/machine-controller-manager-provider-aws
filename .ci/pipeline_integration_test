@@ -146,7 +146,8 @@ EOF
 }
 
 function delete_test_mc_secret() {
-   kubectl --kubeconfig=$CONTROL_KUBECONFIG delete secret test-mc-secret
+  echo "---- Deleting the test_mc_secret ----"
+  kubectl --kubeconfig=$CONTROL_KUBECONFIG delete secret test-mc-secret
 }
 
 function setup_environment() {
