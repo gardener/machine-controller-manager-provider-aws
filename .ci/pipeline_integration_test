@@ -247,6 +247,7 @@ exit $result
 fi
 run_integration_tests
 echo  "---- Deleting the test_mc_secret ----"
+echo $CONTROL_KUBECONFIG
 delete_test_mc_secret
 print_controller_logs
 printf "\n\t\t\t----- End of Test Script -----------\n"
