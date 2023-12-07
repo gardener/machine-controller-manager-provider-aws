@@ -146,8 +146,7 @@ EOF
 }
 
 function delete_test_mc_secret() {
-  echo "---- Deleting the test_mc_secret ----"
-  kubectl --kubeconfig=$CONTROL_KUBECONFIG delete secret test-mc-secret
+  kubectl --kubeconfig=dev/control_kubeconfig.yaml delete secret test-mc-secret
 }
 
 function setup_environment() {
@@ -247,6 +246,8 @@ if [ ${result} -ne 0 ]; then
 exit $result
 fi
 run_integration_tests
+echo  "---- Deleting the test_mc_secret ----"
+echo $CONTROL_KUBECONFIG
 delete_test_mc_secret
 print_controller_logs
 printf "\n\t\t\t----- End of Test Script -----------\n"
