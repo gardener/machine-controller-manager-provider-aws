@@ -96,14 +96,6 @@ function fetch_oot_cluster_kubeconfig() {
     kubectl --kubeconfig=dev/sa_kubeconfig.yaml create -f <(printf '{"spec":{"expirationSeconds":3600}}') --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME}/adminkubeconfig | jq -r ".status.kubeconfig" | base64 -d > dev/control_kubeconfig.yaml
 }
 
-function fetch_machine_class() {
-    #bringing machineclass from secret server
-    ${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-aws-oot-target --key machineClass > ${SOURCE_PATH}/dev/v1machineclass.json
-
-    #convert json to yaml, so that machineclass can be parsed during integration-test
-    yq e -P ${SOURCE_PATH}/dev/v1machineclass.json > ${SOURCE_PATH}/dev/v1machineclass_converted.yaml
-}
-
 function fetch_userdata_and_machineclass(){
     NAMESPACE='garden'
     kubectl --kubeconfig=dev/sa_kubeconfig.yaml get shoot $TEST_SHOOT -oyaml > dev/tmp3_secret.yaml
@@ -115,6 +107,8 @@ function fetch_userdata_and_machineclass(){
     echo $userData
     MCC_NAME=$(kubectl --kubeconfig=dev/seed_kubeconfig.yaml get mcc -n shoot--mcm-ci--$TEST_SHOOT -o custom-columns=Name:.metadata.name --no-headers | grep shoot--mcm-ci)
     kubectl --kubeconfig=dev/seed_kubeconfig.yaml get mcc $MCC_NAME -n shoot--mcm-ci--$TEST_SHOOT -oyaml > ${SOURCE_PATH}/dev/v1machineclass_converted.yaml
+    yq eval 'del(.metadata.creationTimestamp) | del(.metadata.finalizers) | del(.metadata.generation) | del(.metadata.resourceVersion) | del(.metadata.uid) | del(.credentialsSecretRef)'  dev/v1machineclass_converted.yaml -i
+    yq eval '.metadata.name = "test-mc-v1" | .metadata.namespace = "default" | .secretRef.name = "test-mc-secret" | .secretRef.namespace = "default"' dev/v1machineclass_converted.yaml -i
 }
 
 function fetch_credentials(){
