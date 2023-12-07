@@ -104,7 +104,7 @@ function fetch_machine_class() {
     yq e -P ${SOURCE_PATH}/dev/v1machineclass.json > ${SOURCE_PATH}/dev/v1machineclass_converted.yaml
 }
 
-function fetch_userdata(){
+function fetch_userdata_and_machineclass(){
     NAMESPACE='garden'
     kubectl --kubeconfig=dev/sa_kubeconfig.yaml get shoot $TEST_SHOOT -oyaml > dev/tmp3_secret.yaml
     SHOOT_NAME=$(yq eval '.status.seedName' dev/tmp3_secret.yaml)
@@ -113,6 +113,8 @@ function fetch_userdata(){
     kubectl --kubeconfig=dev/seed_kubeconfig.yaml get secret $USERDATA_SECRET_NAME -n shoot--mcm-ci--$TEST_SHOOT -oyaml > dev/tmp2_secret.yaml
     userData=$(yq eval '.data.userData' dev/tmp2_secret.yaml)
     echo $userData
+    MCC_NAME=$(kubectl --kubeconfig=dev/seed_kubeconfig.yaml get mcc -n shoot--mcm-ci--$TEST_SHOOT -o custom-columns=Name:.metadata.name --no-headers | grep shoot--mcm-ci)
+    kubectl --kubeconfig=dev/seed_kubeconfig.yaml get mcc $MCC_NAME -n shoot--mcm-ci--$TEST_SHOOT -oyaml > ${SOURCE_PATH}/dev/v1machineclass_converted.yaml
 }
 
 function fetch_credentials(){
@@ -127,7 +129,7 @@ function create_test_mc_secret() {
     result=$(fetch_credentials)
     accessKeyID=$(echo "$result" | head -n 1)
     secretAccessKey=$(echo "$result" | tail -n 1)
-    userData=$(fetch_userdata)
+    userData=$(fetch_userdata_and_machineclass)
     rm -f dev/tmp_secret.yaml
     rm -f dev/tmp2_secret.yaml
 secret_yaml=$(cat <<EOF
@@ -176,8 +178,10 @@ function setup_environment() {
     fetch_oot_cluster_kubeconfig
     echo "######## Cluster Kubeconfig ##########"
     cat dev/target_kubeconfig.yaml
-    fetch_machine_class
+#    fetch_machine_class
     create_test_mc_secret
+    echo "######## MACHINE CLASS #########"
+    cat dev/v1machineclass_converted.yaml
 }
 
 function check_cluster_state() {
