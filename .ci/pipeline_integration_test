@@ -102,9 +102,11 @@ function fetch_userdata(){
     NAMESPACE='garden'
     kubectl --kubeconfig=dev/sa_kubeconfig.yaml get shoot $TEST_SHOOT -oyaml > dev/shoot.yaml
     SEED_NAME=$(yq eval '.status.seedName' dev/shoot.yaml)
+    cat dev/shoot.yaml
     kubectl --kubeconfig=dev/sa_kubeconfig.yaml create -f <(printf '{"spec":{"expirationSeconds":3600}}') --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SEED_NAME}/adminkubeconfig | jq -r ".status.kubeconfig" | base64 -d > dev/seed_kubeconfig.yaml
     USERDATA_SECRET_NAME=$(kubectl --kubeconfig=dev/seed_kubeconfig.yaml get secrets -n shoot--mcm-ci--$TEST_SHOOT -o custom-columns=Name:.metadata.name --no-headers | grep shoot--mcm-ci)
     kubectl --kubeconfig=dev/seed_kubeconfig.yaml get secret $USERDATA_SECRET_NAME -n shoot--mcm-ci--$TEST_SHOOT -oyaml > dev/userData.yaml
+    cat dev/userData.yaml
     userData=$(yq eval '.data.userData' dev/userData.yaml)
     echo $userData
 }
@@ -204,7 +206,7 @@ function check_cluster_state() {
     printf "No machine crds in control test cluster\n"
 
     printf "\nChecking existance of node objects\n"
-    num_of_existing_nodes=fetch_existing_nodes
+    num_of_existing_nodes=$((fetch_existing_nodes + 0))
     # Wait 60mins for any existing PRs to cleanup nodes
     hf_wait_on "hf_num_of_ready_nodes" nodes 0 3600
     printf "No additional node objects in target test cluster\n"
