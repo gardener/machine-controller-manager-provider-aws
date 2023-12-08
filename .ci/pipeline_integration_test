@@ -260,7 +260,7 @@ if [ ${result} -ne 0 ]; then
 exit $result
 fi
 run_integration_tests
-delete_test_mc_secret
+cleanup_environment
 print_controller_logs
 printf "\n\t\t\t----- End of Test Script -----------\n"
 
