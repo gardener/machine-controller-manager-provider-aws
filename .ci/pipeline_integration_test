@@ -192,7 +192,6 @@ function setup_environment() {
 }
 
 function fetch_existing_nodes() {
-    echo $TARGET_KUBECONFIG
     kubectl --kubeconfig=$TARGET_KUBECONFIG get nodes --no-headers | wc -l
 }
 
