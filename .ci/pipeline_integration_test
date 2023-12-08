@@ -114,7 +114,7 @@ function fetch_machine_class(){
     MCC_NAME=$(kubectl --kubeconfig=dev/seed_kubeconfig.yaml get mcc -n shoot--mcm-ci--$TEST_SHOOT -o custom-columns=Name:.metadata.name --no-headers | grep shoot--mcm-ci)
     kubectl --kubeconfig=dev/seed_kubeconfig.yaml get mcc $MCC_NAME -n shoot--mcm-ci--$TEST_SHOOT -oyaml > ${SOURCE_PATH}/dev/v1machineclass_converted.yaml
     yq eval 'del(.metadata.creationTimestamp) | del(.metadata.finalizers) | del(.metadata.generation) | del(.metadata.resourceVersion) | del(.metadata.uid) | del(.credentialsSecretRef)'  dev/v1machineclass_converted.yaml -i
-    yq eval '.metadata.name = "test-mc-v1" | .metadata.namespace = "default" | .secretRef.name = test_mc_secret" | .secretRef.namespace = "default"' dev/v1machineclass_converted.yaml -i
+    yq eval '.metadata.name = "test-mc-v1" | .metadata.namespace = "default" | .secretRef.name = env(TEST_CREDS_SECRET) | .secretRef.namespace = "default"' dev/v1machineclass_converted.yaml -i
 }
 
 function fetch_credentials(){
