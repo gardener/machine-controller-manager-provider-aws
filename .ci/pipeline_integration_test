@@ -185,8 +185,8 @@ function setup_environment() {
     fetch_oot_cluster_kubeconfig
     echo "############################ CLUSTER KUBECONFIG ############################"
     cat dev/target_kubeconfig.yaml
-    fetch_machine_class
     create_test_mc_secret
+    fetch_machine_class
     echo "########################### MACHINE CLASS ############################"
     cat dev/v1machineclass_converted.yaml
 }
