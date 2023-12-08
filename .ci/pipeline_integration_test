@@ -155,7 +155,7 @@ function delete_test_mc_secret() {
 }
 
 function  cleanup_environment() {
-    printf  "---- Deleting the test_mc_secret ----"
+    printf "\n\t\t\t----- Deleting the test_mc_secret --------\n"
     delete_test_mc_secret
 }
 
