@@ -13,15 +13,16 @@ cli_path=/cc/utils/cli.py
 num_of_existing_nodes=1
 TEST_SHOOT=aws-ci-it
 CREDENTIALS_SECRET_NAME=shoot-operator-aws-team
-TEST_CREDS_SECRET=test-mc-secret
 GARDEN_CORE_NAMESPACE=garden-core
 
 #these variables are accessed in test/integration/controller so prefixed by ${SOURCE_PATH} for absolute path
 declare CONTROL_KUBECONFIG=${SOURCE_PATH}/dev/control_kubeconfig.yaml
 declare TARGET_KUBECONFIG=${SOURCE_PATH}/dev/target_kubeconfig.yaml
+declare TEST_CREDS_SECRET=test-mc-secret
 
 export CONTROL_KUBECONFIG
 export TARGET_KUBECONFIG
+export TEST_CREDS_SECRET
 export MACHINECLASS_V1=${SOURCE_PATH}/dev/v1machineclass_converted.yaml
 export MACHINE_CONTROLLER_MANAGER_DEPLOYMENT_NAME="machine-controller-manager"
 
