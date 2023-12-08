@@ -192,7 +192,7 @@ function setup_environment() {
 }
 
 function fetch_existing_nodes() {
-    kubectl --kubeconfig=$CONTROL_KUBECONFIG get nodes --no-headers | wc -l
+    kubectl --kubeconfig=$TARGET_KUBECONFIG get nodes --no-headers | wc -l
 }
 
 function check_cluster_state() {
@@ -204,9 +204,8 @@ function check_cluster_state() {
     printf "No machine crds in control test cluster\n"
 
     printf "\nChecking existance of node objects\n"
-    printf "######## Existing Nodes ########"
-    num_of_existing_nodes=$((fetch_existing_nodes + 0))
-    printf "######## Existing Nodes ########"
+    printf "\n######## Existing Nodes ########\n"
+    num_of_existing_nodes=$((fetch_existing_nodes))
     echo $num_of_existing_nodes
     # Wait 60mins for any existing PRs to cleanup nodes
     hf_wait_on "hf_num_of_ready_nodes" nodes 0 3600
