@@ -205,7 +205,7 @@ function check_cluster_state() {
 
     printf "\nChecking existance of node objects\n"
     printf "\n######## Existing Nodes ########\n"
-    num_of_existing_nodes=$((fetch_existing_nodes))
+    num_of_existing_nodes=$(($(fetch_existing_nodes)))
     echo $num_of_existing_nodes
     # Wait 60mins for any existing PRs to cleanup nodes
     hf_wait_on "hf_num_of_ready_nodes" nodes 0 3600
