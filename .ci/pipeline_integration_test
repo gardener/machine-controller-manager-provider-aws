@@ -92,7 +92,7 @@ function fetch_service_account_kubeconfig() {
 }
 
 function make_kubeconfig_request() {
-    kubectl --kubeconfig=dev/sa_kubeconfig.yaml create -f <(printf '{"spec":{"expirationSeconds":3600}}') --raw /apis/core.gardener.cloud/v1beta1/namespaces/"$1"/shoots/"$2"/adminkubeconfig | jq -r ".status.kubeconfig" | base64 -d > "$3"
+    kubectl --kubeconfig=dev/sa_kubeconfig.yaml create -f <(printf '{"spec":{"expirationSeconds":10800}}') --raw /apis/core.gardener.cloud/v1beta1/namespaces/"$1"/shoots/"$2"/adminkubeconfig | jq -r ".status.kubeconfig" | base64 -d > "$3"
 }
 
 # Fetch *-ci-it cluster kubeconfig
