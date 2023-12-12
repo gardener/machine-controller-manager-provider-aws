@@ -14,6 +14,7 @@ num_of_existing_nodes=1
 TEST_SHOOT=aws-ci-it
 CREDENTIALS_SECRET_NAME=shoot-operator-aws-team
 GARDEN_CORE_NAMESPACE=garden-core
+KUBECONFIG_EXPIRY=10800
 
 #these variables are accessed in test/integration/controller so prefixed by ${SOURCE_PATH} for absolute path
 declare CONTROL_KUBECONFIG=${SOURCE_PATH}/dev/control_kubeconfig.yaml
@@ -91,23 +92,24 @@ function fetch_service_account_kubeconfig() {
     ${cli_path} config attribute --cfg-type kubernetes --cfg-name mcm-ci-garden-dev-virtual --key kubeconfig  > dev/sa_kubeconfig.yaml
 }
 
-function make_kubeconfig_request() {
-    kubectl --kubeconfig=dev/sa_kubeconfig.yaml create -f <(printf '{"spec":{"expirationSeconds":10800}}') --raw /apis/core.gardener.cloud/v1beta1/namespaces/"$1"/shoots/"$2"/adminkubeconfig | jq -r ".status.kubeconfig" | base64 -d > "$3"
+
+function request_kubeconfig() {
+    kubectl --kubeconfig=dev/sa_kubeconfig.yaml create -f <(printf '{"spec":{"expirationSeconds":$KUBECONFIG_EXPIRY}}') --raw /apis/core.gardener.cloud/v1beta1/namespaces/"$1"/shoots/"$2"/adminkubeconfig | jq -r ".status.kubeconfig" | base64 -d > "$3"
 }
 
 # Fetch *-ci-it cluster kubeconfig
 function fetch_oot_cluster_kubeconfig() {
     NAMESPACE=garden-mcm-ci
     SHOOT_NAME=aws-ci-it
-    make_kubeconfig_request $NAMESPACE $SHOOT_NAME "dev/target_kubeconfig.yaml"
-    make_kubeconfig_request $NAMESPACE $SHOOT_NAME "dev/control_kubeconfig.yaml"
+    request_kubeconfig $NAMESPACE $SHOOT_NAME "dev/target_kubeconfig.yaml"
+    request_kubeconfig $NAMESPACE $SHOOT_NAME "dev/control_kubeconfig.yaml"
 }
 
 function fetch_userdata(){
     NAMESPACE='garden'
     kubectl --kubeconfig=dev/sa_kubeconfig.yaml get shoot $TEST_SHOOT -oyaml > dev/shoot.yaml
     SEED_NAME=$(yq eval '.status.seedName' dev/shoot.yaml)
-    make_kubeconfig_request $NAMESPACE $SEED_NAME "dev/seed_kubeconfig.yaml"
+    request_kubeconfig $NAMESPACE $SEED_NAME "dev/seed_kubeconfig.yaml"
     USERDATA_SECRET_NAME=$(kubectl --kubeconfig=dev/seed_kubeconfig.yaml get secrets -n shoot--mcm-ci--$TEST_SHOOT -o custom-columns=Name:.metadata.name --no-headers | grep shoot--mcm-ci)
     kubectl --kubeconfig=dev/seed_kubeconfig.yaml get secret $USERDATA_SECRET_NAME -n shoot--mcm-ci--$TEST_SHOOT -oyaml > dev/userData.yaml
     userData=$(yq eval '.data.userData' dev/userData.yaml)
@@ -149,8 +151,6 @@ metadata:
 type: Opaque
 EOF
 )
-    echo "################################# TEST_MC_SECRET #################################"
-    echo "$secret_yaml"
     echo "$secret_yaml" | kubectl --kubeconfig=$CONTROL_KUBECONFIG apply -f -
 }
 
@@ -188,12 +188,10 @@ function setup_environment() {
     #fetching kubeconfigs and machineClass from secret_server
     fetch_service_account_kubeconfig
     fetch_oot_cluster_kubeconfig
-    echo "############################ CLUSTER KUBECONFIG ############################"
-    cat dev/target_kubeconfig.yaml
     create_test_mc_secret
+    echo "test-mc-secret created successfully"
     fetch_machine_class
-    echo "########################### MACHINE CLASS ############################"
-    cat dev/v1machineclass_converted.yaml
+    echo "machineclass fetched successfully"
 }
 
 function fetch_existing_nodes() {
@@ -209,9 +207,8 @@ function check_cluster_state() {
     printf "No machine crds in control test cluster\n"
 
     printf "\nChecking existance of node objects\n"
-    printf "\n######## Existing Nodes ########\n"
     num_of_existing_nodes=$(($(fetch_existing_nodes)))
-    echo $num_of_existing_nodes
+    printf "\nexisting_default_nodes=$num_of_existing_nodes\n"
     # Wait 60mins for any existing PRs to cleanup nodes
     hf_wait_on "hf_num_of_ready_nodes" nodes 0 3600
     printf "No additional node objects in target test cluster\n"
