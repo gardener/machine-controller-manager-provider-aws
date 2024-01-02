@@ -259,6 +259,9 @@ func getPlacementObj(req *driver.CreateMachineRequest) (*ec2.Placement, error) {
 	return placementobj, nil
 }
 
+// InitializeMachine should handle post-creation, one-time VM instance initialization operations. (Ex: Like setting up special network config, etc)
+// The AWS Provider leverages this method to perform disabling of source destination checks for NAT instances.
+// See [driver.Driver.InitializeMachine] for further information
 func (d *Driver) InitializeMachine(ctx context.Context, request *driver.InitializeMachineRequest) (*driver.InitializeMachineResponse, error) {
 	providerSpec, err := decodeProviderSpecAndSecret(request.MachineClass, request.Secret)
 	if err != nil {
