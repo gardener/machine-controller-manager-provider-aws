@@ -13,3 +13,6 @@ bin/
 /tmp
 .env
 .ci/controllers-test/logs/*.log
+.ci/controllers-test/logs/mc_process.log.*
+kubectl
+yq_linux*

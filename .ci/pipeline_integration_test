@@ -181,6 +181,8 @@ function setup_environment() {
     mv ./kubectl /usr/local/bin/kubectl
     printf "Successfully installed kubectl\n"
 
+    printf "\n Checking ginkgo version..."
+    ginkgo version
     #install ginkgo
     if ! [ -x "$(command -v ginkgo)" ]; then
     setup_ginkgo
