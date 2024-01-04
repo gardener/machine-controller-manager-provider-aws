@@ -53,7 +53,7 @@ fi
 
 # Install Ginkgo (test framework) to be able to execute the tests.
 echo "Fetching Ginkgo framework"
-GO111MODULE=on go install github.com/onsi/ginkgo/ginkgo@v2.13.2
+GO111MODULE=on go install github.com/onsi/ginkgo/v2/ginkgo
 echo "Successfully fetched Ginkgo framework"
 
 ##############################################################################
