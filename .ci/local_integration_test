@@ -17,6 +17,13 @@ set -e
 # For the test step concourse will set the following environment variables:
 # SOURCE_PATH - path to component repository root directory.
 
+mcm_repo_path="dev/mcm"
+if [[ ! -d "$mcm_repo_path" ]]; then
+  echo "Error: MCM Repo expected at: $mcm_repo_path.
+    For running local Integration Tests, kindly checkout MCM Repo locally and execute 'ln -sf <absPathToMcmRepo> $mcm_repo_path'"
+  exit 1
+fi
+
 cd test/integration/controller
 if ! hash ginkgo; then
     # Install Ginkgo (test framework) to be able to execute the tests.
@@ -24,6 +31,7 @@ if ! hash ginkgo; then
     GO111MODULE=off go get -u github.com/onsi/ginkgo/ginkgo
     echo "Successfully fetched Ginkgo frawework"
 fi
+
 
 echo "Starting integration tests..."
 

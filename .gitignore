@@ -12,3 +12,4 @@ bin/
 .DS_Store
 /tmp
 .env
+.ci/controllers-test/logs/*.log
