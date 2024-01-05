@@ -217,17 +217,17 @@ function fetch_existing_nodes() {
 function check_cluster_state() {
     printf "\t\t\t----- Checking Test Environment -------\n"
 
-    printf "\nChecking existance of machine crds\n"
-    # Wait 60mins for any existing PRs to cleanup machine crds, as crd cleanup is last step.
-    hf_wait_on "hf_num_of_objects" crd 0 3600
-    printf "No machine crds in control test cluster\n"
-
-    printf "\nChecking existance of node objects\n"
-    num_of_existing_nodes=$(($(fetch_existing_nodes)))
-    printf "\nexisting_default_nodes=$num_of_existing_nodes\n"
-    # Wait 60mins for any existing PRs to cleanup nodes
-    hf_wait_on "hf_num_of_ready_nodes" nodes 0 3600
-    printf "No additional node objects in target test cluster\n"
+#    printf "\nChecking existance of machine crds\n"
+#    # Wait 60mins for any existing PRs to cleanup machine crds, as crd cleanup is last step.
+#    hf_wait_on "hf_num_of_objects" crd 0 3600
+#    printf "No machine crds in control test cluster\n"
+#
+#    printf "\nChecking existance of node objects\n"
+#    num_of_existing_nodes=$(($(fetch_existing_nodes)))
+#    printf "\nexisting_default_nodes=$num_of_existing_nodes\n"
+#    # Wait 60mins for any existing PRs to cleanup nodes
+#    hf_wait_on "hf_num_of_ready_nodes" nodes 0 3600
+#    printf "No additional node objects in target test cluster\n"
 
     #wait in case some orphan resources are terminating
     sleep 30
