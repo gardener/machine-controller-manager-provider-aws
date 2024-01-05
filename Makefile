@@ -13,6 +13,7 @@
 # limitations under the License.
 
 -include .env
+export
 include hack/tools.mk
 
 BINARY_PATH         := bin/
@@ -25,6 +26,7 @@ LEADER_ELECT 	    := "true"
 # If Integration Test Suite is to be run locally against clusters then export the below variable
 # with MCM deployment name in the cluster
 MACHINE_CONTROLLER_MANAGER_DEPLOYMENT_NAME := machine-controller-manager
+CONTROL_CLUSTER_NAMESPACE := ${CONTROL_NAMESPACE}
 #########################################
 # Rules for running helper scripts
 #########################################
@@ -98,6 +100,7 @@ test-integration:
 	export MCM_CONTAINER_IMAGE=$(MCM_IMAGE); \
 	export CONTROL_CLUSTER_NAMESPACE=$(CONTROL_NAMESPACE); \
 	export MACHINE_CONTROLLER_MANAGER_DEPLOYMENT_NAME=$(MACHINE_CONTROLLER_MANAGER_DEPLOYMENT_NAME); \
+	if [[ -z "${IS_CONTROL_CLUSTER_SEED}" ]]; then export IS_CONTROL_CLUSTER_SEED=true; fi; \
 	.ci/local_integration_test
 
 #########################################

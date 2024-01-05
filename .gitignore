@@ -12,3 +12,7 @@ bin/
 .DS_Store
 /tmp
 .env
+.ci/controllers-test/logs/*.log
+.ci/controllers-test/logs/*.log.*
+kubectl
+yq_linux*
