@@ -16,18 +16,19 @@ package aws
 import (
 	"context"
 	"fmt"
-	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/codes"
 	"time"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/gardener/machine-controller-manager-provider-aws/pkg/mockclient"
-	"github.com/gardener/machine-controller-manager/pkg/util/provider/driver"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/gardener/machine-controller-manager/pkg/util/provider/driver"
+	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/codes"
+
+	"github.com/gardener/machine-controller-manager-provider-aws/pkg/mockclient"
 )
 
 const (
