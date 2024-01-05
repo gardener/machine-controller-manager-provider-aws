@@ -107,8 +107,9 @@ func (c *controller) reconcileClusterMachineSafetyAPIServer(key string) error {
 					klog.V(2).Infof("SafetyController: Reinitializing machine health check for machine: %q with backing node: %q and providerID: %q", machine.Name, getNodeName(machine), getProviderID(machine))
 				}
 
-				// En-queue after 30 seconds, to ensure all machine states are reconciled
-				c.enqueueMachineAfter(machine, 30*time.Second)
+				// En-queue after 30 seconds, to ensure all machine phases are reconciled to their actual value
+				// as they are currently reset to `Running`
+				c.enqueueMachineAfter(machine, 30*time.Second, "kube-api-servers are up again, so reconcile of machine phase is needed")
 			}
 
 			c.safetyOptions.MachineControllerFrozen = false
@@ -170,7 +171,7 @@ func (c *controller) AnnotateNodesUnmanagedByMCM(ctx context.Context) (machineut
 		return machineutils.LongRetry, err
 	}
 	for _, node := range nodes {
-		_, err := c.getMachineFromNode(node.Name)
+		machine, err := c.getMachineFromNode(node.Name)
 		if err != nil {
 			if err == errMultipleMachineMatch {
 				klog.Errorf("Couldn't fetch machine, Error: %s", err)
@@ -193,10 +194,22 @@ func (c *controller) AnnotateNodesUnmanagedByMCM(ctx context.Context) (machineut
 					machineutils.NotManagedByMCM: "1",
 				}
 
+				klog.V(3).Infof("Adding NotManagedByMCM annotation to Node %q", node.Name)
 				// err is returned only when node update fails
-				if err := c.updateNodeWithAnnotation(ctx, nodeCopy, annotations); err != nil {
+				if err := c.updateNodeWithAnnotations(ctx, nodeCopy, annotations); err != nil {
 					return machineutils.MediumRetry, err
 				}
+			}
+		} else {
+			_, hasAnnot := node.Annotations[machineutils.NotManagedByMCM]
+			if !hasAnnot {
+				continue
+			}
+			klog.V(3).Infof("Removing NotManagedByMCM annotation from Node %q associated with Machine %q", node.Name, machine.Name)
+			nodeCopy := node.DeepCopy()
+			delete(nodeCopy.Annotations, machineutils.NotManagedByMCM)
+			if err := c.updateNodeWithAnnotations(ctx, nodeCopy, nil); err != nil {
+				return machineutils.MediumRetry, err
 			}
 		}
 	}
