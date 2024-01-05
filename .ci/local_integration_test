@@ -35,4 +35,4 @@ fi
 
 echo "Starting integration tests..."
 
-ginkgo -v
+ginkgo -v --show-node-events --poll-progress-after=300s --poll-progress-interval=60s

@@ -241,7 +241,7 @@ function run_integration_tests() {
     echo "Starting integration tests..."
     set +e
 
-    ginkgo -v -mod=vendor -slowSpecThreshold 300s test/integration/controller
+    ginkgo -v -mod=vendor --show-node-events --poll-progress-after=300s --poll-progress-interval=60s test/integration/controller
     TEST_RESULT=$?
     
     set -e
