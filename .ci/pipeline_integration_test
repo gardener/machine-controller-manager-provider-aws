@@ -51,6 +51,7 @@ function hf_num_of_ready_nodes() {
 }
 
 function hf_wait_on() {
+    wait_interval=30
     function_name=$1
     function_param=$2
     count_to_match=$3
@@ -62,7 +63,8 @@ function hf_wait_on() {
         ret=$?
         [[ $ret -ne $count_to_match ]]
     do
-        sleep 30
+        printf "\n\t Error: %s invoked with %s did not return expected value %s. Will retry again in $wait_interval...\n" "$function_name" "$function_param" "$count_to_match" "$wait_interval"
+        sleep $wait_interval
         ((iteration_count--))
 
         # Exit script when timeout occurs
