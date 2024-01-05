@@ -76,4 +76,4 @@ require (
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
-replace github.com/gardener/machine-controller-manager => github.com/elankath/machine-controller-manager v0.0.0-20240104062753-637e6721545c
+replace github.com/gardener/machine-controller-manager => github.com/elankath/machine-controller-manager v0.0.0-20240105082122-55094945a469
