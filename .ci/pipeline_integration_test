@@ -63,7 +63,7 @@ function hf_wait_on() {
         ret=$?
         [[ $ret -ne $count_to_match ]]
     do
-        printf "\n\t Error: %s invoked with %s did not return expected value %s. Will retry again in $wait_interval...\n" "$function_name" "$function_param" "$count_to_match" "$wait_interval"
+        printf "\n\t Error: %s invoked with %s did not return expected value %s. Will retry again in %s...\n" "$function_name" "$function_param" "$count_to_match" "$wait_interval"
         sleep $wait_interval
         ((iteration_count--))
 
