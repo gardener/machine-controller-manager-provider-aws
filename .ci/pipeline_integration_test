@@ -162,6 +162,7 @@ function delete_test_mc_secret() {
 function  cleanup_environment() {
     printf "\n\t\t\t----- Deleting the test_mc_secret --------\n"
     delete_test_mc_secret
+    printf "\n\t\t\t----- cleanup_environment done --------\n"
 }
 
 function setup_environment() {
@@ -280,6 +281,7 @@ run_integration_tests
 cleanup_environment
 print_controller_logs
 printf "\n\t\t\t----- End of Test Script -----------\n"
+printf "\n\t\t\t----- Exiting with TEST_RESULT: %s -----------\n" "$TEST_RESULT"
 
 exit $TEST_RESULT
 
