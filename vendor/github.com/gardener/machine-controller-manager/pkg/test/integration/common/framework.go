@@ -18,19 +18,20 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/onsi/ginkgo/v2"
 	"io"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/gardener/machine-controller-manager/pkg/test/integration/common/helpers"
 	"github.com/gardener/machine-controller-manager/pkg/test/utils/matchers"
-	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 	appsV1 "k8s.io/api/apps/v1"
@@ -41,11 +42,15 @@ import (
 	"k8s.io/client-go/util/retry"
 )
 
-const dwdIgnoreScalingAnnotation = "dependency-watchdog.gardener.cloud/ignore-scaling"
+const (
+	dwdIgnoreScalingAnnotation = "dependency-watchdog.gardener.cloud/ignore-scaling"
+)
 
 var (
 	// path for storing log files (mcm & mc processes)
 	targetDir = filepath.Join("..", "..", "..", ".ci", "controllers-test", "logs")
+	// Suffix for the`kubernetes-io-cluster` tag and cluster name for the orphan resource tracker. Currently relevant only for Azure
+	targetClusterName = os.Getenv("TARGET_RESOURCE_GROUP")
 	// machine-controller-manager log file
 	mcmLogFile = filepath.Join(targetDir, "mcm_process.log")
 
@@ -93,6 +98,10 @@ var (
 
 	// if true, means that the tags present on VM are strings not key-value pairs
 	isTagsStrings = os.Getenv("TAGS_ARE_STRINGS")
+
+	// if true, control cluster is a seed
+	// only set this variable if operating in gardener context
+	isControlSeed = os.Getenv("IS_CONTROL_CLUSTER_SEED")
 )
 
 // ProviderSpecPatch struct holds tags for provider, which we want to patch the  machineclass with
@@ -204,17 +213,14 @@ func (c *IntegrationTestFramework) initalizeClusters() error {
 			return err
 		}
 	}
-
-	// Update namespace to use
-	if c.ControlCluster.IsSeed(c.TargetCluster) {
-		_, err := c.TargetCluster.ClusterName()
-		if err != nil {
-			log.Println("Failed to determine shoot cluster namespace")
-			return err
-		}
-		controlClusterNamespace, _ = c.TargetCluster.ClusterName()
-	} else if len(controlClusterNamespace) == 0 {
+	// set default control cluster namespace if not specified
+	if len(controlClusterNamespace) == 0 {
 		controlClusterNamespace = "default"
+	}
+	// Verify the control cluster namespace
+	err := c.ControlCluster.VerifyControlClusterNamespace(isControlSeed, controlClusterNamespace)
+	if err != nil {
+		return err
 	}
 
 	// setting env variable for later use
@@ -484,14 +490,13 @@ func (c *IntegrationTestFramework) scaleMcmDeployment(replicas int32) error {
 }
 
 func (c *IntegrationTestFramework) updatePatchFile() {
-	clusterName, _ := c.TargetCluster.ClusterName()
-	clusterTag := "kubernetes-io-cluster-" + clusterName
+	clusterTag := "kubernetes-io-cluster-" + targetClusterName
 	testRoleTag := "kubernetes-io-role-integration-test"
 
 	patchMachineClassData := MachineClassPatch{
 		ProviderSpec: ProviderSpecPatch{
 			Tags: []string{
-				clusterName,
+				targetClusterName,
 				clusterTag,
 				testRoleTag,
 			},
@@ -572,8 +577,7 @@ func (c *IntegrationTestFramework) setupMachineClass() error {
 	// eg. tag (providerSpec.tags)  \"mcm-integration-test: "true"\"
 
 	ctx := context.Background()
-
-	if c.ControlCluster.IsSeed(c.TargetCluster) && len(v1MachineClassPath) == 0 {
+	if isControlSeed == "true" && len(v1MachineClassPath) == 0 {
 		if machineClasses, err := c.ControlCluster.McmClient.
 			MachineV1alpha1().
 			MachineClasses(controlClusterNamespace).
@@ -684,20 +688,37 @@ func (c *IntegrationTestFramework) setupMachineClass() error {
 
 // rotateLogFile takes file name as input and returns a file object obtained by os.Create
 // If the file exists already then it renames it so that a new file can be created
-func rotateLogFile(fileName string) (*os.File, error) {
+func rotateOrAppendLogFile(fileName string, shouldRotate bool) (*os.File, error) {
+	if !shouldRotate {
+		if _, err := os.Stat(fileName); os.IsNotExist(err) {
+			return os.Create(fileName)
+		}
+		return os.OpenFile(fileName, os.O_APPEND|os.O_WRONLY, 0600)
+	}
 	if _, err := os.Stat(fileName); err == nil { // !strings.Contains(err.Error(), "no such file or directory") {
-		for i := 9; i > 0; i-- {
+		noOfFiles := 0
+		temp := fileName + "." + strconv.Itoa(noOfFiles+1)
+		_, err := os.Stat(temp)
+		// Finding the log files ending with ".x" where x >= 1 and renaming
+		for err == nil {
+			noOfFiles++
+			temp = fileName + "." + strconv.Itoa(noOfFiles+1)
+			_, err = os.Stat(temp)
+		}
+		for i := noOfFiles; i > 0; i-- {
 			f := fmt.Sprintf("%s.%d", fileName, i)
 			fNew := fmt.Sprintf("%s.%d", fileName, i+1)
 			if err := os.Rename(f, fNew); err != nil {
 				return nil, fmt.Errorf("failed to rename file %s to %s: %w", f, fNew, err)
 			}
 		}
+		// Renaming the log file without suffix ".x" to log file ending with ".1"
 		fNew := fmt.Sprintf("%s.%d", fileName, 1)
 		if err := os.Rename(fileName, fNew); err != nil {
 			return nil, fmt.Errorf("failed to rename file %s to %s: %w", fileName, fNew, err)
 		}
 	}
+	// Creating a new log file
 	return os.Create(fileName)
 }
 
@@ -712,7 +733,7 @@ func (c *IntegrationTestFramework) runControllersLocally() {
 			c.TargetCluster.KubeConfigFilePath,
 			controlClusterNamespace),
 	)
-	outputFile, err := rotateLogFile(mcLogFile)
+	outputFile, err := rotateOrAppendLogFile(mcLogFile, true)
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 	mcsession, err = gexec.Start(exec.Command(args[0], args[1:]...), outputFile, outputFile)
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
@@ -727,7 +748,7 @@ func (c *IntegrationTestFramework) runControllersLocally() {
 			c.TargetCluster.KubeConfigFilePath,
 			controlClusterNamespace),
 	)
-	outputFile, err = rotateLogFile(mcmLogFile)
+	outputFile, err = rotateOrAppendLogFile(mcmLogFile, true)
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
 	mcmsession, err = gexec.Start(exec.Command(args[0], args[1:]...), outputFile, outputFile)
 	gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
@@ -751,8 +772,7 @@ func (c *IntegrationTestFramework) SetupBeforeSuite() {
 	gomega.Expect(c.initalizeClusters()).To(gomega.BeNil())
 
 	//setting up MCM either locally or by deploying after checking conditions
-
-	if c.ControlCluster.IsSeed(c.TargetCluster) {
+	if isControlSeed == "true" {
 
 		if len(mcContainerImage) != 0 || len(mcmContainerImage) != 0 {
 			ginkgo.By("Updating MCM Deployemnt")
@@ -801,9 +821,7 @@ func (c *IntegrationTestFramework) SetupBeforeSuite() {
 		Get(ctx, testMachineClassResources[0], metav1.GetOptions{})
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-	ginkgo.By("Determining target cluster name")
-	clusterName, err := c.TargetCluster.ClusterName()
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	clusterName := targetClusterName
 
 	ginkgo.By("Looking for secrets refered in machineclass in the control cluster")
 	secretData, err := c.ControlCluster.
@@ -1026,9 +1044,9 @@ func (c *IntegrationTestFramework) ControllerTests() {
 				if mcsession == nil {
 					// controllers running in pod
 					// Create log file from container log
-					mcmOutputFile, err := rotateLogFile(mcmLogFile)
+					mcmOutputFile, err := rotateOrAppendLogFile(mcmLogFile, true)
 					gomega.Expect(err).NotTo(gomega.HaveOccurred())
-					mcOutputFile, err := rotateLogFile(mcLogFile)
+					mcOutputFile, err := rotateOrAppendLogFile(mcLogFile, true)
 					gomega.Expect(err).NotTo(gomega.HaveOccurred())
 					ginkgo.By("Reading container log is leading to no errors")
 					podList, err := c.ControlCluster.Clientset.
@@ -1206,9 +1224,19 @@ func (c *IntegrationTestFramework) Cleanup() {
 		for i := 0; i < 5; i++ {
 			if mcsession.ExitCode() != -1 {
 				ginkgo.By("Restarting Machine Controller ")
-				outputFile, err := rotateLogFile(mcLogFile)
+				outputFile, err := rotateOrAppendLogFile(mcLogFile, false)
 				gomega.Expect(err).NotTo(gomega.HaveOccurred())
-				_, err = gexec.Start(mcsession.Command, outputFile, outputFile)
+				_, err = outputFile.WriteString("\n------------RESTARTED MC------------\n")
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				args := strings.Fields(
+					fmt.Sprintf(
+						"make --directory=%s start CONTROL_KUBECONFIG=%s TARGET_KUBECONFIG=%s CONTROL_NAMESPACE=%s LEADER_ELECT=false ",
+						"../../..",
+						c.ControlCluster.KubeConfigFilePath,
+						c.TargetCluster.KubeConfigFilePath,
+						controlClusterNamespace),
+				)
+				mcsession, err = gexec.Start(exec.Command(args[0], args[1:]...), outputFile, outputFile)
 				gomega.Expect(err).NotTo(gomega.HaveOccurred())
 				break
 			}
@@ -1217,9 +1245,19 @@ func (c *IntegrationTestFramework) Cleanup() {
 		for i := 0; i < 5; i++ {
 			if mcmsession.ExitCode() != -1 {
 				ginkgo.By("Restarting Machine Controller Manager")
-				outputFile, err := rotateLogFile(mcmLogFile)
+				outputFile, err := rotateOrAppendLogFile(mcmLogFile, false)
 				gomega.Expect(err).NotTo(gomega.HaveOccurred())
-				_, err = gexec.Start(mcmsession.Command, outputFile, outputFile)
+				_, err = outputFile.WriteString("\n------------RESTARTED MCM------------\n")
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				args := strings.Fields(
+					fmt.Sprintf(
+						"make --directory=%s start CONTROL_KUBECONFIG=%s TARGET_KUBECONFIG=%s CONTROL_NAMESPACE=%s LEADER_ELECT=false MACHINE_SAFETY_OVERSHOOTING_PERIOD=300ms",
+						mcmRepoPath,
+						c.ControlCluster.KubeConfigFilePath,
+						c.TargetCluster.KubeConfigFilePath,
+						controlClusterNamespace),
+				)
+				mcmsession, err = gexec.Start(exec.Command(args[0], args[1:]...), outputFile, outputFile)
 				gomega.Expect(err).NotTo(gomega.HaveOccurred())
 				break
 			}
@@ -1306,7 +1344,7 @@ func (c *IntegrationTestFramework) Cleanup() {
 		}
 
 	}
-	if c.ControlCluster.IsSeed(c.TargetCluster) {
+	if isControlSeed == "true" {
 		// scale back up the MCM deployment to 1 in the Control Cluster
 		// This is needed when IT suite runs locally against a Control & Target cluster
 
