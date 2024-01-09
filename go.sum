@@ -36,8 +36,8 @@ github.com/emirpasic/gods v1.12.0/go.mod h1:YfzfFFoVP/catgzJb4IKIqXjX78Ha8FMSDh3
 github.com/evanphx/json-patch v4.12.0+incompatible h1:4onqiflcdA9EOZ4RxV643DvftH5pOlLGNtQ5lPWQu84=
 github.com/evanphx/json-patch v4.12.0+incompatible/go.mod h1:50XU6AFN0ol/bzJsmQLiYLvXMP4fmwYFNcr97nuDLSk=
 github.com/flynn/go-shlex v0.0.0-20150515145356-3f9db97f8568/go.mod h1:xEzjJPgXI435gkrCt3MPfRiAkVrwSbHsst4LCFVfpJc=
-github.com/gardener/machine-controller-manager v0.51.1-0.20240105113939-c20a25054a12 h1:Ok0tZQOmaImvPe1eXlQJzV0l/8YcE756LHbWFfi3ZRs=
-github.com/gardener/machine-controller-manager v0.51.1-0.20240105113939-c20a25054a12/go.mod h1:u7tU/FOf9Nst6xw6NqtHybp7Hpz8Ty57yUMbYtavtY0=
+github.com/gardener/machine-controller-manager v0.51.1 h1:aWSadfWEkzrfEYBr38ntRApgKl2inxmy+UCsqgVXuak=
+github.com/gardener/machine-controller-manager v0.51.1/go.mod h1:u7tU/FOf9Nst6xw6NqtHybp7Hpz8Ty57yUMbYtavtY0=
 github.com/gliderlabs/ssh v0.2.2 h1:6zsha5zo/TWhRhwqCD3+EarCAgZ2yN28ipRnGPnwkI0=
 github.com/gliderlabs/ssh v0.2.2/go.mod h1:U7qILu1NlMHj9FlMhZLlkCdDnU1DBEAqr0aevW3Awn0=
 github.com/go-git/gcfg v1.5.0 h1:Q5ViNfGF8zFgyJWPqYwA7qGFoMTEiBmdlkcfRmpIMa4=

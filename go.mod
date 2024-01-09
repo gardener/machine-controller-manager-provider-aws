@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/aws/aws-sdk-go v1.36.0
 	github.com/cenkalti/backoff/v4 v4.2.1
-	github.com/gardener/machine-controller-manager v0.50.0
+	github.com/gardener/machine-controller-manager v0.51.1
 	github.com/onsi/ginkgo/v2 v2.13.0
 	github.com/onsi/gomega v1.29.0
 	github.com/spf13/pflag v1.0.5
@@ -89,5 +89,3 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
-
-replace github.com/gardener/machine-controller-manager => github.com/gardener/machine-controller-manager v0.51.1-0.20240105113939-c20a25054a12
