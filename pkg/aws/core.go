@@ -37,6 +37,14 @@ import (
 	"github.com/gardener/machine-controller-manager-provider-aws/pkg/spi"
 )
 
+const (
+	createMachineOperationLabel    = "create_machine"
+	deleteMachineOperationLabel    = "delete_machine"
+	listMachinesOperationLabel     = "list_machine"
+	getMachineStatusOperationLabel = "get_machine_status"
+	getVolumeIDsOperationLabel     = "get_volume_ids"
+)
+
 // Driver is the driver struct for holding AWS machine information
 type Driver struct {
 	SPI spi.SessionProviderInterface
@@ -63,7 +71,9 @@ func NewAWSDriver(spi spi.SessionProviderInterface) driver.Driver {
 }
 
 // CreateMachine handles a machine creation request
-func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineRequest) (*driver.CreateMachineResponse, error) {
+func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineRequest) (resp *driver.CreateMachineResponse, err error) {
+	defer RecordDriverAPIMetric(err, createMachineOperationLabel, time.Now())
+
 	var (
 		exists       bool
 		userData     []byte
@@ -269,9 +279,10 @@ func getPlacementObj(req *driver.CreateMachineRequest) (*ec2.Placement, error) {
 }
 
 // DeleteMachine handles a machine deletion request
-func (d *Driver) DeleteMachine(ctx context.Context, req *driver.DeleteMachineRequest) (*driver.DeleteMachineResponse, error) {
+func (d *Driver) DeleteMachine(ctx context.Context, req *driver.DeleteMachineRequest) (resp *driver.DeleteMachineResponse, err error) {
+	defer RecordDriverAPIMetric(err, deleteMachineOperationLabel, time.Now())
+
 	var (
-		err    error
 		secret = req.Secret
 	)
 
@@ -338,7 +349,9 @@ func (d *Driver) DeleteMachine(ctx context.Context, req *driver.DeleteMachineReq
 }
 
 // GetMachineStatus handles a machine get status request
-func (d *Driver) GetMachineStatus(ctx context.Context, req *driver.GetMachineStatusRequest) (*driver.GetMachineStatusResponse, error) {
+func (d *Driver) GetMachineStatus(ctx context.Context, req *driver.GetMachineStatusRequest) (resp *driver.GetMachineStatusResponse, err error) {
+	defer RecordDriverAPIMetric(err, getMachineStatusOperationLabel, time.Now())
+
 	var (
 		secret       = req.Secret
 		machineClass = req.MachineClass
@@ -397,8 +410,10 @@ func (d *Driver) GetMachineStatus(ctx context.Context, req *driver.GetMachineSta
 	return response, nil
 }
 
-// ListMachines lists all the machines possibilly created by a machineClass
-func (d *Driver) ListMachines(ctx context.Context, req *driver.ListMachinesRequest) (*driver.ListMachinesResponse, error) {
+// ListMachines lists all the machines possibly created by a machineClass
+func (d *Driver) ListMachines(ctx context.Context, req *driver.ListMachinesRequest) (resp *driver.ListMachinesResponse, err error) {
+	defer RecordDriverAPIMetric(err, listMachinesOperationLabel, time.Now())
+
 	var (
 		machineClass = req.MachineClass
 		secret       = req.Secret
@@ -483,14 +498,16 @@ func (d *Driver) ListMachines(ctx context.Context, req *driver.ListMachinesReque
 
 	klog.V(3).Infof("List machines request has been processed successfully")
 	// Core logic ends here.
-	resp := &driver.ListMachinesResponse{
+	resp = &driver.ListMachinesResponse{
 		MachineList: listOfVMs,
 	}
 	return resp, nil
 }
 
-// GetVolumeIDs returns a list of Volume IDs for all PV Specs for whom an provider volume was found
-func (d *Driver) GetVolumeIDs(ctx context.Context, req *driver.GetVolumeIDsRequest) (*driver.GetVolumeIDsResponse, error) {
+// GetVolumeIDs returns a list of Volume IDs for all PV Specs for whom a provider volume was found
+func (d *Driver) GetVolumeIDs(ctx context.Context, req *driver.GetVolumeIDsRequest) (resp *driver.GetVolumeIDsResponse, err error) {
+	defer RecordDriverAPIMetric(err, getVolumeIDsOperationLabel, time.Now())
+
 	var (
 		volumeIDs []string
 	)
@@ -516,7 +533,7 @@ func (d *Driver) GetVolumeIDs(ctx context.Context, req *driver.GetVolumeIDsReque
 
 	klog.V(3).Infof("GetVolumeIDs machines request has been processed successfully. \nList: %v", volumeIDs)
 
-	resp := &driver.GetVolumeIDsResponse{
+	resp = &driver.GetVolumeIDsResponse{
 		VolumeIDs: volumeIDs,
 	}
 	return resp, nil
