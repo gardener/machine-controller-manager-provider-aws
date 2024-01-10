@@ -19,11 +19,12 @@ package aws
 import (
 	"fmt"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
+
 	api "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
 )
 

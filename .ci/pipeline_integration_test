@@ -50,6 +50,7 @@ function hf_num_of_ready_nodes() {
 }
 
 function hf_wait_on() {
+    wait_interval=30
     function_name=$1
     function_param=$2
     count_to_match=$3
@@ -61,7 +62,8 @@ function hf_wait_on() {
         ret=$?
         [[ $ret -ne $count_to_match ]]
     do
-        sleep 30
+        printf "\n\t Error: %s invoked with %s did not return expected value %s. Will retry again in %s...\n" "$function_name" "$function_param" "$count_to_match" "$wait_interval"
+        sleep $wait_interval
         ((iteration_count--))
 
         # Exit script when timeout occurs
@@ -181,6 +183,8 @@ function setup_environment() {
     printf "Successfully installed kubectl\n"
 
     #install ginkgo
+    printf "\n Checking ginkgo version..."
+    ginkgo version
     if ! [ -x "$(command -v ginkgo)" ]; then
     setup_ginkgo
     fi
@@ -228,7 +232,7 @@ function run_integration_tests() {
     echo "Starting integration tests..."
     set +e
 
-    ginkgo -v -mod=vendor test/integration/controller
+    ginkgo -v -mod=vendor --show-node-events --poll-progress-after=300s --poll-progress-interval=60s test/integration/controller
     TEST_RESULT=$?
     
     set -e
@@ -267,6 +271,7 @@ run_integration_tests
 cleanup_environment
 print_controller_logs
 printf "\n\t\t\t----- End of Test Script -----------\n"
+printf "\n\t\t\t----- Exiting with TEST_RESULT: %s -----------\n" "$TEST_RESULT"
 
 exit $TEST_RESULT
 
