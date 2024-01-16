@@ -23,7 +23,6 @@ PROVIDER_NAME       := AWS
 PROJECT_NAME        := gardener
 LEADER_ELECT 	    := "true"
 IS_CONTROL_CLUSTER_SEED 	:= true
-
 # If Integration Test Suite is to be run locally against clusters then export the below variable
 # with MCM deployment name in the cluster
 MACHINE_CONTROLLER_MANAGER_DEPLOYMENT_NAME := machine-controller-manager
