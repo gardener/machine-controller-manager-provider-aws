@@ -189,6 +189,14 @@ function setup_environment() {
     setup_ginkgo
     fi
 
+    # Clone MCM Repo into $mcm_repo_path
+    if [[ ! -d $mcm_repo_path ]]; then
+      printf "Cloning machine-controller-manager repo into %s.\n" $mcm_repo_path
+      local cloneCmd="git clone https://github.com/gardener/machine-controller-manager.git $mcm_repo_path --recursive"
+      printf "Executing %s...\n" "$cloneCmd"
+      eval $cloneCmd
+    fi
+
     #fetching kubeconfigs and machineClass from secret_server
     fetch_service_account_kubeconfig
     fetch_oot_cluster_kubeconfig
