@@ -7,6 +7,7 @@ NC='\033[0m' # No Color
 
 mkdir -p dev
 
+mcm_repo_path="dev/mcm"
 logs_path=.ci/controllers-test/logs
 TEST_RESULT=
 cli_path=/cc/utils/cli.py
@@ -187,6 +188,14 @@ function setup_environment() {
     ginkgo version
     if ! [ -x "$(command -v ginkgo)" ]; then
     setup_ginkgo
+    fi
+
+    # Clone MCM Repo into $mcm_repo_path
+    if [[ ! -d "$mcm_repo_path" ]]; then
+      printf "Cloning machine-controller-manager repo into %s.\n" "$mcm_repo_path"
+      local cloneCmd="git clone https://github.com/gardener/machine-controller-manager.git "$mcm_repo_path" --recursive"
+      printf "Executing %s...\n" "$cloneCmd"
+      eval $cloneCmd
     fi
 
     #fetching kubeconfigs and machineClass from secret_server
