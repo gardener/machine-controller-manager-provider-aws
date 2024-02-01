@@ -22,6 +22,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/gardener/machine-controller-manager-provider-aws/pkg/instrument"
 	"strings"
 	"time"
 
@@ -72,7 +73,7 @@ func NewAWSDriver(spi spi.SessionProviderInterface) driver.Driver {
 
 // CreateMachine handles a machine creation request
 func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineRequest) (resp *driver.CreateMachineResponse, err error) {
-	defer RecordDriverAPIMetric(err, createMachineOperationLabel, time.Now())
+	defer instrument.RecordDriverAPIMetric(err, createMachineOperationLabel, time.Now())
 
 	var (
 		exists       bool
@@ -280,7 +281,7 @@ func getPlacementObj(req *driver.CreateMachineRequest) (placementobj *ec2.Placem
 
 // DeleteMachine handles a machine deletion request
 func (d *Driver) DeleteMachine(ctx context.Context, req *driver.DeleteMachineRequest) (resp *driver.DeleteMachineResponse, err error) {
-	defer RecordDriverAPIMetric(err, deleteMachineOperationLabel, time.Now())
+	defer instrument.RecordDriverAPIMetric(err, deleteMachineOperationLabel, time.Now())
 
 	var (
 		instances  []*ec2.Instance
@@ -351,7 +352,7 @@ func (d *Driver) DeleteMachine(ctx context.Context, req *driver.DeleteMachineReq
 
 // GetMachineStatus handles a machine get status request
 func (d *Driver) GetMachineStatus(ctx context.Context, req *driver.GetMachineStatusRequest) (resp *driver.GetMachineStatusResponse, err error) {
-	defer RecordDriverAPIMetric(err, getMachineStatusOperationLabel, time.Now())
+	defer instrument.RecordDriverAPIMetric(err, getMachineStatusOperationLabel, time.Now())
 
 	var (
 		secret       = req.Secret
@@ -413,7 +414,7 @@ func (d *Driver) GetMachineStatus(ctx context.Context, req *driver.GetMachineSta
 
 // ListMachines lists all the machines possibly created by a machineClass
 func (d *Driver) ListMachines(ctx context.Context, req *driver.ListMachinesRequest) (resp *driver.ListMachinesResponse, err error) {
-	defer RecordDriverAPIMetric(err, listMachinesOperationLabel, time.Now())
+	defer instrument.RecordDriverAPIMetric(err, listMachinesOperationLabel, time.Now())
 
 	var (
 		machineClass = req.MachineClass
@@ -507,7 +508,7 @@ func (d *Driver) ListMachines(ctx context.Context, req *driver.ListMachinesReque
 
 // GetVolumeIDs returns a list of Volume IDs for all PV Specs for whom a provider volume was found
 func (d *Driver) GetVolumeIDs(ctx context.Context, req *driver.GetVolumeIDsRequest) (resp *driver.GetVolumeIDsResponse, err error) {
-	defer RecordDriverAPIMetric(err, getVolumeIDsOperationLabel, time.Now())
+	defer instrument.RecordDriverAPIMetric(err, getVolumeIDsOperationLabel, time.Now())
 
 	var (
 		volumeID  string
