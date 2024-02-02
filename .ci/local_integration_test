@@ -21,6 +21,113 @@ if ! hash ginkgo; then
     echo "Successfully fetched Ginkgo frawework"
 fi
 
-echo "Starting integration tests..."
+printf  "\e[34mIs the control cluster a seed ? (true/false)\e[0m\n"
+
+read IS_CONTROL_CLUSTER_SEED
+
+if [ -z "$IS_CONTROL_CLUSTER_SEED" ]
+then
+      printf "\e[31mIS_CONTROL_CLUSTER_SEED cannot be empty\e[0m\n"
+      exit 1
+fi
+
+if [ "$IS_CONTROL_CLUSTER_SEED" != true ] && [ "$IS_CONTROL_CLUSTER_SEED" != false ]
+then
+      printf "\e[31mIS_CONTROL_CLUSTER_SEED must be a boolean\e[0m\n"
+      exit 1
+fi
+export IS_CONTROL_CLUSTER_SEED=$IS_CONTROL_CLUSTER_SEED
+
+printf "\e[34mEnter the absolute path to the local machine-controller-manager repository.\e[0m\n"
+
+read MCM_REPO_PATH
+if [ -z "$MCM_REPO_PATH" ]
+then
+      printf "\e[31mMCM_REPO_PATH cannot be empty\e[0m\n"
+      exit 1
+fi
+if [ ! -d "$MCM_REPO_PATH" ]
+then
+      printf "\e[31m$MCM_REPO_PATH is not a valid directory\e[0m\n"
+      exit 1
+fi
+
+if [ "$IS_CONTROL_CLUSTER_SEED" = true ]
+then
+    cd $MCM_REPO_PATH
+    make gardener-setup
+    cd -
+else
+    cd $MCM_REPO_PATH
+    echo "Enter the project"
+    read PROJECT
+    echo "Enter the target cluster"
+    read TARGET_CLUSTER
+    make non-gardener-setup
+    cd -
+fi
+
+
+CREDENTIALS_SECRET_NAME=shoot-operator-aws-team
+GARDEN_CORE_NAMESPACE=garden-core
+
+function fetch_credentials(){
+   kubectl  get secret $CREDENTIALS_SECRET_NAME -n $GARDEN_CORE_NAMESPACE -o yaml > credentials.yaml
+   accessKeyID=$(yq eval '.data.accessKeyID' credentials.yaml)
+   secretAccessKey=$(yq eval '.data.secretAccessKey' credentials.yaml)
+   echo $accessKeyID
+   echo $secretAccessKey
+}
+
+function fetch_userdata(){
+    NAMESPACE='garden'
+    USERDATA_SECRET_NAME=$(kubectl get secrets -o custom-columns=Name:.metadata.name --no-headers | grep shoot--$PROJECT | head -n 1)
+    kubectl  get secret $USERDATA_SECRET_NAME  -oyaml > userData.yaml
+    userData=$(yq eval '.data.userData' userData.yaml)
+    echo $userData
+}
+
+function create_test_mc_secret() {
+    gardenctl target --garden sap-landscape-dev
+    eval $(gardenctl kubectl-env bash)
+    result=$(fetch_credentials)
+    accessKeyID=$(echo "$result" | head -n 1)
+    secretAccessKey=$(echo "$result" | tail -n 1)
+    gardenctl target --garden sap-landscape-dev --project $PROJECT --shoot $TARGET_CLUSTER --control-plane
+    eval $(gardenctl kubectl-env bash)
+    userData=$(fetch_userdata)
+    rm -f credentials.yaml
+    rm -f userData.yaml
+secret_yaml=$(cat <<EOF
+apiVersion: v1
+data:
+  accessKeyID: $accessKeyID
+  secretAccessKey: $secretAccessKey
+  userData: $userData
+kind: Secret
+metadata:
+  name: test-mc-secret
+  namespace: default
+type: Opaque
+EOF
+)
+
+    gardenctl target --garden sap-landscape-dev --project $PROJECT --shoot $TARGET_CLUSTER --control-plane
+    echo "$secret_yaml" | kubectl --kubeconfig=$CONTROL_KUBECONFIG apply -f -
+}
+
+if [ "$IS_CONTROL_CLUSTER_SEED" = false ]
+then
+  create_test_mc_secret
+  printf "\e[32mSuccessfully created test_mc_secret on control cluster\e[0m\n"
+fi
+
+export IS_CONTROL_CLUSTER_SEED=$IS_CONTROL_CLUSTER_SEED
+export CONTROL_NAMESPACE=$CONTROL_NAMESPACE
+export CONTROL_KUBECONFIG=$CONTROL_KUBECONFIG
+export TARGET_KUBECONFIG=$TARGET_KUBECONFIG
+export MACHINECLASS_V1=$MACHINECLASS_V1
+
+printf "\e[33mStarting integration tests...\e[0m\n"
 
 ginkgo -v --show-node-events --poll-progress-after=300s --poll-progress-interval=60s
