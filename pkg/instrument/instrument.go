@@ -27,7 +27,7 @@ func RecordDriverAPIMetric(err error, operation string, invocationTime time.Time
 			Inc()
 		return
 	}
-	// compute the time taken to complete the AZ service call and record it as a metric
+	// compute the time taken to complete the AWS service call and record it as a metric
 	elapsed := time.Since(invocationTime)
 	metrics.DriverAPIRequestDuration.WithLabelValues(
 		prometheusProviderLabelValue,
