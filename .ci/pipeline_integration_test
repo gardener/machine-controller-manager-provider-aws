@@ -269,9 +269,10 @@ function print_controller_logs {
 ############################################## <Main> ########################################################
 
 printf "\n\t\t\t----- Start of Test Script -----------\n"
-setup_environment
 #if cluster state is not clean then don't run the tests
 check_cluster_state
+# sets up the environment for the tests
+setup_environment
 result=$?
 if [ ${result} -ne 0 ]; then
 exit $result
