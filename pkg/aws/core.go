@@ -73,7 +73,7 @@ func NewAWSDriver(spi spi.SessionProviderInterface) driver.Driver {
 
 // CreateMachine handles a machine creation request
 func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineRequest) (resp *driver.CreateMachineResponse, err error) {
-	defer instrument.RecordDriverAPIMetric(err, createMachineOperationLabel, time.Now())
+	defer instrument.DriverAPIMetricRecorderFn(createMachineOperationLabel, &err)
 
 	var (
 		exists       bool
@@ -281,7 +281,7 @@ func getPlacementObj(req *driver.CreateMachineRequest) (placementobj *ec2.Placem
 
 // DeleteMachine handles a machine deletion request
 func (d *Driver) DeleteMachine(ctx context.Context, req *driver.DeleteMachineRequest) (resp *driver.DeleteMachineResponse, err error) {
-	defer instrument.RecordDriverAPIMetric(err, deleteMachineOperationLabel, time.Now())
+	defer instrument.DriverAPIMetricRecorderFn(deleteMachineOperationLabel, &err)
 
 	var (
 		instances  []*ec2.Instance
@@ -352,7 +352,7 @@ func (d *Driver) DeleteMachine(ctx context.Context, req *driver.DeleteMachineReq
 
 // GetMachineStatus handles a machine get status request
 func (d *Driver) GetMachineStatus(ctx context.Context, req *driver.GetMachineStatusRequest) (resp *driver.GetMachineStatusResponse, err error) {
-	defer instrument.RecordDriverAPIMetric(err, getMachineStatusOperationLabel, time.Now())
+	defer instrument.DriverAPIMetricRecorderFn(getMachineStatusOperationLabel, &err)
 
 	var (
 		secret       = req.Secret
@@ -414,7 +414,7 @@ func (d *Driver) GetMachineStatus(ctx context.Context, req *driver.GetMachineSta
 
 // ListMachines lists all the machines possibly created by a machineClass
 func (d *Driver) ListMachines(ctx context.Context, req *driver.ListMachinesRequest) (resp *driver.ListMachinesResponse, err error) {
-	defer instrument.RecordDriverAPIMetric(err, listMachinesOperationLabel, time.Now())
+	defer instrument.DriverAPIMetricRecorderFn(listMachinesOperationLabel, &err)
 
 	var (
 		machineClass = req.MachineClass
@@ -508,7 +508,7 @@ func (d *Driver) ListMachines(ctx context.Context, req *driver.ListMachinesReque
 
 // GetVolumeIDs returns a list of Volume IDs for all PV Specs for whom a provider volume was found
 func (d *Driver) GetVolumeIDs(ctx context.Context, req *driver.GetVolumeIDsRequest) (resp *driver.GetVolumeIDsResponse, err error) {
-	defer instrument.RecordDriverAPIMetric(err, getVolumeIDsOperationLabel, time.Now())
+	defer instrument.DriverAPIMetricRecorderFn(getVolumeIDsOperationLabel, &err)
 
 	var (
 		volumeID  string
@@ -516,7 +516,7 @@ func (d *Driver) GetVolumeIDs(ctx context.Context, req *driver.GetVolumeIDsReque
 	)
 
 	// Log messages to track start and end of request
-	klog.V(3).Infof("GetVolumeIDs request has been recieved for %q", req.PVSpecs)
+	klog.V(3).Infof("GetVolumeIDs request has been received for %q", req.PVSpecs)
 
 	for _, spec := range req.PVSpecs {
 
