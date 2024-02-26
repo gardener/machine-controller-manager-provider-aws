@@ -179,9 +179,15 @@ set +e
 ginkgo -v --show-node-events --poll-progress-after=300s --poll-progress-interval=60s
 set -e
 printf "\e[32mIntegration tests completed successfully\e[0m\n"
-set +e
-kubectl --kubeconfig=$CONTROL_KUBECONFIG delete secret test_mc_secret
-set -e
+
+if [ "$IS_CONTROL_CLUSTER_SEED" = false ]
+then
+  set +e
+  kubectl --kubeconfig=$CONTROL_KUBECONFIG delete secret test_mc_secret
+  set -e
+  printf "\e[32mSuccessfully deleted test_mc_secret on control cluster\e[0m\n"
+fi
+
 cd ../../..
 rm -f .env
 cd test/integration/controller
