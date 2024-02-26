@@ -7,12 +7,45 @@ set -e
 # For the test step concourse will set the following environment variables:
 # SOURCE_PATH - path to component repository root directory.
 
-mcm_repo_link="dev/mcm"
+mcm_repo_link="dev"
+
+printf "\e[34mDo you want to clone the latest MCM Repo? (true/false)\e[0m\n"
+read clone_mcm_repo
+
+#check if clone_mcm_repo is not empty
+if [ -z "$clone_mcm_repo" ]
+then
+      printf "\e[31mclone_mcm_repo cannot be empty\e[0m\n"
+      exit 1
+fi
+
+#check if clone_mcm_repo is a boolean
+if [ "$clone_mcm_repo" != true ] && [ "$clone_mcm_repo" != false ]
+then
+      printf "\e[31mclone_mcm_repo must be a boolean\e[0m\n"
+      exit 1
+fi
+
+if [ "$clone_mcm_repo" = true ]
+then
+    echo $mcm_repo_link
+    if [ ! -d "$mcm_repo_link" ]
+    then
+        mkdir -p $mcm_repo_link
+    fi
+    cd $mcm_repo_link
+    git clone https://github.com/gardener/machine-controller-manager
+    mv machine-controller-manager mcm
+    cd -
+fi
+
+
 if [[ ! -d "$mcm_repo_link" ]]; then
   echo "Error: MCM Repo expected at: $mcm_repo_link
     For running local Integration Tests, kindly checkout MCM Repo locally and execute 'ln -sf <absolutePathToMcmRepo> $mcm_repo_link'"
   exit 1
 fi
+
 cd test/integration/controller
 if ! hash ginkgo; then
     # Install Ginkgo (test framework) to be able to execute the tests.
@@ -146,6 +179,9 @@ set +e
 ginkgo -v --show-node-events --poll-progress-after=300s --poll-progress-interval=60s
 set -e
 printf "\e[32mIntegration tests completed successfully\e[0m\n"
+set +e
+kubectl --kubeconfig=$CONTROL_KUBECONFIG delete secret test_mc_secret
+set -e
 cd ../../..
 rm -f .env
 cd test/integration/controller
