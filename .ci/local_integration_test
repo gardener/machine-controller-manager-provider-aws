@@ -54,8 +54,7 @@ if ! hash ginkgo; then
     echo "Successfully fetched Ginkgo frawework"
 fi
 
-printf  "\e[34mIs the control cluster a seed ? (true/false)\e[0m\n"
-
+printf  "\e[34mIs the control cluster a seed? (true/false)\e[0m\n"
 read IS_CONTROL_CLUSTER_SEED
 
 if [ -z "$IS_CONTROL_CLUSTER_SEED" ]
@@ -94,15 +93,30 @@ else
     cd $MCM_REPO_PATH
     echo "Enter the project"
     read PROJECT
+    if [ -z "$PROJECT" ]
+    then
+        printf "\e[31mPROJECT cannot be empty\e[0m\n"
+        exit 1
+    fi
     echo "Enter the control cluster"
     read CONTROL_CLUSTER
+    if [ -z "$CONTROL_CLUSTER" ]
+    then
+        printf "\e[31mCONTROL_CLUSTER cannot be empty\e[0m\n"
+        exit 1
+    fi
     echo "Enter the target cluster"
     read TARGET_CLUSTER
+    if [ -z "$TARGET_CLUSTER" ]
+    then
+        printf "\e[31mTARGET_CLUSTER cannot be empty\e[0m\n"
+        exit 1
+    fi
     echo "Enter the machine class path"
     read MACHINECLASS
     if [ ! -f "$MACHINECLASS" ]
     then
-        printf "\e[31m$MACHINECLASS is not a valid file\e[0m\n"
+        printf "\e[31m$MACHINECLASS is not a valid file path\e[0m\n"
         exit 1
     fi
     make non-gardener-setup
