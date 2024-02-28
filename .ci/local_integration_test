@@ -136,7 +136,7 @@ CREDENTIALS_SECRET_NAME=shoot-operator-aws-team
 GARDEN_CORE_NAMESPACE=garden-core
 
 function fetch_credentials(){
-   kubectl  get secret $CREDENTIALS_SECRET_NAME -n $GARDEN_CORE_NAMESPACE -o yaml > credentials.yaml
+   kubectl get secret $CREDENTIALS_SECRET_NAME -n $GARDEN_CORE_NAMESPACE -o yaml > credentials.yaml
    accessKeyID=$(yq eval '.data.accessKeyID' credentials.yaml)
    secretAccessKey=$(yq eval '.data.secretAccessKey' credentials.yaml)
    echo $accessKeyID
@@ -146,7 +146,7 @@ function fetch_credentials(){
 function fetch_userdata(){
     NAMESPACE='garden'
     USERDATA_SECRET_NAME=$(kubectl get secrets -o custom-columns=Name:.metadata.name --no-headers | grep shoot--$PROJECT | head -n 1)
-    kubectl  get secret $USERDATA_SECRET_NAME  -oyaml > userData.yaml
+    kubectl get secret $USERDATA_SECRET_NAME -oyaml > userData.yaml
     userData=$(yq eval '.data.userData' userData.yaml)
     echo $userData
 }
