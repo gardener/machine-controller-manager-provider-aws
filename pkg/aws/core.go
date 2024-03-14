@@ -273,7 +273,6 @@ func (d *Driver) InitializeMachine(ctx context.Context, request *driver.Initiali
 	}
 	targetInstance := instances[0]
 	providerID := encodeInstanceID(providerSpec.Region, *targetInstance.InstanceId)
-	lastKnownState := "N/A"
 	// if SrcAnDstCheckEnabled is false then disable the SrcAndDestCheck on running NAT instance
 	if providerSpec.SrcAndDstChecksEnabled != nil && !*providerSpec.SrcAndDstChecksEnabled {
 		klog.V(3).Infof("Disabling SourceDestCheck on VM %q associated with machine %s", providerID, request.Machine.Name)
@@ -285,12 +284,10 @@ func (d *Driver) InitializeMachine(ctx context.Context, request *driver.Initiali
 		if err != nil {
 			return nil, status.Error(codes.Uninitialized, err.Error())
 		}
-		lastKnownState = fmt.Sprintf("Disabled Source/Destination check on instance %s.", *targetInstance.InstanceId)
 	}
 	return &driver.InitializeMachineResponse{
-		ProviderID:     providerID,
-		NodeName:       *targetInstance.PrivateDnsName,
-		LastKnownState: lastKnownState,
+		ProviderID: providerID,
+		NodeName:   *targetInstance.PrivateDnsName,
 	}, nil
 }
 

@@ -30,13 +30,12 @@ type Driver interface {
 	// CreateMachine call is responsible for VM creation on the provider
 	CreateMachine(context.Context, *CreateMachineRequest) (*CreateMachineResponse, error)
 	// InitializeMachine call is responsible for VM initialization on the provider.
-	// This should one-time post VM creation activities like network configuration, etc.
+	// This method should only be invoked as a post VM creation initialization to configure network configuration etc.
 	//
 	// In case of an error, this operation should return an error with one of the following status codes
 	//  - codes.Unimplemented if the provider does not support VM instance initialization.
 	//  - codes.Uninitialized initialization of VM instance failed due to errors
 	//  - codes.NotFound if VM instance was not found.
-	//  - codes.Aborted if VM instance was aborted by the provider.
 	InitializeMachine(context.Context, *InitializeMachineRequest) (*InitializeMachineResponse, error)
 	// DeleteMachine call is responsible for VM deletion/termination on the provider
 	DeleteMachine(context.Context, *DeleteMachineRequest) (*DeleteMachineResponse, error)
@@ -74,7 +73,7 @@ type CreateMachineResponse struct {
 	LastKnownState string
 }
 
-// InitializeMachineRequest encapsulates params for the VM Initialization operation in the Driver facade.
+// InitializeMachineRequest encapsulates params for the VM Initialization operation (Driver.InitializeMachine).
 type InitializeMachineRequest struct {
 	// Machine object representing VM that must be initialized
 	Machine *v1alpha1.Machine
@@ -82,7 +81,7 @@ type InitializeMachineRequest struct {
 	// MachineClass backing the machine object
 	MachineClass *v1alpha1.MachineClass
 
-	//  Secret backing the machineClass object
+	// Secret backing the machineClass object
 	Secret *corev1.Secret
 }
 
@@ -95,9 +94,6 @@ type InitializeMachineResponse struct {
 
 	// NodeName is the name of the node-object registered to kubernetes.
 	NodeName string
-
-	// LastKnownState represents the last state of the VM instance after initialization operation.
-	LastKnownState string
 }
 
 // DeleteMachineRequest is the delete request for VM deletion
