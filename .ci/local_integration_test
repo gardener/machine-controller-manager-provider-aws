@@ -22,7 +22,7 @@ fi
 #check if clone_mcm_repo is a boolean
 if [ "$clone_mcm_repo" != true ] && [ "$clone_mcm_repo" != false ]
 then
-      printf "\e[31mclone_mcm_repo must be a boolean\e[0m\n"
+      printf "\e[31mentered value must be a boolean\e[0m\n"
       exit 1
 fi
 
@@ -65,7 +65,7 @@ fi
 
 if [ "$IS_CONTROL_CLUSTER_SEED" != true ] && [ "$IS_CONTROL_CLUSTER_SEED" != false ]
 then
-      printf "\e[31mIS_CONTROL_CLUSTER_SEED must be a boolean\e[0m\n"
+      printf "\e[31mentered value must be a boolean\e[0m\n"
       exit 1
 fi
 export IS_CONTROL_CLUSTER_SEED=$IS_CONTROL_CLUSTER_SEED
@@ -112,7 +112,7 @@ else
         printf "\e[31mTARGET_CLUSTER cannot be empty\e[0m\n"
         exit 1
     fi
-    echo "Enter the machine class path"
+    echo "Enter the machine class file path"
     read MACHINECLASS
     if [ ! -f "$MACHINECLASS" ]
     then
