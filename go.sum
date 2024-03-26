@@ -18,8 +18,8 @@ github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ3
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/elankath/machine-controller-manager v0.0.0-20240314074113-f256cd827289 h1:IiJS7rT9Ups/LohCvoz87OOOCKYT+JntgTjhH0QvH2k=
-github.com/elankath/machine-controller-manager v0.0.0-20240314074113-f256cd827289/go.mod h1:6g5i/uRGugkRyIABZmDjvaiT8GLL7XRE9ziw4C/9nCo=
+github.com/elankath/machine-controller-manager v0.0.0-20240314080456-45f2fbc38224 h1:/ZrlPiDpmQ6rjcWEi8mhqjdPwyksNDIMDToKx5LS6uQ=
+github.com/elankath/machine-controller-manager v0.0.0-20240314080456-45f2fbc38224/go.mod h1:6g5i/uRGugkRyIABZmDjvaiT8GLL7XRE9ziw4C/9nCo=
 github.com/emicklei/go-restful/v3 v3.9.0 h1:XwGDlfxEnQZzuopoqxwSEllNcCOM9DhhFyhFIIGKwxE=
 github.com/emicklei/go-restful/v3 v3.9.0/go.mod h1:6n3XBCmQQb25CM2LCACGz8ukIrRry+4bhvbpWn3mrbc=
 github.com/evanphx/json-patch v4.12.0+incompatible h1:4onqiflcdA9EOZ4RxV643DvftH5pOlLGNtQ5lPWQu84=
