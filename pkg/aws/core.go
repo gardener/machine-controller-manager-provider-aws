@@ -1,18 +1,6 @@
-/*
-Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// SPDX-FileCopyrightText: 2024 SAP SE or an SAP affiliate company and Gardener contributors
+//
+// SPDX-License-Identifier: Apache-2.0
 
 // Package aws contains the cloud provider specific implementations to manage machines
 package aws
@@ -22,6 +10,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/gardener/machine-controller-manager-provider-aws/pkg/instrument"
 	"strings"
 	"time"
 
@@ -35,6 +24,14 @@ import (
 
 	awserror "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/errors"
 	"github.com/gardener/machine-controller-manager-provider-aws/pkg/spi"
+)
+
+const (
+	createMachineOperationLabel    = "create_machine"
+	deleteMachineOperationLabel    = "delete_machine"
+	listMachinesOperationLabel     = "list_machine"
+	getMachineStatusOperationLabel = "get_machine_status"
+	getVolumeIDsOperationLabel     = "get_volume_ids"
 )
 
 // Driver is the driver struct for holding AWS machine information
@@ -63,7 +60,9 @@ func NewAWSDriver(spi spi.SessionProviderInterface) driver.Driver {
 }
 
 // CreateMachine handles a machine creation request
-func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineRequest) (*driver.CreateMachineResponse, error) {
+func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineRequest) (resp *driver.CreateMachineResponse, err error) {
+	defer instrument.DriverAPIMetricRecorderFn(createMachineOperationLabel, &err)()
+
 	var (
 		exists       bool
 		userData     []byte
@@ -74,7 +73,7 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 
 	// Check if the MachineClass is for the supported cloud provider
 	if req.MachineClass.Provider != ProviderAWS {
-		err := fmt.Errorf("Requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderAWS)
+		err = fmt.Errorf("Requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderAWS)
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
@@ -227,11 +226,11 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 	klog.V(2).Infof("Waiting for VM with Provider-ID %q, for machine %q to be visible to all AWS endpoints", response.ProviderID, machine.Name)
 
 	operation := func() error {
-		_, err := confirmInstanceByID(svc, *runResult.Instances[0].InstanceId)
+		_, err = confirmInstanceByID(svc, *runResult.Instances[0].InstanceId)
 		return err
 	}
 
-	if err := retryWithExponentialBackOff(operation, maxElapsedTimeInBackoff); err != nil {
+	if err = retryWithExponentialBackOff(operation, maxElapsedTimeInBackoff); err != nil {
 		return nil, status.Error(codes.Internal, fmt.Sprintf("creation of VM %q failed, timed out waiting for eventual consistency. Multiple VMs backing machine obj might spawn, they will be orphan collected", response.ProviderID))
 	}
 
@@ -241,14 +240,14 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 }
 
 // returns Placement Object required in ec2.RunInstancesInput
-func getPlacementObj(req *driver.CreateMachineRequest) (*ec2.Placement, error) {
-	placementobj := &ec2.Placement{}
+func getPlacementObj(req *driver.CreateMachineRequest) (placementobj *ec2.Placement, err error) {
+	placementobj = &ec2.Placement{}
 
 	requestAnnotations := req.Machine.Spec.NodeTemplateSpec.ObjectMeta.Annotations
 
 	if placementAnnotation, ok := requestAnnotations[awsPlacement]; ok && placementAnnotation != "" {
 		placementAnnotationsRaw := []byte(placementAnnotation)
-		if err := json.Unmarshal(placementAnnotationsRaw, placementobj); err != nil {
+		if err = json.Unmarshal(placementAnnotationsRaw, placementobj); err != nil {
 			return nil, err
 		}
 	}
@@ -292,20 +291,23 @@ func (d *Driver) InitializeMachine(ctx context.Context, request *driver.Initiali
 }
 
 // DeleteMachine handles a machine deletion request
-func (d *Driver) DeleteMachine(ctx context.Context, req *driver.DeleteMachineRequest) (*driver.DeleteMachineResponse, error) {
+func (d *Driver) DeleteMachine(ctx context.Context, req *driver.DeleteMachineRequest) (resp *driver.DeleteMachineResponse, err error) {
+	defer instrument.DriverAPIMetricRecorderFn(deleteMachineOperationLabel, &err)()
+
 	var (
-		err    error
-		secret = req.Secret
+		instances  []*ec2.Instance
+		instanceID string
+		secret     = req.Secret
 	)
 
 	// Check if the MachineClass is for the supported cloud provider
 	if req.MachineClass.Provider != ProviderAWS {
-		err := fmt.Errorf("Requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderAWS)
+		err = fmt.Errorf("Requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderAWS)
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	// Log messages to track delete request
-	klog.V(3).Infof("Machine deletion request has been recieved for %q", req.Machine.Name)
+	klog.V(3).Infof("Machine deletion request has been received for %q", req.Machine.Name)
 	defer klog.V(3).Infof("Machine deletion request has been processed for %q", req.Machine.Name)
 
 	providerSpec, err := decodeProviderSpecAndSecret(req.MachineClass, secret)
@@ -322,7 +324,7 @@ func (d *Driver) DeleteMachine(ctx context.Context, req *driver.DeleteMachineReq
 	if req.Machine.Spec.ProviderID != "" {
 		// ProviderID exists for machine object, hence terminate the correponding VM
 
-		_, instanceID, err := decodeRegionAndInstanceID(req.Machine.Spec.ProviderID)
+		_, instanceID, err = decodeRegionAndInstanceID(req.Machine.Spec.ProviderID)
 		if err != nil {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
@@ -335,11 +337,10 @@ func (d *Driver) DeleteMachine(ctx context.Context, req *driver.DeleteMachineReq
 
 	} else {
 		// ProviderID doesn't exist, hence check for any existing machine and then delete if exists
-
-		instances, err := d.getInstancesFromMachineName(req.Machine.Name, providerSpec, req.Secret)
+		instances, err = d.getInstancesFromMachineName(req.Machine.Name, providerSpec, req.Secret)
 		if err != nil {
-			status, ok := status.FromError(err)
-			if ok && status.Code() == codes.NotFound {
+			errorStatus, ok := status.FromError(err)
+			if ok && errorStatus.Code() == codes.NotFound {
 				klog.V(3).Infof("No matching VM found. Termination successful for machine object %q", req.Machine.Name)
 				return &driver.DeleteMachineResponse{}, nil
 			}
@@ -361,7 +362,9 @@ func (d *Driver) DeleteMachine(ctx context.Context, req *driver.DeleteMachineReq
 }
 
 // GetMachineStatus handles a machine get status request
-func (d *Driver) GetMachineStatus(ctx context.Context, req *driver.GetMachineStatusRequest) (*driver.GetMachineStatusResponse, error) {
+func (d *Driver) GetMachineStatus(ctx context.Context, req *driver.GetMachineStatusRequest) (resp *driver.GetMachineStatusResponse, err error) {
+	defer instrument.DriverAPIMetricRecorderFn(getMachineStatusOperationLabel, &err)()
+
 	var (
 		secret       = req.Secret
 		machineClass = req.MachineClass
@@ -369,7 +372,7 @@ func (d *Driver) GetMachineStatus(ctx context.Context, req *driver.GetMachineSta
 
 	// Check if the MachineClass is for the supported cloud provider
 	if req.MachineClass.Provider != ProviderAWS {
-		err := fmt.Errorf("Requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderAWS)
+		err = fmt.Errorf("Requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderAWS)
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
@@ -416,8 +419,10 @@ func (d *Driver) GetMachineStatus(ctx context.Context, req *driver.GetMachineSta
 	return response, nil
 }
 
-// ListMachines lists all the machines possibilly created by a machineClass
-func (d *Driver) ListMachines(ctx context.Context, req *driver.ListMachinesRequest) (*driver.ListMachinesResponse, error) {
+// ListMachines lists all the machines possibly created by a machineClass
+func (d *Driver) ListMachines(ctx context.Context, req *driver.ListMachinesRequest) (resp *driver.ListMachinesResponse, err error) {
+	defer instrument.DriverAPIMetricRecorderFn(listMachinesOperationLabel, &err)()
+
 	var (
 		machineClass = req.MachineClass
 		secret       = req.Secret
@@ -425,7 +430,7 @@ func (d *Driver) ListMachines(ctx context.Context, req *driver.ListMachinesReque
 
 	// Check if the MachineClass is for the supported cloud provider
 	if req.MachineClass.Provider != ProviderAWS {
-		err := fmt.Errorf("Requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderAWS)
+		err = fmt.Errorf("Requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderAWS)
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
@@ -502,25 +507,28 @@ func (d *Driver) ListMachines(ctx context.Context, req *driver.ListMachinesReque
 
 	klog.V(3).Infof("List machines request has been processed successfully")
 	// Core logic ends here.
-	resp := &driver.ListMachinesResponse{
+	resp = &driver.ListMachinesResponse{
 		MachineList: listOfVMs,
 	}
 	return resp, nil
 }
 
-// GetVolumeIDs returns a list of Volume IDs for all PV Specs for whom an provider volume was found
-func (d *Driver) GetVolumeIDs(ctx context.Context, req *driver.GetVolumeIDsRequest) (*driver.GetVolumeIDsResponse, error) {
+// GetVolumeIDs returns a list of Volume IDs for all PV Specs for whom a provider volume was found
+func (d *Driver) GetVolumeIDs(ctx context.Context, req *driver.GetVolumeIDsRequest) (resp *driver.GetVolumeIDsResponse, err error) {
+	defer instrument.DriverAPIMetricRecorderFn(getVolumeIDsOperationLabel, &err)()
+
 	var (
+		volumeID  string
 		volumeIDs []string
 	)
 
 	// Log messages to track start and end of request
-	klog.V(3).Infof("GetVolumeIDs request has been recieved for %q", req.PVSpecs)
+	klog.V(3).Infof("GetVolumeIDs request has been received for %q", req.PVSpecs)
 
 	for _, spec := range req.PVSpecs {
 
 		if spec.AWSElasticBlockStore != nil {
-			volumeID, err := kubernetesVolumeIDToEBSVolumeID(spec.AWSElasticBlockStore.VolumeID)
+			volumeID, err = kubernetesVolumeIDToEBSVolumeID(spec.AWSElasticBlockStore.VolumeID)
 			if err != nil {
 				klog.Errorf("Failed to translate Kubernetes volume ID '%s' to EBS volume ID: %v", spec.AWSElasticBlockStore.VolumeID, err)
 				continue
@@ -528,14 +536,14 @@ func (d *Driver) GetVolumeIDs(ctx context.Context, req *driver.GetVolumeIDsReque
 
 			volumeIDs = append(volumeIDs, volumeID)
 		} else if spec.CSI != nil && spec.CSI.Driver == awsEBSDriverName && spec.CSI.VolumeHandle != "" {
-			volumeID := spec.CSI.VolumeHandle
+			volumeID = spec.CSI.VolumeHandle
 			volumeIDs = append(volumeIDs, volumeID)
 		}
 	}
 
 	klog.V(3).Infof("GetVolumeIDs machines request has been processed successfully. \nList: %v", volumeIDs)
 
-	resp := &driver.GetVolumeIDsResponse{
+	resp = &driver.GetVolumeIDsResponse{
 		VolumeIDs: volumeIDs,
 	}
 	return resp, nil

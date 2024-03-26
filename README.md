@@ -1,6 +1,6 @@
 # machine-controller-manager-provider-aws
 
-[![reuse compliant](https://reuse.software/badge/reuse-compliant.svg)](https://reuse.software/)
+[![REUSE status](https://api.reuse.software/badge/github.com/gardener/machine-controller-manager-provider-aws)](https://api.reuse.software/info/github.com/gardener/machine-controller-manager-provider-aws)
 
 Out of tree (controller based) implementation for `AWS` as a new provider.
 
