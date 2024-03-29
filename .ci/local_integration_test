@@ -102,7 +102,7 @@ else
     read CONTROL_CLUSTER
     if [ -z "$CONTROL_CLUSTER" ]
     then
-        printf "\e[31mCONTROL_CLUSTER cannot be empty\e[0m\n"
+        printf "\e[31mcontrol cluster cannot be empty\e[0m\n"
         exit 1
     fi
     echo "Enter the target cluster"
