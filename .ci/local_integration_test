@@ -15,7 +15,7 @@ read clone_mcm_repo
 #check if clone_mcm_repo is not empty
 if [ -z "$clone_mcm_repo" ]
 then
-      printf "\e[31mclone_mcm_repo cannot be empty\e[0m\n"
+      printf "\e[31mentered value cannot be empty\e[0m\n"
       exit 1
 fi
 
@@ -59,7 +59,7 @@ read IS_CONTROL_CLUSTER_SEED
 
 if [ -z "$IS_CONTROL_CLUSTER_SEED" ]
 then
-      printf "\e[31mIS_CONTROL_CLUSTER_SEED cannot be empty\e[0m\n"
+      printf "\e[31mentered value cannot be empty\e[0m\n"
       exit 1
 fi
 
@@ -75,7 +75,7 @@ printf "\e[34mEnter the absolute path to the local machine-controller-manager re
 read MCM_REPO_PATH
 if [ -z "$MCM_REPO_PATH" ]
 then
-      printf "\e[31mMCM_REPO_PATH cannot be empty\e[0m\n"
+      printf "\e[31mentered value cannot be empty\e[0m\n"
       exit 1
 fi
 if [ ! -d "$MCM_REPO_PATH" ]
@@ -95,7 +95,7 @@ else
     read PROJECT
     if [ -z "$PROJECT" ]
     then
-        printf "\e[31mPROJECT cannot be empty\e[0m\n"
+        printf "\e[31mproject cannot be empty\e[0m\n"
         exit 1
     fi
     echo "Enter the control cluster"
@@ -109,7 +109,7 @@ else
     read TARGET_CLUSTER
     if [ -z "$TARGET_CLUSTER" ]
     then
-        printf "\e[31mTARGET_CLUSTER cannot be empty\e[0m\n"
+        printf "\e[31mtarget cluster cannot be empty\e[0m\n"
         exit 1
     fi
     echo "Enter the machine class file path"
