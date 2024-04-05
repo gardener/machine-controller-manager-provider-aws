@@ -40,9 +40,9 @@ then
 fi
 
 
-if [[ ! -d "$mcm_repo_link" ]]; then
-  echo "Error: MCM Repo expected at: $mcm_repo_link
-    For running local Integration Tests, kindly checkout MCM Repo locally and execute 'ln -sf <absolutePathToMcmRepo> $mcm_repo_link'"
+if [[ ! -d "$mcm_repo_link/mcm" ]]; then
+  echo "Error: MCM Repo expected at: $mcm_repo_link/mcm
+    For running local Integration Tests, kindly checkout MCM Repo locally and execute 'ln -sf <absolutePathToMcmRepo> $mcm_repo_link/dev'"
   exit 1
 fi
 
@@ -197,7 +197,9 @@ printf "\e[32mIntegration tests completed successfully\e[0m\n"
 if [ "$IS_CONTROL_CLUSTER_SEED" = false ]
 then
   set +e
-  kubectl --kubeconfig=$CONTROL_KUBECONFIG delete secret test_mc_secret
+  gardenctl target --garden sap-landscape-dev --project $PROJECT --shoot $CONTROL_CLUSTER
+  eval $(gardenctl kubectl-env bash)
+  kubectl delete secret test_mc_secret
   set -e
   printf "\e[32mSuccessfully deleted test_mc_secret on control cluster\e[0m\n"
 fi
