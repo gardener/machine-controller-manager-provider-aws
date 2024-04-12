@@ -97,6 +97,9 @@ type AWSProviderSpec struct {
 
 	// InstanceMetadataOptions contains configuration for controlling access to the metadata API.
 	InstanceMetadataOptions *InstanceMetadataOptions `json:"instanceMetadataOptions,omitempty"`
+
+	// CPUOptions contains detailed configuration for the number of cores and threads for the instance.
+	CPUOptions *CPUOptions `json:"cpuOptions,omitempty"`
 }
 
 // AWSBlockDeviceMappingSpec stores info about AWS block device mappings
@@ -261,4 +264,13 @@ type InstanceMetadataOptions struct {
 	HTTPPutResponseHopLimit *int64 `json:"httpPutResponseHopLimit,omitempty"`
 	// HTTPTokens enforces the use of metadata v2 API.
 	HTTPTokens *string `json:"httpTokens,omitempty"`
+}
+
+// CPUOptions contains detailed configuration for the number of cores and threads for the instance.
+type CPUOptions struct {
+	// CoreCount specifies the number of CPU cores per instance.
+	CoreCount *int64 `json:"coreCount"`
+
+	// ThreadsPerCore sets the number of threads per core. Must be either '1' (disable multi-threading) or '2'.
+	ThreadsPerCore *int64 `json:"threadsPerCore"`
 }
