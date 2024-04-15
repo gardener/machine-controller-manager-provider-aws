@@ -28,7 +28,6 @@ fi
 
 if [ "$clone_mcm_repo" = true ]
 then
-    echo $mcm_repo_link
     if [ ! -d "$mcm_repo_link" ]
     then
         mkdir -p $mcm_repo_link
@@ -42,7 +41,7 @@ fi
 
 if [[ ! -d "$mcm_repo_link/mcm" ]]; then
   echo "Error: MCM Repo expected at: $mcm_repo_link/mcm
-    For running local Integration Tests, kindly checkout MCM Repo locally and execute 'ln -sf <absolutePathToMcmRepo> $mcm_repo_link/dev'"
+    For running local Integration Tests, kindly checkout MCM Repo locally and execute 'ln -sf <absolutePathToMcmRepo> $mcm_repo_link/mcm'"
   exit 1
 fi
 
@@ -87,39 +86,68 @@ fi
 if [ "$IS_CONTROL_CLUSTER_SEED" = true ]
 then
     cd $MCM_REPO_PATH
-    make gardener-setup
-    cd -
-else
-    cd $MCM_REPO_PATH
-    echo "Enter the project"
+    printf "\e[34mEnter the project name\e[0m\n"
     read PROJECT
     if [ -z "$PROJECT" ]
     then
         printf "\e[31mproject cannot be empty\e[0m\n"
         exit 1
     fi
-    echo "Enter the control cluster"
+    printf "\e[34mEnter the seed name\e[0m\n"
     read CONTROL_CLUSTER
     if [ -z "$CONTROL_CLUSTER" ]
     then
-        printf "\e[31mcontrol cluster cannot be empty\e[0m\n"
+        printf "\e[31mseed name cannot be empty\e[0m\n"
         exit 1
     fi
-    echo "Enter the target cluster"
+    printf "\e[34mEnter the target cluster name\e[0m\n"
     read TARGET_CLUSTER
     if [ -z "$TARGET_CLUSTER" ]
     then
         printf "\e[31mtarget cluster cannot be empty\e[0m\n"
         exit 1
     fi
-    echo "Enter the machine class file path"
+    ./hack/gardener_local_setup.sh --seed "$CONTROL_CLUSTER" --shoot "$TARGET_CLUSTER" --project "$PROJECT" --provider aws
+    cd -
+else
+    cd $MCM_REPO_PATH
+    printf "\e[34mEnter the project name\e[0m\n"
+    read PROJECT
+    if [ -z "$PROJECT" ]
+    then
+        printf "\e[31mproject cannot be empty\e[0m\n"
+        exit 1
+    fi
+    printf "\e[34mEnter the control cluster name\e[0m\n"
+    read CONTROL_CLUSTER
+    if [ -z "$CONTROL_CLUSTER" ]
+    then
+        printf "\e[31mcontrol cluster cannot be empty\e[0m\n"
+        exit 1
+    fi
+    printf "\e[34mEnter the target cluster name\e[0m\n"
+    read TARGET_CLUSTER
+    if [ -z "$TARGET_CLUSTER" ]
+    then
+        printf "\e[31mtarget cluster cannot be empty\e[0m\n"
+        exit 1
+    fi
+    printf "\e[34mEnter the machine class file path\e[0m\n"
     read MACHINECLASS
     if [ ! -f "$MACHINECLASS" ]
     then
         printf "\e[31m$MACHINECLASS is not a valid file path\e[0m\n"
         exit 1
     fi
-    make non-gardener-setup
+    printf "\e[34mEnter the namespace on which you want to operate in the control cluster\e[0m\n"
+    read NAMESPACE; \
+    printf "\e[34mEnter control kubeconfig path\e[0m\n";
+    read CONTROL_KUBECONFIG_PATH;
+    printf "\e[34mEnter target kubeconfig path\e[0m\n";
+    read TARGET_KUBECONFIG_PATH;
+#    echo "enter cluster provider(gcp|aws|azure|vsphere|openstack|alicloud|metal|equinix-metal)"; \
+#    read PROVIDER;
+    ./hack/non_gardener_local_setup.sh --namespace $NAMESPACE --control-kubeconfig-path "$CONTROL_KUBECONFIG_PATH" --target-kubeconfig-path "$TARGET_KUBECONFIG_PATH" --provider aws
     cd -
     cd ../../..
     printf "\n%s" "MACHINECLASS_V1=${MACHINECLASS}" >> ".env"
@@ -183,8 +211,9 @@ EOF
 
 if [ "$IS_CONTROL_CLUSTER_SEED" = false ]
 then
-  create_test_mc_secret
-  printf "\e[32mSuccessfully created test_mc_secret on control cluster\e[0m\n"
+  if command -v gardenctl &> /dev/null; then
+    create_test_mc_secret
+  fi
 fi
 
 printf "\e[33mStarting integration tests...\e[0m\n"
@@ -196,12 +225,12 @@ printf "\e[32mIntegration tests completed successfully\e[0m\n"
 
 if [ "$IS_CONTROL_CLUSTER_SEED" = false ]
 then
-  set +e
-  gardenctl target --garden sap-landscape-dev --project $PROJECT --shoot $CONTROL_CLUSTER
-  eval $(gardenctl kubectl-env bash)
-  kubectl delete secret test_mc_secret
-  set -e
-  printf "\e[32mSuccessfully deleted test_mc_secret on control cluster\e[0m\n"
+  if command -v gardenctl &> /dev/null; then
+    set +e
+    kubectl --kubeconfig=$CONTROL_KUBECONFIG delete secret test-mc-secret
+    set -e
+    printf "\e[32mSuccessfully deleted test_mc_secret on control cluster\e[0m\n"
+  fi
 fi
 
 cd ../../..
