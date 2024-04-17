@@ -8,6 +8,7 @@ set -e
 # SOURCE_PATH - path to component repository root directory.
 
 mcm_repo_link="dev"
+declare PROVIDER="aws"
 
 printf "\e[34mDo you want to clone the latest MCM Repo? (true/false)\e[0m\n"
 read clone_mcm_repo
@@ -108,7 +109,7 @@ fi
 cd $MCM_REPO_PATH
 if [ "$IS_CONTROL_CLUSTER_SEED" = true ]
 then
-    ./hack/gardener_local_setup.sh --seed "$CONTROL_CLUSTER" --shoot "$TARGET_CLUSTER" --project "$PROJECT" --provider aws
+    ./hack/gardener_local_setup.sh --seed "$CONTROL_CLUSTER" --shoot "$TARGET_CLUSTER" --project "$PROJECT" --provider "$PROVIDER"
     cd -
 else
     printf "\e[34mEnter the machine class file path\e[0m\n"
@@ -153,7 +154,7 @@ else
         printf "\e[31"$TARGET_KUBECONFIG_PATH" is not a valid filepath\e[0m\n"
         exit 1
     fi
-    ./hack/non_gardener_local_setup.sh --namespace $NAMESPACE --control-kubeconfig-path "$CONTROL_KUBECONFIG_PATH" --target-kubeconfig-path "$TARGET_KUBECONFIG_PATH" --provider aws
+    ./hack/non_gardener_local_setup.sh --namespace $NAMESPACE --control-kubeconfig-path "$CONTROL_KUBECONFIG_PATH" --target-kubeconfig-path "$TARGET_KUBECONFIG_PATH" --provider "$PROVIDER"
     cd -
     cd ../../..
     printf "\n%s" "MACHINECLASS_V1=${MACHINECLASS}" >> ".env"
@@ -161,12 +162,13 @@ else
 fi
 
 cd ../../..
+printf "\n%s" "TARGET_CLUSTER_NAME=shoot--${PROJECT}--${TARGET_CLUSTER}" >> ".env"
 set -o allexport
 source .env
 set +o allexport
 cd test/integration/controller
 
-CREDENTIALS_SECRET_NAME=shoot-operator-aws-team
+CREDENTIALS_SECRET_NAME=shoot-operator-"$PROVIDER"-team
 GARDEN_CORE_NAMESPACE=garden-core
 
 function fetch_credentials(){
