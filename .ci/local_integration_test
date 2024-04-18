@@ -14,6 +14,8 @@ declare TARGET_CLUSTER
 declare CONTROL_CLUSTER
 declare GARDEN_CORE_NAMESPACE
 declare CONTROL_KUBECONFIG
+DEFAULT_MCM_REPO_PATH=$(realpath "$(pwd)/../machine-controller-manager")
+
 
 function fetch_credentials(){
    kubectl get secret $CREDENTIALS_SECRET_NAME -n $GARDEN_CORE_NAMESPACE -o yaml > credentials.yaml
@@ -99,7 +101,6 @@ if [[ ! -d "$mcm_repo_link/mcm" ]]; then
   exit 1
 fi
 
-cd test/integration/controller
 if ! hash ginkgo; then
     # Install Ginkgo (test framework) to be able to execute the tests.
     echo "Fetching Ginkgo frawework"
@@ -124,9 +125,6 @@ fi
 export IS_CONTROL_CLUSTER_SEED=$IS_CONTROL_CLUSTER_SEED
 
 printf "\e[33mEnter the absolute path to the local machine-controller-manager repository.\e[0m\n"
-cd ../../../.. > /dev/null
-DEFAULT_MCM_REPO_PATH="$(pwd)/machine-controller-manager"
-cd - > /dev/null
 printf "\e[33mDefault path is $DEFAULT_MCM_REPO_PATH. Press Enter to proceed with it.\e[0m\n"
 read MCM_REPO_PATH
 if [ -z "$MCM_REPO_PATH" ]
@@ -161,9 +159,9 @@ then
     exit 1
 fi
 
-cd $MCM_REPO_PATH
 if [ "$IS_CONTROL_CLUSTER_SEED" = true ]
 then
+    cd $MCM_REPO_PATH
     ./hack/gardener_local_setup.sh --seed "$CONTROL_CLUSTER" --shoot "$TARGET_CLUSTER" --project "$PROJECT" --provider "$PROVIDER"
     cd -
 else
@@ -224,19 +222,14 @@ else
         printf "\e[31"$TARGET_KUBECONFIG_PATH" is not a valid filepath\e[0m\n"
         exit 1
     fi
-    ./hack/non_gardener_local_setup.sh --namespace $NAMESPACE --control-kubeconfig-path "$CONTROL_KUBECONFIG_PATH" --target-kubeconfig-path "$TARGET_KUBECONFIG_PATH" --provider "$PROVIDER"
-    cd -
-    cd ../../..
+    "$MCM_REPO_PATH"/hack/non_gardener_local_setup.sh --namespace $NAMESPACE --control-kubeconfig-path "$CONTROL_KUBECONFIG_PATH" --target-kubeconfig-path "$TARGET_KUBECONFIG_PATH" --provider "$PROVIDER"
     printf "\n%s" "MACHINECLASS_V1=${MACHINECLASS}" >> ".env"
-    cd test/integration/controller
 fi
 
-cd ../../..
-printf "\n%s" "TARGET_CLUSTER_NAME=shoot--${PROJECT}--${TARGET_CLUSTER}" >> ".env"
+printf "\n%s" "TARGET_CLUSTER_NAME=shoot--${PROJECT}--${TARGET_CLUSTER}" >> "../../../.env"
 set -o allexport
 source .env
 set +o allexport
-cd test/integration/controller
 
 CREDENTIALS_SECRET_NAME=shoot-operator-"$PROVIDER"-team
 GARDEN_CORE_NAMESPACE=garden-core
@@ -254,6 +247,8 @@ fi
 
 printf "\e[33mStarting integration tests...\e[0m\n"
 
+cd test/integration/controller
+
 set +e
 ginkgo -v --show-node-events --poll-progress-after=300s --poll-progress-interval=60s
 set -e
@@ -264,10 +259,9 @@ then
     set +e
     kubectl --kubeconfig=$CONTROL_KUBECONFIG delete secret test-mc-secret
     set -e
-    printf "\e[32mSuccessfully deleted test_mc_secret on control cluster\e[0m\n"
+    printf "\e[32mSuccessfully deleted test-mc-secret on control cluster\e[0m\n"
 
 fi
 
-cd ../../..
-rm -f .env
-cd test/integration/controller
+rm -f ../../../.env
+cd -
