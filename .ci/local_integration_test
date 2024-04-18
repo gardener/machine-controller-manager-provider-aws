@@ -9,6 +9,57 @@ set -e
 
 mcm_repo_link="dev"
 declare PROVIDER="aws"
+declare PROJECT
+declare TARGET_CLUSTER
+declare CONTROL_CLUSTER
+declare GARDEN_CORE_NAMESPACE
+declare CONTROL_KUBECONFIG
+
+function fetch_credentials(){
+   kubectl get secret $CREDENTIALS_SECRET_NAME -n $GARDEN_CORE_NAMESPACE -o yaml > credentials.yaml
+   accessKeyID=$(yq eval '.data.accessKeyID' credentials.yaml)
+   secretAccessKey=$(yq eval '.data.secretAccessKey' credentials.yaml)
+   echo $accessKeyID
+   echo $secretAccessKey
+}
+
+function fetch_userdata(){
+    NAMESPACE='garden'
+    USERDATA_SECRET_NAME=$(kubectl get secrets -o custom-columns=Name:.metadata.name --no-headers | grep shoot--$PROJECT | head -n 1)
+    kubectl get secret $USERDATA_SECRET_NAME -oyaml > userData.yaml
+    userData=$(yq eval '.data.userData' userData.yaml)
+    echo $userData
+}
+
+function create_test_mc_secret() {
+    gardenctl target --garden sap-landscape-dev
+    eval $(gardenctl kubectl-env bash)
+    result=$(fetch_credentials)
+    accessKeyID=$(echo "$result" | head -n 1)
+    secretAccessKey=$(echo "$result" | tail -n 1)
+    gardenctl target --garden sap-landscape-dev --project $PROJECT --shoot $TARGET_CLUSTER --control-plane
+    eval $(gardenctl kubectl-env bash)
+    userData=$(fetch_userdata)
+    rm -f credentials.yaml
+    rm -f userData.yaml
+secret_yaml=$(cat <<EOF
+apiVersion: v1
+data:
+  accessKeyID: $accessKeyID
+  secretAccessKey: $secretAccessKey
+  userData: $userData
+kind: Secret
+metadata:
+  name: test-mc-secret
+  namespace: default
+type: Opaque
+EOF
+)
+
+    gardenctl target --garden sap-landscape-dev --project $PROJECT --shoot $CONTROL_CLUSTER
+    eval $(gardenctl kubectl-env bash)
+    echo "$secret_yaml" | kubectl --kubeconfig=$CONTROL_KUBECONFIG apply -f -
+}
 
 printf "\e[33mDo you want to clone the latest MCM Repo? (true/false)\e[0m\n"
 read clone_mcm_repo
@@ -73,12 +124,14 @@ fi
 export IS_CONTROL_CLUSTER_SEED=$IS_CONTROL_CLUSTER_SEED
 
 printf "\e[33mEnter the absolute path to the local machine-controller-manager repository.\e[0m\n"
-
+cd ../../../.. > /dev/null
+DEFAULT_MCM_REPO_PATH="$(pwd)/machine-controller-manager"
+cd - > /dev/null
+printf "\e[33mDefault path is $DEFAULT_MCM_REPO_PATH. Press Enter to proceed with it.\e[0m\n"
 read MCM_REPO_PATH
 if [ -z "$MCM_REPO_PATH" ]
 then
-      printf "\e[31mentered value cannot be empty\e[0m\n"
-      exit 1
+      MCM_REPO_PATH="$DEFAULT_MCM_REPO_PATH"
 fi
 if [ ! -d "$MCM_REPO_PATH" ]
 then
@@ -188,51 +241,6 @@ cd test/integration/controller
 CREDENTIALS_SECRET_NAME=shoot-operator-"$PROVIDER"-team
 GARDEN_CORE_NAMESPACE=garden-core
 
-function fetch_credentials(){
-   kubectl get secret $CREDENTIALS_SECRET_NAME -n $GARDEN_CORE_NAMESPACE -o yaml > credentials.yaml
-   accessKeyID=$(yq eval '.data.accessKeyID' credentials.yaml)
-   secretAccessKey=$(yq eval '.data.secretAccessKey' credentials.yaml)
-   echo $accessKeyID
-   echo $secretAccessKey
-}
-
-function fetch_userdata(){
-    NAMESPACE='garden'
-    USERDATA_SECRET_NAME=$(kubectl get secrets -o custom-columns=Name:.metadata.name --no-headers | grep shoot--$PROJECT | head -n 1)
-    kubectl get secret $USERDATA_SECRET_NAME -oyaml > userData.yaml
-    userData=$(yq eval '.data.userData' userData.yaml)
-    echo $userData
-}
-
-function create_test_mc_secret() {
-    gardenctl target --garden sap-landscape-dev
-    eval $(gardenctl kubectl-env bash)
-    result=$(fetch_credentials)
-    accessKeyID=$(echo "$result" | head -n 1)
-    secretAccessKey=$(echo "$result" | tail -n 1)
-    gardenctl target --garden sap-landscape-dev --project $PROJECT --shoot $TARGET_CLUSTER --control-plane
-    eval $(gardenctl kubectl-env bash)
-    userData=$(fetch_userdata)
-    rm -f credentials.yaml
-    rm -f userData.yaml
-secret_yaml=$(cat <<EOF
-apiVersion: v1
-data:
-  accessKeyID: $accessKeyID
-  secretAccessKey: $secretAccessKey
-  userData: $userData
-kind: Secret
-metadata:
-  name: test-mc-secret
-  namespace: default
-type: Opaque
-EOF
-)
-
-    gardenctl target --garden sap-landscape-dev --project $PROJECT --shoot $CONTROL_CLUSTER
-    eval $(gardenctl kubectl-env bash)
-    echo "$secret_yaml" | kubectl --kubeconfig=$CONTROL_KUBECONFIG apply -f -
-}
 
 if [ "$IS_CONTROL_CLUSTER_SEED" = false ]
 then
