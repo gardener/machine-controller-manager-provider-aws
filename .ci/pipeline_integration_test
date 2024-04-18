@@ -193,7 +193,8 @@ function setup_environment() {
     # Clone MCM Repo into $mcm_repo_path
     if [[ ! -d "$mcm_repo_path" ]]; then
       printf "Cloning machine-controller-manager repo into %s.\n" "$mcm_repo_path"
-      local cloneCmd="git clone https://github.com/gardener/machine-controller-manager.git "$mcm_repo_path" --recursive"
+      MCM_VERSION=$(go list -mod=mod -f '{{ .Version }}' -m "github.com/gardener/machine-controller-manager")
+      local cloneCmd="git clone --branch "$MCM_VERSION" --depth 1 https://github.com/gardener/machine-controller-manager.git "$mcm_repo_path" --recursive"
       printf "Executing %s...\n" "$cloneCmd"
       eval $cloneCmd
     fi

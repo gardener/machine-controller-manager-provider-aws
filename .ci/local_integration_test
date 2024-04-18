@@ -10,7 +10,7 @@ set -e
 mcm_repo_link="dev"
 declare PROVIDER="aws"
 
-printf "\e[34mDo you want to clone the latest MCM Repo? (true/false)\e[0m\n"
+printf "\e[33mDo you want to clone the latest MCM Repo? (true/false)\e[0m\n"
 read clone_mcm_repo
 
 #check if clone_mcm_repo is not empty
@@ -34,7 +34,9 @@ then
         mkdir -p $mcm_repo_link
     fi
     cd $mcm_repo_link
-    git clone https://github.com/gardener/machine-controller-manager
+    MCM_VERSION=$(go list -mod=mod -f '{{ .Version }}' -m "github.com/gardener/machine-controller-manager")
+    printf "\e[33mCloning MCM Repo with version: $MCM_VERSION\e[0m\n"
+    git clone --branch "$MCM_VERSION" --depth 1 https://github.com/gardener/machine-controller-manager
     mv machine-controller-manager mcm
     cd -
 fi
@@ -54,7 +56,7 @@ if ! hash ginkgo; then
     echo "Successfully fetched Ginkgo frawework"
 fi
 
-printf  "\e[34mIs the control cluster a seed? (true/false)\e[0m\n"
+printf  "\e[33mIs the control cluster a seed? (true/false)\e[0m\n"
 read IS_CONTROL_CLUSTER_SEED
 
 if [ -z "$IS_CONTROL_CLUSTER_SEED" ]
@@ -70,7 +72,7 @@ then
 fi
 export IS_CONTROL_CLUSTER_SEED=$IS_CONTROL_CLUSTER_SEED
 
-printf "\e[34mEnter the absolute path to the local machine-controller-manager repository.\e[0m\n"
+printf "\e[33mEnter the absolute path to the local machine-controller-manager repository.\e[0m\n"
 
 read MCM_REPO_PATH
 if [ -z "$MCM_REPO_PATH" ]
@@ -84,21 +86,21 @@ then
       exit 1
 fi
 
-printf "\e[34mEnter the project name\e[0m\n"
+printf "\e[33mEnter the project name\e[0m\n"
 read PROJECT
 if [ -z "$PROJECT" ]
 then
     printf "\e[31mproject cannot be empty\e[0m\n"
     exit 1
 fi
-printf "\e[34mEnter the control cluster name\e[0m\n"
+printf "\e[33mEnter the control cluster name\e[0m\n"
 read CONTROL_CLUSTER
 if [ -z "$CONTROL_CLUSTER" ]
 then
     printf "\e[31mseed name cannot be empty\e[0m\n"
     exit 1
 fi
-printf "\e[34mEnter the target cluster name\e[0m\n"
+printf "\e[33mEnter the target cluster name\e[0m\n"
 read TARGET_CLUSTER
 if [ -z "$TARGET_CLUSTER" ]
 then
@@ -112,14 +114,14 @@ then
     ./hack/gardener_local_setup.sh --seed "$CONTROL_CLUSTER" --shoot "$TARGET_CLUSTER" --project "$PROJECT" --provider "$PROVIDER"
     cd -
 else
-    printf "\e[34mEnter the machine class file path\e[0m\n"
+    printf "\e[33mEnter the machine class file path\e[0m\n"
     read MACHINECLASS
     if [ ! -f "$MACHINECLASS" ]
     then
         printf "\e[31m$MACHINECLASS is not a valid file path\e[0m\n"
         exit 1
     fi
-    printf "\e[34mDo you want to create the secret automatically ? (true/false)\e[0m\n"
+    printf "\e[33mDo you want to create the secret automatically ? (true/false)\e[0m\n"
     printf "\e[33mNote: This is only possible if your control cluster is a gardener shoot.\e[0m\n"
     read CREATE_SECRET
     if [ -z "$CREATE_SECRET" ]
@@ -134,20 +136,20 @@ else
     fi
     if [ "$CREATE_SECRET" = false ]
     then
-        printf "\e[34mEnter the absolute path for the secret to be applied.\e[0m\n"
+        printf "\e[33mEnter the absolute path for the secret to be applied.\e[0m\n"
         read SECRET_PATH
     fi
 
-    printf "\e[34mEnter the namespace on which you want to operate in the control cluster\e[0m\n"
+    printf "\e[33mEnter the namespace on which you want to operate in the control cluster\e[0m\n"
     read NAMESPACE; \
-    printf "\e[34mEnter control kubeconfig path\e[0m\n";
+    printf "\e[33mEnter control kubeconfig path\e[0m\n";
     read CONTROL_KUBECONFIG_PATH;
     if [ ! -f "$CONTROL_KUBECONFIG_PATH" ]
     then
         printf "\e[31"$CONTROL_KUBECONFIG_PATH" is not a valid filepath\e[0m\n"
         exit 1
     fi
-    printf "\e[34mEnter target kubeconfig path\e[0m\n";
+    printf "\e[33mEnter target kubeconfig path\e[0m\n";
     read TARGET_KUBECONFIG_PATH;
     if [ ! -f "$TARGET_KUBECONFIG_PATH" ]
     then
