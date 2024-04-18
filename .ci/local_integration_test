@@ -138,10 +138,25 @@ else
     then
         printf "\e[33mEnter the absolute path for the secret to be applied.\e[0m\n"
         read SECRET_PATH
+        if [ -z "$SECRET_PATH" ]
+        then
+            printf "\e[31mentered value cannot be empty\e[0m\n"
+            exit 1
+        fi
+        if [ ! -f "$SECRET_PATH" ]
+        then
+            printf "\e[31m$SECRET_PATH is not a valid file path\e[0m\n"
+            exit 1
+        fi
     fi
 
     printf "\e[33mEnter the namespace on which you want to operate in the control cluster\e[0m\n"
     read NAMESPACE; \
+    if [ -z "$NAMESPACE" ]
+    then
+        printf "\e[31mentered value cannot be empty\e[0m\n"
+        exit 1
+    fi
     printf "\e[33mEnter control kubeconfig path\e[0m\n";
     read CONTROL_KUBECONFIG_PATH;
     if [ ! -f "$CONTROL_KUBECONFIG_PATH" ]
