@@ -164,6 +164,7 @@ then
     cd $MCM_REPO_PATH
     ./hack/gardener_local_setup.sh --seed "$CONTROL_CLUSTER" --shoot "$TARGET_CLUSTER" --project "$PROJECT" --provider "$PROVIDER"
     cd -
+    printf "\n%s" "TARGET_CLUSTER_NAME=shoot--${PROJECT}--${TARGET_CLUSTER}" >> "../../../.env"
 else
     printf "\e[33mEnter the machine class file path\e[0m\n"
     read MACHINECLASS
@@ -224,9 +225,11 @@ else
     fi
     "$MCM_REPO_PATH"/hack/non_gardener_local_setup.sh --namespace $NAMESPACE --control-kubeconfig-path "$CONTROL_KUBECONFIG_PATH" --target-kubeconfig-path "$TARGET_KUBECONFIG_PATH" --provider "$PROVIDER"
     printf "\n%s" "MACHINECLASS_V1=${MACHINECLASS}" >> ".env"
+    printf "\e[33mEnter the TARGET_CLUSTER_NAME. (Used for initializing orphan resource tracker)\e[0m\n"
+    read TARGET_CLUSTER_NAME
+    printf "\n%s" "TARGET_CLUSTER_NAME=${TARGET_CLUSTER_NAME}" >> "../../../.env"
 fi
 
-printf "\n%s" "TARGET_CLUSTER_NAME=shoot--${PROJECT}--${TARGET_CLUSTER}" >> "../../../.env"
 set -o allexport
 source .env
 set +o allexport
