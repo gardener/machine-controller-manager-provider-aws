@@ -16,7 +16,7 @@ limitations under the License.
 This file was copied and modified from the kubernetes/kubernetes project
 https://github.com/kubernetes/kubernetes/release-1.8/pkg/controller/deployment/util/pod_util.go
 
-Modifications Copyright (c) 2017 SAP SE or an SAP affiliate company. All rights reserved.
+Modifications Copyright SAP SE or an SAP affiliate company and Gardener contributors
 */
 
 // Package controller is used to provide the core functionalities of machine-controller-manager
@@ -1517,7 +1517,7 @@ func (c *controller) updateMachineToFailedState(ctx context.Context, description
 		klog.Errorf("update failed for machine %q in function. Retrying, error: %q", machine.Name, err)
 	} else {
 		updated = true
-		klog.Infof("Machine State has been updated for %q with providerID %q and backing node %q", machine.Name, getProviderID(machine), getNodeName(machine))
+		klog.Infof("Machine State has been updated to Phase %q for %q with providerID %q and backing node %q", clone.Status.CurrentStatus.Phase, machine.Name, getProviderID(machine), getNodeName(machine))
 	}
 
 	return updated, err

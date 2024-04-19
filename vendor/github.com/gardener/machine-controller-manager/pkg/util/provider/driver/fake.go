@@ -1,18 +1,6 @@
-/*
-Copyright (c) 2017 SAP SE or an SAP affiliate company. All rights reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// SPDX-FileCopyrightText: 2024 SAP SE or an SAP affiliate company and Gardener contributors
+//
+// SPDX-License-Identifier: Apache-2.0
 
 // Package driver contains a fake driver implementation
 package driver
@@ -74,6 +62,27 @@ func (d *FakeDriver) CreateMachine(ctx context.Context, createMachineRequest *Cr
 	return nil, d.Err
 }
 
+// InitializeMachine makes a call to the driver to initialize the VM instance of machine.
+func (d *FakeDriver) InitializeMachine(ctx context.Context, initMachineRequest *InitializeMachineRequest) (*InitializeMachineResponse, error) {
+	sErr, ok := status.FromError(d.Err)
+	if ok && sErr != nil {
+		switch sErr.Code() {
+		case codes.NotFound:
+			d.VMExists = false
+			return nil, d.Err
+		case codes.Unimplemented:
+			break
+		default:
+			return nil, d.Err
+		}
+	}
+	d.VMExists = true
+	return &InitializeMachineResponse{
+		ProviderID: d.ProviderID,
+		NodeName:   d.NodeName,
+	}, d.Err
+}
+
 // DeleteMachine make a call to the driver to delete the machine.
 func (d *FakeDriver) DeleteMachine(ctx context.Context, deleteMachineRequest *DeleteMachineRequest) (*DeleteMachineResponse, error) {
 	d.VMExists = false
@@ -92,7 +101,6 @@ func (d *FakeDriver) GetMachineStatus(ctx context.Context, getMachineStatusReque
 	case d.Err != nil:
 		return nil, d.Err
 	}
-
 	return &GetMachineStatusResponse{
 		ProviderID: d.ProviderID,
 		NodeName:   d.NodeName,

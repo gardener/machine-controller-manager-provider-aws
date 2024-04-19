@@ -1,18 +1,6 @@
-/*
-Copyright (c) 2017 SAP SE or an SAP affiliate company. All rights reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// SPDX-FileCopyrightText: 2024 SAP SE or an SAP affiliate company and Gardener contributors
+//
+// SPDX-License-Identifier: Apache-2.0
 
 // Package controller is used to provide the core functionalities of machine-controller-manager
 package controller
@@ -360,8 +348,9 @@ func (c *controller) triggerCreationFlow(ctx context.Context, createMachineReque
 		nodeName, providerID string
 
 		// Initializations
-		machine     = createMachineRequest.Machine
-		machineName = createMachineRequest.Machine.Name
+		machine              = createMachineRequest.Machine
+		machineName          = createMachineRequest.Machine.Name
+		uninitializedMachine = false
 	)
 
 	// we should avoid mutating Secret, since it goes all the way into the Informer's store
@@ -390,6 +379,7 @@ func (c *controller) triggerCreationFlow(ctx context.Context, createMachineReque
 			klog.Errorf("Error occurred while decoding machine error for machine %q: %s", machine.Name, err)
 			return machineutils.MediumRetry, err
 		}
+		klog.Warningf("For machine %q, obtained VM error status as: %s", machineName, machineErr)
 
 		// Decoding machine error code
 		switch machineErr.Code() {
@@ -403,7 +393,7 @@ func (c *controller) triggerCreationFlow(ctx context.Context, createMachineReque
 				klog.V(2).Infof("The machine creation is triggered with timeout of %s", c.getEffectiveCreationTimeout(createMachineRequest.Machine).Duration)
 				createMachineResponse, err := c.driver.CreateMachine(ctx, createMachineRequest)
 				if err != nil {
-					// Create call returned an error.
+					// Create call returned an error
 					klog.Errorf("Error while creating machine %s: %s", machine.Name, err.Error())
 					return c.machineCreateErrorHandler(ctx, machine, createMachineResponse, err)
 				}
@@ -467,6 +457,7 @@ func (c *controller) triggerCreationFlow(ctx context.Context, createMachineReque
 					klog.V(2).Infof("Machine %q marked Failed as VM was referring to a stale node object", machine.Name)
 					return machineutils.ShortRetry, err
 				}
+				uninitializedMachine = true
 			} else {
 				// if node label present that means there must be a backing VM ,without need of GetMachineStatus() call
 				nodeName = machine.Labels[v1alpha1.NodeLabelKey]
@@ -496,6 +487,10 @@ func (c *controller) triggerCreationFlow(ctx context.Context, createMachineReque
 
 			return machineutils.ShortRetry, err
 
+		case codes.Uninitialized:
+			uninitializedMachine = true
+			klog.Infof("VM instance associated with machine %s was created but not initialized.", machine.Name)
+
 		default:
 			updateRetryPeriod, updateErr := c.machineStatusUpdate(
 				ctx,
@@ -524,6 +519,13 @@ func (c *controller) triggerCreationFlow(ctx context.Context, createMachineReque
 		}
 		nodeName = getMachineStatusResponse.NodeName
 		providerID = getMachineStatusResponse.ProviderID
+	}
+
+	if uninitializedMachine {
+		retryPeriod, err := c.initializeMachine(ctx, createMachineRequest.Machine, createMachineRequest.MachineClass, createMachineRequest.Secret)
+		if err != nil {
+			return retryPeriod, err
+		}
 	}
 
 	_, machineNodeLabelPresent := createMachineRequest.Machine.Labels[v1alpha1.NodeLabelKey]
@@ -583,6 +585,57 @@ func (c *controller) triggerCreationFlow(ctx context.Context, createMachineReque
 	}
 
 	return machineutils.LongRetry, nil
+}
+
+func (c *controller) initializeMachine(ctx context.Context, machine *v1alpha1.Machine, machineClass *v1alpha1.MachineClass, secret *corev1.Secret) (machineutils.RetryPeriod, error) {
+	req := &driver.InitializeMachineRequest{
+		Machine:      machine,
+		MachineClass: machineClass,
+		Secret:       secret,
+	}
+	klog.V(3).Infof("Initializing VM instance for Machine %q", machine.Name)
+	resp, err := c.driver.InitializeMachine(ctx, req)
+	if err != nil {
+		errStatus, ok := status.FromError(err)
+		if !ok {
+			klog.Errorf("Cannot decode Driver error for machine %q: %s. Unexpected behaviour as Driver errors are expected to be of type status.Status", machine.Name, err)
+			return machineutils.LongRetry, err
+		}
+		klog.Errorf("Error occurred while initializing VM instance for machine %q: %s", machine.Name, err)
+		switch errStatus.Code() {
+		case codes.Unimplemented:
+			klog.V(3).Infof("Provider does not support Driver.InitializeMachine - skipping VM instance initialization for %q.", machine.Name)
+			return 0, nil
+		case codes.NotFound:
+			klog.Warningf("No VM instance found for machine %q. Skipping VM instance initialization.", machine.Name)
+			return 0, nil
+		}
+		updateRetryPeriod, updateErr := c.machineStatusUpdate(
+			ctx,
+			machine,
+			v1alpha1.LastOperation{
+				Description:    fmt.Sprintf("Provider error: %s. %s", err.Error(), machineutils.InstanceInitialization),
+				ErrorCode:      errStatus.Code().String(),
+				State:          v1alpha1.MachineStateFailed,
+				Type:           v1alpha1.MachineOperationCreate,
+				LastUpdateTime: metav1.Now(),
+			},
+			v1alpha1.CurrentStatus{
+				Phase:          c.getCreateFailurePhase(machine),
+				LastUpdateTime: metav1.Now(),
+			},
+			machine.Status.LastKnownState,
+		)
+
+		if updateErr != nil {
+			return updateRetryPeriod, updateErr
+		}
+
+		return machineutils.ShortRetry, err
+	}
+
+	klog.V(3).Infof("VM instance %q for machine %q was initialized", resp.ProviderID, machine.Name)
+	return 0, nil
 }
 
 func (c *controller) triggerDeletionFlow(ctx context.Context, deleteMachineRequest *driver.DeleteMachineRequest) (machineutils.RetryPeriod, error) {

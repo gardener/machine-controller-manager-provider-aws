@@ -1,21 +1,12 @@
-// Copyright 2023 SAP SE or an SAP affiliate company
+// SPDX-FileCopyrightText: 2024 SAP SE or an SAP affiliate company and Gardener contributors
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package helpers
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -46,61 +37,53 @@ func ParseK8sYaml(filepath string) ([]runtime.Object, []*schema.GroupVersionKind
 	acceptedK8sTypes := regexp.MustCompile(`(Role|ClusterRole|RoleBinding|ClusterRoleBinding|ServiceAccount|CustomResourceDefinition|kind: Deployment)`)
 	acceptedMCMTypes := regexp.MustCompile(`(MachineClass|Machine)`)
 	fileAsString := string(fileR[:])
-	sepYamlfiles := strings.Split(fileAsString, "---\n")
-	retObj := make([]runtime.Object, 0, len(sepYamlfiles))
-	retKind := make([]*schema.GroupVersionKind, 0, len(sepYamlfiles))
+	retObj := make([]runtime.Object, 0, 1)
+	retKind := make([]*schema.GroupVersionKind, 0, 1)
 	var retErr error
 	crdRegexp, _ := regexp.Compile("CustomResourceDefinition")
-	for _, f := range sepYamlfiles {
-		if f == "\n" || f == "" {
-			// ignore empty cases
-			continue
+	if fileAsString == "\n" || fileAsString == "" {
+		// file should not be empty
+		return nil, nil, fmt.Errorf("file %s is empty", filepath)
+	}
+	if crdRegexp.Match(fileR) {
+		decode := apiextensionsscheme.Codecs.UniversalDeserializer().Decode
+		obj, groupVersionKind, err := decode([]byte(fileAsString), nil, nil)
+		if err != nil {
+			log.Printf("Error while decoding YAML object. Err was: %v\n", err)
+			return nil, nil, err
 		}
-
-		// isExist, err := regexp.Match("CustomResourceDefinition", []byte(f))
-		if crdRegexp.Match([]byte(f)) {
-			decode := apiextensionsscheme.Codecs.UniversalDeserializer().Decode
-			obj, groupVersionKind, err := decode([]byte(f), nil, nil)
-			if err != nil {
-				log.Printf("Error while decoding YAML object. Err was: %v\n", err)
-				retErr = err
-				continue
-			}
-			if !acceptedK8sTypes.MatchString(groupVersionKind.Kind) {
-				log.Printf(
-					"The custom-roles configMap contained K8s object types which are not supported! Skipping object with type: %s",
-					groupVersionKind.Kind)
-			} else {
-				retKind = append(retKind, groupVersionKind)
-				retObj = append(retObj, obj)
-			}
-		} else if acceptedK8sTypes.Match([]byte(f)) {
-			decode := scheme.Codecs.UniversalDeserializer().Decode
-			obj, groupVersionKind, err := decode([]byte(f), nil, nil)
-			if err != nil {
-				log.Printf("Error while decoding YAML object. Err was: %v\n", err)
-				retErr = err
-				continue
-			}
+		if !acceptedK8sTypes.MatchString(groupVersionKind.Kind) {
+			log.Printf(
+				"The custom-roles configMap contained K8s object types which are not supported! Skipping object with type: %s",
+				groupVersionKind.Kind)
+		} else {
 			retKind = append(retKind, groupVersionKind)
 			retObj = append(retObj, obj)
+		}
+	} else if acceptedK8sTypes.Match(fileR) {
+		decode := scheme.Codecs.UniversalDeserializer().Decode
+		obj, groupVersionKind, err := decode([]byte(fileAsString), nil, nil)
+		if err != nil {
+			log.Printf("Error while decoding YAML object. fffff was: %v\n", err)
+			return nil, nil, err
+		}
+		retKind = append(retKind, groupVersionKind)
+		retObj = append(retObj, obj)
 
+	} else {
+		decode := mcmscheme.Codecs.UniversalDeserializer().Decode
+		obj, groupVersionKind, err := decode(fileR, nil, nil)
+		if err != nil {
+			log.Printf("Error while decoding YAML object. vvvvv  was: %v\n", err)
+			return nil, nil, err
+		}
+		if !acceptedMCMTypes.MatchString(groupVersionKind.Kind) {
+			log.Printf(
+				"The custom-roles configMap contained K8s object types which are not supported! Skipping object with type: %s",
+				groupVersionKind.Kind)
 		} else {
-			decode := mcmscheme.Codecs.UniversalDeserializer().Decode
-			obj, groupVersionKind, err := decode([]byte(f), nil, nil)
-			if err != nil {
-				log.Printf("Error while decoding YAML object. Err was: %v\n", err)
-				retErr = err
-				continue
-			}
-			if !acceptedMCMTypes.MatchString(groupVersionKind.Kind) {
-				log.Printf(
-					"The custom-roles configMap contained K8s object types which are not supported! Skipping object with type: %s",
-					groupVersionKind.Kind)
-			} else {
-				retKind = append(retKind, groupVersionKind)
-				retObj = append(retObj, obj)
-			}
+			retKind = append(retKind, groupVersionKind)
+			retObj = append(retObj, obj)
 		}
 	}
 	return retObj, retKind, retErr
