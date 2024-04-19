@@ -137,7 +137,7 @@ then
       exit 1
 fi
 
-printf "\e[33mEnter the project name\e[0m\n"
+printf "\e[33mEnter the project name. (Enter NA if it is not a gardener setup and you intend to deploy the secret manually) \e[0m\n"
 read PROJECT
 if [ -z "$PROJECT" ]
 then
