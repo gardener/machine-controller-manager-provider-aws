@@ -7,13 +7,100 @@ set -e
 # For the test step concourse will set the following environment variables:
 # SOURCE_PATH - path to component repository root directory.
 
-mcm_repo_link="dev/mcm"
-if [[ ! -d "$mcm_repo_link" ]]; then
-  echo "Error: MCM Repo expected at: $mcm_repo_link
-    For running local Integration Tests, kindly checkout MCM Repo locally and execute 'ln -sf <absolutePathToMcmRepo> $mcm_repo_link'"
+mcm_repo_link="dev"
+declare PROVIDER="aws"
+declare PROJECT
+declare TARGET_CLUSTER
+declare CONTROL_CLUSTER
+declare GARDEN_CORE_NAMESPACE
+declare CONTROL_KUBECONFIG
+DEFAULT_MCM_REPO_PATH=$(realpath "$(pwd)/../machine-controller-manager")
+
+
+function fetch_credentials(){
+   kubectl get secret $CREDENTIALS_SECRET_NAME -n $GARDEN_CORE_NAMESPACE -o yaml > credentials.yaml
+   accessKeyID=$(yq eval '.data.accessKeyID' credentials.yaml)
+   secretAccessKey=$(yq eval '.data.secretAccessKey' credentials.yaml)
+   echo $accessKeyID
+   echo $secretAccessKey
+}
+
+function fetch_userdata(){
+    NAMESPACE='garden'
+    USERDATA_SECRET_NAME=$(kubectl get secrets -o custom-columns=Name:.metadata.name --no-headers | grep shoot--$PROJECT | head -n 1)
+    kubectl get secret $USERDATA_SECRET_NAME -oyaml > userData.yaml
+    userData=$(yq eval '.data.userData' userData.yaml)
+    echo $userData
+}
+
+function create_test_mc_secret() {
+    gardenctl target --garden sap-landscape-dev
+    eval $(gardenctl kubectl-env bash)
+    result=$(fetch_credentials)
+    accessKeyID=$(echo "$result" | head -n 1)
+    secretAccessKey=$(echo "$result" | tail -n 1)
+    gardenctl target --garden sap-landscape-dev --project $PROJECT --shoot $TARGET_CLUSTER --control-plane
+    eval $(gardenctl kubectl-env bash)
+    userData=$(fetch_userdata)
+    rm -f credentials.yaml
+    rm -f userData.yaml
+secret_yaml=$(cat <<EOF
+apiVersion: v1
+data:
+  accessKeyID: $accessKeyID
+  secretAccessKey: $secretAccessKey
+  userData: $userData
+kind: Secret
+metadata:
+  name: test-mc-secret
+  namespace: default
+type: Opaque
+EOF
+)
+
+    gardenctl target --garden sap-landscape-dev --project $PROJECT --shoot $CONTROL_CLUSTER
+    eval $(gardenctl kubectl-env bash)
+    echo "$secret_yaml" | kubectl --kubeconfig=$CONTROL_KUBECONFIG apply -f -
+}
+
+printf "\e[33mDo you want to clone the latest MCM Repo? (true/false)\e[0m\n"
+read clone_mcm_repo
+
+#check if clone_mcm_repo is not empty
+if [ -z "$clone_mcm_repo" ]
+then
+      printf "\e[31mentered value cannot be empty\e[0m\n"
+      exit 1
+fi
+
+#check if clone_mcm_repo is a boolean
+if [ "$clone_mcm_repo" != true ] && [ "$clone_mcm_repo" != false ]
+then
+      printf "\e[31mentered value must be a boolean\e[0m\n"
+      exit 1
+fi
+
+if [ "$clone_mcm_repo" = true ]
+then
+    if [ ! -d "$mcm_repo_link" ]
+    then
+        mkdir -p $mcm_repo_link
+    fi
+    cd $mcm_repo_link
+    MCM_VERSION=$(go list -mod=mod -f '{{ .Version }}' -m "github.com/gardener/machine-controller-manager")
+    printf "\e[33mCloning MCM Repo with version: $MCM_VERSION\e[0m\n"
+    git clone --branch "$MCM_VERSION" --depth 1 https://github.com/gardener/machine-controller-manager
+    mv machine-controller-manager mcm
+    cd -
+fi
+
+
+if [[ ! -d "$mcm_repo_link/mcm" ]]; then
+  echo "Error: MCM Repo expected at: $mcm_repo_link/mcm
+    For running local Integration Tests, kindly checkout MCM Repo locally and execute 'ln -sf <absolutePathToMcmRepo> $mcm_repo_link/mcm'"
   exit 1
 fi
-cd test/integration/controller
+
 if ! hash ginkgo; then
     # Install Ginkgo (test framework) to be able to execute the tests.
     echo "Fetching Ginkgo frawework"
@@ -21,6 +108,163 @@ if ! hash ginkgo; then
     echo "Successfully fetched Ginkgo frawework"
 fi
 
-echo "Starting integration tests..."
+printf  "\e[33mIs the control cluster a seed? (true/false)\e[0m\n"
+read IS_CONTROL_CLUSTER_SEED
 
+if [ -z "$IS_CONTROL_CLUSTER_SEED" ]
+then
+      printf "\e[31mentered value cannot be empty\e[0m\n"
+      exit 1
+fi
+
+if [ "$IS_CONTROL_CLUSTER_SEED" != true ] && [ "$IS_CONTROL_CLUSTER_SEED" != false ]
+then
+      printf "\e[31mentered value must be a boolean\e[0m\n"
+      exit 1
+fi
+export IS_CONTROL_CLUSTER_SEED=$IS_CONTROL_CLUSTER_SEED
+
+printf "\e[33mEnter the absolute path to the local machine-controller-manager repository.\e[0m\n"
+printf "\e[33mDefault path is $DEFAULT_MCM_REPO_PATH. Press Enter to proceed with it.\e[0m\n"
+read MCM_REPO_PATH
+if [ -z "$MCM_REPO_PATH" ]
+then
+      MCM_REPO_PATH="$DEFAULT_MCM_REPO_PATH"
+fi
+if [ ! -d "$MCM_REPO_PATH" ]
+then
+      printf "\e[31m$MCM_REPO_PATH is not a valid directory\e[0m\n"
+      exit 1
+fi
+
+printf "\e[33mEnter the project name. (Enter NA if it is not a gardener setup and you intend to deploy the secret manually) \e[0m\n"
+read PROJECT
+if [ -z "$PROJECT" ]
+then
+    printf "\e[31mproject cannot be empty\e[0m\n"
+    exit 1
+fi
+printf "\e[33mEnter the control cluster name\e[0m\n"
+read CONTROL_CLUSTER
+if [ -z "$CONTROL_CLUSTER" ]
+then
+    printf "\e[31mseed name cannot be empty\e[0m\n"
+    exit 1
+fi
+printf "\e[33mEnter the target cluster name\e[0m\n"
+read TARGET_CLUSTER
+if [ -z "$TARGET_CLUSTER" ]
+then
+    printf "\e[31mtarget cluster cannot be empty\e[0m\n"
+    exit 1
+fi
+
+if [ "$IS_CONTROL_CLUSTER_SEED" = true ]
+then
+    cd $MCM_REPO_PATH
+    ./hack/gardener_local_setup.sh --seed "$CONTROL_CLUSTER" --shoot "$TARGET_CLUSTER" --project "$PROJECT" --provider "$PROVIDER"
+    cd -
+    printf "\n%s" "TARGET_CLUSTER_NAME=shoot--${PROJECT}--${TARGET_CLUSTER}" >> "../../../.env"
+else
+    printf "\e[33mEnter the machine class file path\e[0m\n"
+    read MACHINECLASS
+    if [ ! -f "$MACHINECLASS" ]
+    then
+        printf "\e[31m$MACHINECLASS is not a valid file path\e[0m\n"
+        exit 1
+    fi
+    printf "\e[33mDo you want to create the secret automatically ? (true/false)\e[0m\n"
+    printf "\e[33mNote: This is only possible if your control cluster is a gardener shoot.\e[0m\n"
+    read CREATE_SECRET
+    if [ -z "$CREATE_SECRET" ]
+    then
+        printf "\e[31mentered value cannot be empty\e[0m\n"
+        exit 1
+    fi
+    if [ "$CREATE_SECRET" != true ] && [ "$CREATE_SECRET" != false ]
+    then
+        printf "\e[31mentered value must be a boolean\e[0m\n"
+        exit 1
+    fi
+    if [ "$CREATE_SECRET" = false ]
+    then
+        printf "\e[33mEnter the absolute path for the secret to be applied.\e[0m\n"
+        read SECRET_PATH
+        if [ -z "$SECRET_PATH" ]
+        then
+            printf "\e[31mentered value cannot be empty\e[0m\n"
+            exit 1
+        fi
+        if [ ! -f "$SECRET_PATH" ]
+        then
+            printf "\e[31m$SECRET_PATH is not a valid file path\e[0m\n"
+            exit 1
+        fi
+    fi
+
+    printf "\e[33mEnter the namespace on which you want to operate in the control cluster\e[0m\n"
+    read NAMESPACE; \
+    if [ -z "$NAMESPACE" ]
+    then
+        printf "\e[31mentered value cannot be empty\e[0m\n"
+        exit 1
+    fi
+    printf "\e[33mEnter control kubeconfig path\e[0m\n";
+    read CONTROL_KUBECONFIG_PATH;
+    if [ ! -f "$CONTROL_KUBECONFIG_PATH" ]
+    then
+        printf "\e[31"$CONTROL_KUBECONFIG_PATH" is not a valid filepath\e[0m\n"
+        exit 1
+    fi
+    printf "\e[33mEnter target kubeconfig path\e[0m\n";
+    read TARGET_KUBECONFIG_PATH;
+    if [ ! -f "$TARGET_KUBECONFIG_PATH" ]
+    then
+        printf "\e[31"$TARGET_KUBECONFIG_PATH" is not a valid filepath\e[0m\n"
+        exit 1
+    fi
+    "$MCM_REPO_PATH"/hack/non_gardener_local_setup.sh --namespace $NAMESPACE --control-kubeconfig-path "$CONTROL_KUBECONFIG_PATH" --target-kubeconfig-path "$TARGET_KUBECONFIG_PATH" --provider "$PROVIDER"
+    printf "\n%s" "MACHINECLASS_V1=${MACHINECLASS}" >> ".env"
+    printf "\e[33mEnter the TARGET_CLUSTER_NAME. (Used for initializing orphan resource tracker)\e[0m\n"
+    read TARGET_CLUSTER_NAME
+    printf "\n%s" "TARGET_CLUSTER_NAME=${TARGET_CLUSTER_NAME}" >> "../../../.env"
+fi
+
+set -o allexport
+source .env
+set +o allexport
+
+CREDENTIALS_SECRET_NAME=shoot-operator-"$PROVIDER"-team
+GARDEN_CORE_NAMESPACE=garden-core
+
+
+if [ "$IS_CONTROL_CLUSTER_SEED" = false ]
+then
+  if [ "$CREATE_SECRET" = true ]; then
+    create_test_mc_secret
+  else
+    kubectl apply --kubeconfig="$CONTROL_KUBECONFIG" -f "$SECRET_PATH"
+  fi
+
+fi
+
+printf "\e[33mStarting integration tests...\e[0m\n"
+
+cd test/integration/controller
+
+set +e
 ginkgo -v --show-node-events --poll-progress-after=300s --poll-progress-interval=60s
+set -e
+printf "\e[32mIntegration tests completed successfully\e[0m\n"
+
+if [ "$IS_CONTROL_CLUSTER_SEED" = false ]
+then
+    set +e
+    kubectl --kubeconfig=$CONTROL_KUBECONFIG delete secret test-mc-secret
+    set -e
+    printf "\e[32mSuccessfully deleted test-mc-secret on control cluster\e[0m\n"
+
+fi
+
+rm -f ../../../.env
+cd -
