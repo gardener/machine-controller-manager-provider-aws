@@ -220,11 +220,11 @@ type AWSNetworkInterfaceSpec struct {
 	// launching into a default subnet, the default value is true.
 	AssociatePublicIPAddress *bool `json:"associatePublicIPAddress,omitempty"`
 
-	// A number of IPv6 addresses to assign to the network interface. Amazon EC2
+	// Ipv6AddressCount represents the number of IPv6 addresses to assign to the network interface. Amazon EC2
 	// chooses the IPv6 addresses from the range of the subnet.
 	Ipv6AddressCount *int64 `json:"ipv6AddressCount,omitempty"`
 
-	// The number of IPv6 delegated prefixes to be automatically assigned to the
+	// Ipv6PrefixCount represents the number of IPv6 delegated prefixes to be automatically assigned to the
 	// network interface.
 	Ipv6PrefixCount *int64 `json:"ipv6PrefixCount,omitempty"`
 
