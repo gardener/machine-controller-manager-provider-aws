@@ -46,7 +46,7 @@ if ! which golint 1>/dev/null; then
 fi
 
 ###############################################################################
-PACKAGES="$(go list -e ./... | grep -vE '/tmp/|/vendor/')"
+PACKAGES="$(go list -e ./... | grep -vE '/tmp/')"
 LINT_FOLDERS="$(echo ${PACKAGES} | sed "s|github.com/gardener/machine-controller-manager-provider-aws|.|g")"
 
 # Execute static code checks.

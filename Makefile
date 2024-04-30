@@ -35,7 +35,6 @@ rename-project:
 .PHONY: start
 start:
 	@GO111MODULE=on go run \
-			-mod=vendor \
 			cmd/machine-controller/main.go \
 			--control-kubeconfig=$(CONTROL_KUBECONFIG) \
 			--target-kubeconfig=$(TARGET_KUBECONFIG) \
@@ -59,13 +58,12 @@ check:
 	.ci/check
 
 #########################################
-# Rules for re-vendoring
+# Rules for tidying
 #########################################
 
-.PHONY: revendor
-revendor:
+.PHONY: tidy
+tidy:
 	@env GO111MODULE=on go mod tidy -v
-	@env GO111MODULE=on go mod vendor -v
 
 .PHONY: update-dependencies
 update-dependencies:
