@@ -10,9 +10,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/gardener/machine-controller-manager-provider-aws/pkg/instrument"
 	"strings"
 	"time"
+
+	"github.com/gardener/machine-controller-manager-provider-aws/pkg/instrument"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -183,6 +184,13 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 
 	if providerSpec.KeyName != nil && len(*providerSpec.KeyName) > 0 {
 		inputConfig.KeyName = aws.String(*providerSpec.KeyName)
+	}
+
+	if cpuOptions := providerSpec.CPUOptions; cpuOptions != nil {
+		inputConfig.CpuOptions = &ec2.CpuOptionsRequest{
+			CoreCount:      cpuOptions.CoreCount,
+			ThreadsPerCore: cpuOptions.ThreadsPerCore,
+		}
 	}
 
 	// Set the AWS Capacity Reservation target. Using an 'open' preference means that if the reservation is not found, then

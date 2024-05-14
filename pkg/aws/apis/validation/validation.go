@@ -49,6 +49,7 @@ func ValidateAWSProviderSpec(spec *awsapi.AWSProviderSpec, secret *corev1.Secret
 	allErrs = append(allErrs, ValidateSecret(secret, field.NewPath("secretRef"))...)
 	allErrs = append(allErrs, validateSpecTags(spec.Tags, fldPath.Child("tags"))...)
 	allErrs = append(allErrs, validateInstanceMetadata(spec.InstanceMetadataOptions, fldPath.Child("instanceMetadata"))...)
+	allErrs = append(allErrs, validateCPUOptions(spec.CPUOptions, fldPath.Child(("cpuOptions")))...)
 
 	return allErrs
 }
@@ -199,6 +200,27 @@ func validateInstanceMetadata(metadata *awsapi.InstanceMetadataOptions, fldPath 
 
 	if metadata.HTTPTokens != nil {
 		allErrs = append(allErrs, validateStringValues(fldPath.Child("httpTokens"), *metadata.HTTPTokens, []string{awsapi.HTTPTokensRequired, awsapi.HTTPTokensOptional})...)
+	}
+
+	return allErrs
+}
+
+func validateCPUOptions(cpuOptions *awsapi.CPUOptions, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if cpuOptions == nil {
+		return allErrs
+	}
+
+	if cpuOptions.CoreCount == nil {
+		allErrs = append(allErrs, field.Required(fldPath.Child("coreCount"), "CoreCount is required"))
+	}
+
+	if cpuOptions.ThreadsPerCore == nil {
+		allErrs = append(allErrs, field.Required(fldPath.Child("threadsPerCore"), "ThreadsPerCore is required"))
+	}
+
+	if threadsPerCore := *cpuOptions.ThreadsPerCore; threadsPerCore > 2 || threadsPerCore < 1 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("threadsPerCore"), threadsPerCore, "ThreadsPerCore must be either '1' or '2'"))
 	}
 
 	return allErrs
