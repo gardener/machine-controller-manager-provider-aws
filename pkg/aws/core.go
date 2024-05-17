@@ -145,6 +145,10 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 			spec.DeleteOnTermination = aws.Bool(true)
 		}
 
+		if netIf.Ipv6AddressCount != nil {
+			spec.Ipv6AddressCount = netIf.Ipv6AddressCount
+		}
+
 		networkInterfaceSpecs = append(networkInterfaceSpecs, spec)
 	}
 
@@ -243,17 +247,59 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 	}
 
 	klog.V(2).Infof("VM with Provider-ID %q, for machine %q should be visible to all AWS endpoints now", response.ProviderID, machine.Name)
+	klog.V(3).Infof("VM with Provider-ID: %q created for Machine: %q", response.ProviderID, machine.Name)
+	return response, nil
+}
+
+// InitializeMachine should handle post-creation, one-time VM instance initialization operations. (Ex: Like setting up special network config, etc)
+// The AWS Provider leverages this method to perform disabling of source destination checks for NAT instances.
+// See [driver.Driver.InitializeMachine] for further information
+func (d *Driver) InitializeMachine(ctx context.Context, request *driver.InitializeMachineRequest) (*driver.InitializeMachineResponse, error) {
+	providerSpec, err := decodeProviderSpecAndSecret(request.MachineClass, request.Secret)
+	if err != nil {
+		return nil, err
+	}
+	instances, err := d.getInstancesFromMachineName(request.Machine.Name, providerSpec, request.Secret)
+	if err != nil {
+		return nil, err
+	}
+	targetInstance := instances[0]
+	providerID := encodeInstanceID(providerSpec.Region, *targetInstance.InstanceId)
+
+	svc, err := d.createSVC(request.Secret, providerSpec.Region)
+	if err != nil {
+		return nil, status.Error(codes.Uninitialized, err.Error())
+	}
 
 	// if SrcAnDstCheckEnabled is false then disable the SrcAndDestCheck on running NAT instance
-	if providerSpec.SrcAndDstChecksEnabled != nil && !*providerSpec.SrcAndDstChecksEnabled {
-		err = disableSrcAndDestCheck(svc, runResult.Instances[0].InstanceId)
+	if providerSpec.SrcAndDstChecksEnabled != nil && !*providerSpec.SrcAndDstChecksEnabled && *targetInstance.SourceDestCheck {
+		klog.V(3).Infof("Disabling SourceDestCheck on VM %q associated with machine %s", providerID, request.Machine.Name)
+		err = disableSrcAndDestCheck(svc, targetInstance.InstanceId)
 		if err != nil {
-			return nil, status.Error(awserror.GetMCMErrorCodeForCreateMachine(err), err.Error())
+			return nil, status.Error(codes.Uninitialized, err.Error())
 		}
 	}
 
-	klog.V(3).Infof("VM with Provider-ID: %q created for Machine: %q", response.ProviderID, machine.Name)
-	return response, nil
+	for i, netIf := range providerSpec.NetworkInterfaces {
+		for _, instanceNetIf := range targetInstance.NetworkInterfaces {
+			if netIf.Ipv6PrefixCount != nil && *instanceNetIf.Attachment.DeviceIndex == int64(i) {
+				input := &ec2.AssignIpv6AddressesInput{
+					NetworkInterfaceId: instanceNetIf.NetworkInterfaceId,
+					Ipv6PrefixCount:    netIf.Ipv6PrefixCount,
+				}
+				klog.V(3).Infof("On VM %q associated with machine %s, assigning ipv6PrefixCount: %d to networkInterface %q",
+					providerID, request.Machine.Name, *netIf.Ipv6PrefixCount, *instanceNetIf.NetworkInterfaceId)
+				_, err = svc.AssignIpv6Addresses(input)
+				if err != nil {
+					return nil, status.Error(codes.Uninitialized, err.Error())
+				}
+			}
+		}
+	}
+	return &driver.InitializeMachineResponse{
+		ProviderID: providerID,
+		NodeName:   *targetInstance.PrivateDnsName,
+	}, nil
 }
 
 // returns Placement Object required in ec2.RunInstancesInput
@@ -385,17 +431,13 @@ func (d *Driver) GetMachineStatus(ctx context.Context, req *driver.GetMachineSta
 
 	requiredInstance := instances[0]
 
-	// if SrcAnDstCheckEnabled is false then disable the SrcAndDestCheck on running NAT instance
+	// if SrcAnDstCheckEnabled is false then check attribute on instance and return Uninitialized error if not matching.
 	if providerSpec.SrcAndDstChecksEnabled != nil && !*providerSpec.SrcAndDstChecksEnabled {
-
-		svc, err := d.createSVC(secret, providerSpec.Region)
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-
-		err = disableSrcAndDestCheck(svc, requiredInstance.InstanceId)
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
+		if *requiredInstance.SourceDestCheck {
+			msg := fmt.Sprintf("VM %q associated with machine %q has SourceDestCheck=%t despite providerSpec.SrcAndDstChecksEnabled=%t",
+				*requiredInstance.InstanceId, req.Machine.Name, *requiredInstance.SourceDestCheck, *providerSpec.SrcAndDstChecksEnabled)
+			klog.Warning(msg)
+			return nil, status.Error(codes.Uninitialized, msg)
 		}
 	}
 
