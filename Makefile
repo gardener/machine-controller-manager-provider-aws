@@ -97,14 +97,9 @@ build:
 	@.ci/build
 
 platform ?= linux/amd64
-ifeq ($(origin platform), command line)
-	PLATFORM := $(platform)
-else
-	PLATFORM := $(platform)
-endif
 .PHONY: docker-image
 docker-image:
-	@docker buildx build --platform $(PLATFORM) -t $(IMAGE_REPOSITORY):$(IMAGE_TAG) .
+	@docker buildx build --platform $(platform) -t $(IMAGE_REPOSITORY):$(IMAGE_TAG) .
 
 .PHONY: docker-login
 docker-login:
