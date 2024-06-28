@@ -96,10 +96,10 @@ build-local:
 build:
 	@.ci/build
 
-platform ?= linux/amd64
+PLATFORM ?= linux/amd64
 .PHONY: docker-image
 docker-image:
-	@docker buildx build --platform $(platform) -t $(IMAGE_REPOSITORY):$(IMAGE_TAG) .
+	@docker buildx build --platform $(PLATFORM) -t $(IMAGE_REPOSITORY):$(IMAGE_TAG) .
 
 .PHONY: docker-login
 docker-login:
