@@ -139,12 +139,10 @@ func (d *Driver) getInstancesFromMachineName(machineName string, providerSpec *a
 	}
 
 	for _, reservation := range runResult.Reservations {
-		for _, instance := range reservation.Instances {
-			instances = append(instances, instance)
-		}
+		instances = append(instances, reservation.Instances...)
 	}
 	if len(instances) == 0 {
-		errMessage := fmt.Sprintf("AWS plugin is returning no VM instances backing this machine object")
+		errMessage := "AWS plugin is returning no VM instances backing this machine object"
 		return nil, status.Error(codes.NotFound, errMessage)
 	}
 

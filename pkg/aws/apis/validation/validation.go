@@ -98,11 +98,7 @@ func validateBlockDevices(blockDevices []awsapi.AWSBlockDeviceMappingSpec, fldPa
 			allErrs = append(allErrs, field.Invalid(idxPath.Child("deviceName"), disk.DeviceName, utilvalidation.RegexError(fmt.Sprintf("Device name given: %s does not match the expected pattern", disk.DeviceName), awsapi.DataDeviceNameFormat)))
 		}
 
-		if _, keyExist := deviceNames[disk.DeviceName]; keyExist {
-			deviceNames[disk.DeviceName]++
-		} else {
-			deviceNames[disk.DeviceName] = 1
-		}
+		deviceNames[disk.DeviceName] += 1
 
 		if !slices.Contains(awsapi.ValidVolumeTypes, disk.Ebs.VolumeType) {
 			allErrs = append(allErrs, field.Required(idxPath.Child("ebs.volumeType"), fmt.Sprintf("Please mention a valid EBS volume type: %v", awsapi.ValidVolumeTypes)))
