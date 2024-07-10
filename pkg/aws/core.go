@@ -61,7 +61,7 @@ func NewAWSDriver(spi spi.SessionProviderInterface) driver.Driver {
 }
 
 // CreateMachine handles a machine creation request
-func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineRequest) (resp *driver.CreateMachineResponse, err error) {
+func (d *Driver) CreateMachine(_ context.Context, req *driver.CreateMachineRequest) (resp *driver.CreateMachineResponse, err error) {
 	defer instrument.DriverAPIMetricRecorderFn(createMachineOperationLabel, &err)()
 
 	var (
@@ -254,7 +254,7 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 // InitializeMachine should handle post-creation, one-time VM instance initialization operations. (Ex: Like setting up special network config, etc)
 // The AWS Provider leverages this method to perform disabling of source destination checks for NAT instances.
 // See [driver.Driver.InitializeMachine] for further information
-func (d *Driver) InitializeMachine(ctx context.Context, request *driver.InitializeMachineRequest) (*driver.InitializeMachineResponse, error) {
+func (d *Driver) InitializeMachine(_ context.Context, request *driver.InitializeMachineRequest) (*driver.InitializeMachineResponse, error) {
 	providerSpec, err := decodeProviderSpecAndSecret(request.MachineClass, request.Secret)
 	if err != nil {
 		return nil, err
@@ -322,7 +322,7 @@ func getPlacementObj(req *driver.CreateMachineRequest) (placementobj *ec2.Placem
 }
 
 // DeleteMachine handles a machine deletion request
-func (d *Driver) DeleteMachine(ctx context.Context, req *driver.DeleteMachineRequest) (resp *driver.DeleteMachineResponse, err error) {
+func (d *Driver) DeleteMachine(_ context.Context, req *driver.DeleteMachineRequest) (resp *driver.DeleteMachineResponse, err error) {
 	defer instrument.DriverAPIMetricRecorderFn(deleteMachineOperationLabel, &err)()
 
 	var (
@@ -393,7 +393,7 @@ func (d *Driver) DeleteMachine(ctx context.Context, req *driver.DeleteMachineReq
 }
 
 // GetMachineStatus handles a machine get status request
-func (d *Driver) GetMachineStatus(ctx context.Context, req *driver.GetMachineStatusRequest) (resp *driver.GetMachineStatusResponse, err error) {
+func (d *Driver) GetMachineStatus(_ context.Context, req *driver.GetMachineStatusRequest) (resp *driver.GetMachineStatusResponse, err error) {
 	defer instrument.DriverAPIMetricRecorderFn(getMachineStatusOperationLabel, &err)()
 
 	var (
@@ -451,7 +451,7 @@ func (d *Driver) GetMachineStatus(ctx context.Context, req *driver.GetMachineSta
 }
 
 // ListMachines lists all the machines possibly created by a machineClass
-func (d *Driver) ListMachines(ctx context.Context, req *driver.ListMachinesRequest) (resp *driver.ListMachinesResponse, err error) {
+func (d *Driver) ListMachines(_ context.Context, req *driver.ListMachinesRequest) (resp *driver.ListMachinesResponse, err error) {
 	defer instrument.DriverAPIMetricRecorderFn(listMachinesOperationLabel, &err)()
 
 	var (
@@ -545,7 +545,7 @@ func (d *Driver) ListMachines(ctx context.Context, req *driver.ListMachinesReque
 }
 
 // GetVolumeIDs returns a list of Volume IDs for all PV Specs for whom a provider volume was found
-func (d *Driver) GetVolumeIDs(ctx context.Context, req *driver.GetVolumeIDsRequest) (resp *driver.GetVolumeIDsResponse, err error) {
+func (d *Driver) GetVolumeIDs(_ context.Context, req *driver.GetVolumeIDsRequest) (resp *driver.GetVolumeIDsResponse, err error) {
 	defer instrument.DriverAPIMetricRecorderFn(getVolumeIDsOperationLabel, &err)()
 
 	var (

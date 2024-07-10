@@ -96,7 +96,7 @@ func getIntPtrForString(s string) *int64 {
 	return &num
 }
 
-func retryWithExponentialBackOff(operation backoff.Operation, maxElapsedTime time.Duration) error {
+func retryWithExponentialBackOff(operation backoff.Operation, _ time.Duration) error {
 	expBackOffObj := backoff.NewExponentialBackOff()
 	expBackOffObj.MaxElapsedTime = maxElapsedTimeInBackoff
 	if err := backoff.Retry(operation, expBackOffObj); err != nil {

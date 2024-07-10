@@ -38,7 +38,7 @@ func TestDriverAPIMetricRecorderFn(t *testing.T) {
 	reg := prometheus.NewRegistry()
 	g.Expect(reg.Register(metrics.DriverFailedAPIRequests)).To(Succeed())
 	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
+		t.Run(tc.name, func(_ *testing.T) {
 			defer metrics.DriverFailedAPIRequests.Reset()
 			_ = deferredMetricsRecorderInvoker(tc.err != nil, isStatusErr(tc.err), DriverAPIMetricRecorderFn)
 			if tc.err != nil {

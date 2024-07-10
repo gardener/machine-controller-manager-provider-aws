@@ -11,7 +11,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/session"
 	awssession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
@@ -64,7 +63,7 @@ type MockPluginSPIImpl struct {
 }
 
 // NewSession starts a new AWS session
-func (ms *MockPluginSPIImpl) NewSession(secret *corev1.Secret, region string) (*awssession.Session, error) {
+func (ms *MockPluginSPIImpl) NewSession(_ *corev1.Secret, region string) (*awssession.Session, error) {
 	if region == FailAtRegion {
 		return nil, AWSInvalidRegionError
 	}
@@ -72,7 +71,7 @@ func (ms *MockPluginSPIImpl) NewSession(secret *corev1.Secret, region string) (*
 }
 
 // NewEC2API Returns a EC2API object
-func (ms *MockPluginSPIImpl) NewEC2API(session *session.Session) ec2iface.EC2API {
+func (ms *MockPluginSPIImpl) NewEC2API(_ *awssession.Session) ec2iface.EC2API {
 	return &MockEC2Client{
 		FakeInstances: &ms.FakeInstances,
 	}
@@ -273,7 +272,6 @@ func (ms *MockEC2Client) StopInstances(input *ec2.StopInstancesInput) (*ec2.Stop
 				// Do not append InstanceID, there by removing it
 				found = true
 				desiredInstance = instance
-			} else {
 			}
 		}
 	}
