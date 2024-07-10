@@ -8,9 +8,9 @@ machine-controller-manager-provider-aws:
     steps_template: &steps_anchor
       steps:
         check:
-          image: 'golang:1.21.4'
+          image: 'golang:1.22.5'
         build:
-          image: 'golang:1.21.4'
+          image: 'golang:1.22.5'
           output_dir: 'binary'
         test:
           image: 'europe-docker.pkg.dev/gardener-project/releases/testmachinery/base-step:stable'
@@ -60,7 +60,7 @@ machine-controller-manager-provider-aws:
           interval: '24h'
         update_component_deps:
           set_dependency_version_script_container_image:
-            image_reference: 'golang:1.21.4'
+            image_reference: 'golang:1.22.5'
     release:
       <<: *steps_anchor
       traits:
