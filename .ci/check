@@ -34,15 +34,19 @@ echo "Successfully fetched golangci-lint"
 golangci-lint version
 
 ###############################################################################
+cd ${SOURCE_PATH}
+
 PACKAGES="$(go list -e ./... | grep -vE '/tmp/')"
 LINT_FOLDERS="$(echo ${PACKAGES} | sed "s|github.com/gardener/machine-controller-manager-provider-aws|.|g")"
 
-echo "Executing golangci-lint"
+# Execute static code checks.
+echo "Running go vet..."
+go vet ${PACKAGES}
+
+# Execute automatic code formatting directive.
+echo "Running go vet..."
+go fmt ${PACKAGES}
+
+echo "Executing golangci-lint..."
 # golangci-lint can't be run from outside the directory
 (cd ${SOURCE_PATH} && golangci-lint run -c .golangci.yaml --timeout 10m)
-
-## Execute static code checks.
-#go vet ${PACKAGES}
-#
-## Execute automatic code formatting directive.
-#go fmt ${PACKAGES}
