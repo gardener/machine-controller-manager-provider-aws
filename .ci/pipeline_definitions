@@ -22,7 +22,9 @@ machine-controller-manager-provider-aws:
       <<: *steps_anchor
       traits:
         <<: *version_anchor
-        component_descriptor: ~
+        component_descriptor:
+          ocm_repository_mappings:
+            - repository: europe-docker.pkg.dev/gardener-project/releases
         draft_release: ~
         publish:
           dockerimages: &default_images
