@@ -259,18 +259,21 @@ func (d *Driver) InitializeMachine(_ context.Context, request *driver.Initialize
 	if err != nil {
 		return nil, err
 	}
-	instances, err := d.getInstancesFromMachineName(request.Machine.Name, providerSpec, request.Secret)
+	instances, err := d.getMatchingInstancesForMachine(request.Machine, providerSpec, request.Secret)
 	if err != nil {
+		if isNotFoundError(err) {
+			//TODO check if level is correct, and if log is appropriate
+			klog.V(2).Infof("Could not retrieve instances for machine %s from provider", request.Machine.Name)
+			return nil, status.Error(codes.Uninitialized, err.Error())
+		}
 		return nil, err
 	}
 	targetInstance := instances[0]
 	providerID := encodeInstanceID(providerSpec.Region, *targetInstance.InstanceId)
-
 	svc, err := d.createSVC(request.Secret, providerSpec.Region)
 	if err != nil {
 		return nil, status.Error(codes.Uninitialized, err.Error())
 	}
-
 	// if SrcAnDstCheckEnabled is false then disable the SrcAndDestCheck on running NAT instance
 	if providerSpec.SrcAndDstChecksEnabled != nil && !*providerSpec.SrcAndDstChecksEnabled && *targetInstance.SourceDestCheck {
 		klog.V(3).Infof("Disabling SourceDestCheck on VM %q associated with machine %s", providerID, request.Machine.Name)
@@ -279,7 +282,6 @@ func (d *Driver) InitializeMachine(_ context.Context, request *driver.Initialize
 			return nil, status.Error(codes.Uninitialized, err.Error())
 		}
 	}
-
 	for i, netIf := range providerSpec.NetworkInterfaces {
 		for _, instanceNetIf := range targetInstance.NetworkInterfaces {
 			if netIf.Ipv6PrefixCount != nil && *instanceNetIf.Attachment.DeviceIndex == int64(i) {
@@ -368,7 +370,7 @@ func (d *Driver) DeleteMachine(_ context.Context, req *driver.DeleteMachineReque
 
 	} else {
 		// ProviderID doesn't exist, hence check for any existing machine and then delete if exists
-		instances, err = d.getInstancesFromMachineName(req.Machine.Name, providerSpec, req.Secret)
+		instances, err = d.getMatchingInstancesForMachine(req.Machine, providerSpec, req.Secret)
 		if err != nil {
 			errorStatus, ok := status.FromError(err)
 			if ok && errorStatus.Code() == codes.NotFound {
@@ -415,7 +417,7 @@ func (d *Driver) GetMachineStatus(_ context.Context, req *driver.GetMachineStatu
 		return nil, err
 	}
 
-	instances, err := d.getInstancesFromMachineName(req.Machine.Name, providerSpec, secret)
+	instances, err := d.getMatchingInstancesForMachine(req.Machine, providerSpec, secret)
 
 	if err != nil {
 		return nil, err
