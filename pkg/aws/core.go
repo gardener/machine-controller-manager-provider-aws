@@ -262,8 +262,7 @@ func (d *Driver) InitializeMachine(_ context.Context, request *driver.Initialize
 	instances, err := d.getMatchingInstancesForMachine(request.Machine, providerSpec, request.Secret)
 	if err != nil {
 		if isNotFoundError(err) {
-			//TODO check if level is correct, and if log is appropriate
-			klog.V(2).Infof("Could not retrieve instances for machine %s from provider", request.Machine.Name)
+			klog.Errorf("Could not get matching instance for uninitialized machine %q from provider: %s", request.Machine.Name, err)
 			return nil, status.Error(codes.Uninitialized, err.Error())
 		}
 		return nil, err
