@@ -141,14 +141,18 @@ func (d *Driver) getMatchingInstancesForMachine(machine *v1alpha1.Machine, provi
 	runResult, err := getMachineInstancesByTagsAndStatus(svc, machine.Name, clusterName, nodeRole)
 	//if getMachineInstancesByTagsAndStatus returns an error, try fetching matching instances using getInstanceByID()
 	if err != nil {
-		_, instanceID, err := decodeRegionAndInstanceID(machine.Spec.ProviderID)
-		if err != nil {
-			return nil, status.Error(codes.InvalidArgument, err.Error())
-		}
-		runResult, err = getInstanceByID(svc, instanceID)
-		if err != nil {
-			klog.Errorf("AWS plugin is returning error while describe instances request is sent: %s", err)
-			return nil, status.Error(codes.Internal, err.Error())
+		if machine.Spec.ProviderID != "" {
+			_, instanceID, err := decodeRegionAndInstanceID(machine.Spec.ProviderID)
+			if err != nil {
+				return nil, status.Error(codes.InvalidArgument, err.Error())
+			}
+			runResult, err = getInstanceByID(svc, instanceID)
+			if err != nil {
+				klog.Errorf("AWS plugin is returning error while describe instances request is sent: %s", err)
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+		} else {
+			return nil, status.Error(codes.NotFound, "ProviderID is blank")
 		}
 	}
 	for _, reservation := range runResult.Reservations {
