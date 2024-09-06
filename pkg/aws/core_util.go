@@ -79,7 +79,7 @@ func disableSrcAndDestCheck(svc ec2iface.EC2API, instanceID *string) error {
 	return nil
 }
 
-func getMachineInstancesByTagsAndStatus(svc ec2iface.EC2API, machineName string, clusterName string, nodeRole string) (*ec2.DescribeInstancesOutput, error) {
+func getMachineInstancesByTagsAndStatus(svc ec2iface.EC2API, machineName string, clusterName string, nodeRole string) ([]*ec2.Instance, error) {
 	input := ec2.DescribeInstancesInput{
 		Filters: []*ec2.Filter{
 			{
@@ -112,11 +112,16 @@ func getMachineInstancesByTagsAndStatus(svc ec2iface.EC2API, machineName string,
 		},
 	}
 	runResult, err := svc.DescribeInstances(&input)
+
 	if err != nil {
 		klog.Errorf("AWS plugin is returning error while describe instances request is sent: %s", err)
 		return nil, status.Error(codes.Internal, err.Error())
 	} else {
-		return runResult, nil
+		var instances []*ec2.Instance
+		for _, reservation := range runResult.Reservations {
+			instances = append(instances, reservation.Instances...)
+		}
+		return instances, nil
 	}
 }
 
@@ -138,28 +143,30 @@ func (d *Driver) getMatchingInstancesForMachine(machine *v1alpha1.Machine, provi
 			nodeRole = key
 		}
 	}
-	runResult, err := getMachineInstancesByTagsAndStatus(svc, machine.Name, clusterName, nodeRole)
-	//if getMachineInstancesByTagsAndStatus returns an error, try fetching matching instances using getInstanceByID()
+	instances, err = getMachineInstancesByTagsAndStatus(svc, machine.Name, clusterName, nodeRole)
 	if err != nil {
+		return nil, err
+	}
+	if len(instances) == 0 {
+		//if getMachineInstancesByTagsAndStatus returns an error, try fetching matching instances using ProviderID
 		if machine.Spec.ProviderID == "" {
-			return nil, status.Error(codes.NotFound, "ProviderID is blank")
+			return nil, status.Error(codes.NotFound, "No ProviderID found on the machine")
 		}
 		_, instanceID, err := decodeRegionAndInstanceID(machine.Spec.ProviderID)
 		if err != nil {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
-		runResult, err = getInstanceByID(svc, instanceID)
+		runResult, err := getInstanceByID(svc, instanceID)
 		if err != nil {
-			klog.Errorf("AWS plugin is returning error while describe instances request is sent: %s", err)
-			return nil, status.Error(codes.Internal, err.Error())
+			return nil, err
 		}
-	}
-	for _, reservation := range runResult.Reservations {
-		instances = append(instances, reservation.Instances...)
-	}
-	if len(instances) == 0 {
-		errMessage := "AWS plugin is returning no VM instances backing this machine object"
-		return nil, status.Error(codes.NotFound, errMessage)
+		for _, reservation := range runResult.Reservations {
+			instances = append(instances, reservation.Instances...)
+		}
+		if len(instances) == 0 {
+			errMessage := "AWS plugin is returning no VM instances backing this machine object"
+			return nil, status.Error(codes.NotFound, errMessage)
+		}
 	}
 	return instances, nil
 }
@@ -169,6 +176,14 @@ func getInstanceByID(svc ec2iface.EC2API, instanceID string) (*ec2.DescribeInsta
 		InstanceIds: []*string{&instanceID},
 	}
 	instances, err := svc.DescribeInstances(&input)
+	if err != nil {
+		if awserror.IsInstanceIDNotFound(err) {
+			errMessage := "AWS plugin is returning no VM instances backing this machine object"
+			return nil, status.Error(codes.NotFound, errMessage)
+		}
+		klog.Errorf("AWS plugin is returning error while describe instances request is sent: %s", err)
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 	return instances, err
 }
 
