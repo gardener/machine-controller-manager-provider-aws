@@ -32,7 +32,7 @@ func encodeInstanceID(region, instanceID string) string {
 func decodeRegionAndInstanceID(id string) (string, string, error) {
 	splitProviderID := strings.Split(id, "/")
 	if len(splitProviderID) < 2 {
-		err := fmt.Errorf("Unable to decode provider-ID")
+		err := fmt.Errorf("unable to decode provider-ID")
 		return "", "", err
 	}
 	return splitProviderID[len(splitProviderID)-2], splitProviderID[len(splitProviderID)-1], nil

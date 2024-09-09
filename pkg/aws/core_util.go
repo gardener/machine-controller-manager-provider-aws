@@ -52,7 +52,7 @@ func decodeProviderSpecAndSecret(machineClass *v1alpha1.MachineClass, secret *co
 	// Validate the Spec and Secrets
 	validationErr := validation.ValidateAWSProviderSpec(providerSpec, secret, field.NewPath("providerSpec"))
 	if validationErr.ToAggregate() != nil && len(validationErr.ToAggregate().Errors()) > 0 {
-		err = fmt.Errorf("Error while validating ProviderSpec %v", validationErr.ToAggregate().Error())
+		err = fmt.Errorf("error while validating ProviderSpec %v", validationErr.ToAggregate().Error())
 		klog.V(2).Infof("Validation of AWSMachineClass failed %s", err)
 
 		return nil, status.Error(codes.InvalidArgument, err.Error())
@@ -137,12 +137,8 @@ func getMachineInstancesByTagsAndStatus(svc ec2iface.EC2API, machineName string,
 }
 
 // getMatchingInstancesForMachine extracts AWS Instance object for a given machine
-func (d *Driver) getMatchingInstancesForMachine(machine *v1alpha1.Machine, providerSpec *api.AWSProviderSpec, secret *corev1.Secret) (instances []*ec2.Instance, err error) {
-	svc, err := d.createSVC(secret, providerSpec.Region)
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	instances, err = getMachineInstancesByTagsAndStatus(svc, machine.Name, providerSpec.Tags)
+func (d *Driver) getMatchingInstancesForMachine(machine *v1alpha1.Machine, svc ec2iface.EC2API, providerSpecTags map[string]string) (instances []*ec2.Instance, err error) {
+	instances, err = getMachineInstancesByTagsAndStatus(svc, machine.Name, providerSpecTags)
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +194,7 @@ func confirmInstanceByID(svc ec2iface.EC2API, instanceID string) (bool, error) {
 func (d *Driver) generateBlockDevices(blockDevices []api.AWSBlockDeviceMappingSpec, rootDeviceName *string) ([]*ec2.BlockDeviceMapping, error) {
 	// If not blockDevices are passed, return an error.
 	if len(blockDevices) == 0 {
-		return nil, fmt.Errorf("No block devices passed")
+		return nil, fmt.Errorf("no block devices passed")
 	}
 
 	var blkDeviceMappings []*ec2.BlockDeviceMapping

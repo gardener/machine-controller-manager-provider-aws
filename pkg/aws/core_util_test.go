@@ -237,7 +237,7 @@ var _ = Describe("CoreUtils", func() {
 
 			Expect(disksGenerated).To(Equal(expectedDisks))
 			Expect(err).To(HaveOccurred())
-			Expect(err).To(Equal(fmt.Errorf("No block devices passed")))
+			Expect(err).To(Equal(fmt.Errorf("no block devices passed")))
 		})
 
 		It("should not encrypt blockDevices by default", func() {
