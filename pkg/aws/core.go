@@ -369,10 +369,9 @@ func (d *Driver) DeleteMachine(_ context.Context, req *driver.DeleteMachineReque
 
 	} else {
 		// ProviderID doesn't exist, hence check for any existing machine and then delete if exists
-		instances, err = d.getMatchingInstancesForMachine(req.Machine, providerSpec, req.Secret)
+		instances, err = getMachineInstancesByTagsAndStatus(svc, req.Machine.Name, providerSpec.Tags)
 		if err != nil {
-			errorStatus, ok := status.FromError(err)
-			if ok && errorStatus.Code() == codes.NotFound {
+			if isNotFoundError(err) {
 				klog.V(3).Infof("No matching VM found. Termination successful for machine object %q", req.Machine.Name)
 				return &driver.DeleteMachineResponse{}, nil
 			}
@@ -421,7 +420,7 @@ func (d *Driver) GetMachineStatus(_ context.Context, req *driver.GetMachineStatu
 	if err != nil {
 		return nil, err
 	} else if len(instances) > 1 {
-		instanceIDs := []string{}
+		instanceIDs := make([]string, 0, len(instances))
 		for _, instance := range instances {
 			instanceIDs = append(instanceIDs, *instance.InstanceId)
 		}

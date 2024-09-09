@@ -79,7 +79,18 @@ func disableSrcAndDestCheck(svc ec2iface.EC2API, instanceID *string) error {
 	return nil
 }
 
-func getMachineInstancesByTagsAndStatus(svc ec2iface.EC2API, machineName string, clusterName string, nodeRole string) ([]*ec2.Instance, error) {
+func getMachineInstancesByTagsAndStatus(svc ec2iface.EC2API, machineName string, providerSpecTags map[string]string) ([]*ec2.Instance, error) {
+	var (
+		clusterName string
+		nodeRole    string
+	)
+	for key := range providerSpecTags {
+		if strings.Contains(key, "kubernetes.io/cluster/") {
+			clusterName = key
+		} else if strings.Contains(key, "kubernetes.io/role/") {
+			nodeRole = key
+		}
+	}
 	input := ec2.DescribeInstancesInput{
 		Filters: []*ec2.Filter{
 			{
@@ -126,29 +137,18 @@ func getMachineInstancesByTagsAndStatus(svc ec2iface.EC2API, machineName string,
 }
 
 // getMatchingInstancesForMachine extracts AWS Instance object for a given machine
-func (d *Driver) getMatchingInstancesForMachine(machine *v1alpha1.Machine, providerSpec *api.AWSProviderSpec, secret *corev1.Secret) ([]*ec2.Instance, error) {
-	var (
-		clusterName string
-		nodeRole    string
-		instances   []*ec2.Instance
-	)
+func (d *Driver) getMatchingInstancesForMachine(machine *v1alpha1.Machine, providerSpec *api.AWSProviderSpec, secret *corev1.Secret) (instances []*ec2.Instance, err error) {
 	svc, err := d.createSVC(secret, providerSpec.Region)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	for key := range providerSpec.Tags {
-		if strings.Contains(key, "kubernetes.io/cluster/") {
-			clusterName = key
-		} else if strings.Contains(key, "kubernetes.io/role/") {
-			nodeRole = key
-		}
-	}
-	instances, err = getMachineInstancesByTagsAndStatus(svc, machine.Name, clusterName, nodeRole)
+	instances, err = getMachineInstancesByTagsAndStatus(svc, machine.Name, providerSpec.Tags)
 	if err != nil {
 		return nil, err
 	}
 	if len(instances) == 0 {
-		//if getMachineInstancesByTagsAndStatus returns an error, try fetching matching instances using ProviderID
+		//if getMachineInstancesByTagsAndStatus does not return any instances, try fetching matching instances using ProviderID
+		klog.V(3).Infof("No VM instances found for machine %s using tags/status. Now looking for VM using providerID", machine.Name)
 		if machine.Spec.ProviderID == "" {
 			return nil, status.Error(codes.NotFound, "No ProviderID found on the machine")
 		}
