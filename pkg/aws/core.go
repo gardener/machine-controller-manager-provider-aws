@@ -147,6 +147,7 @@ func (d *Driver) CreateMachine(_ context.Context, req *driver.CreateMachineReque
 
 		if netIf.Ipv6AddressCount != nil {
 			spec.Ipv6AddressCount = netIf.Ipv6AddressCount
+			spec.PrimaryIpv6 = aws.Bool(true)
 		}
 
 		networkInterfaceSpecs = append(networkInterfaceSpecs, spec)
