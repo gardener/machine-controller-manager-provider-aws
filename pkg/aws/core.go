@@ -74,7 +74,7 @@ func (d *Driver) CreateMachine(_ context.Context, req *driver.CreateMachineReque
 
 	// Check if the MachineClass is for the supported cloud provider
 	if req.MachineClass.Provider != ProviderAWS {
-		err = fmt.Errorf("Requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderAWS)
+		err = fmt.Errorf("requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderAWS)
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
@@ -259,18 +259,20 @@ func (d *Driver) InitializeMachine(_ context.Context, request *driver.Initialize
 	if err != nil {
 		return nil, err
 	}
-	instances, err := d.getInstancesFromMachineName(request.Machine.Name, providerSpec, request.Secret)
-	if err != nil {
-		return nil, err
-	}
-	targetInstance := instances[0]
-	providerID := encodeInstanceID(providerSpec.Region, *targetInstance.InstanceId)
-
 	svc, err := d.createSVC(request.Secret, providerSpec.Region)
 	if err != nil {
 		return nil, status.Error(codes.Uninitialized, err.Error())
 	}
-
+	instances, err := d.getMatchingInstancesForMachine(request.Machine, svc, providerSpec.Tags)
+	if err != nil {
+		if isNotFoundError(err) {
+			klog.Errorf("Could not get matching instance for uninitialized machine %q from provider: %s", request.Machine.Name, err)
+			return nil, status.Error(codes.Uninitialized, err.Error())
+		}
+		return nil, err
+	}
+	targetInstance := instances[0]
+	providerID := encodeInstanceID(providerSpec.Region, *targetInstance.InstanceId)
 	// if SrcAnDstCheckEnabled is false then disable the SrcAndDestCheck on running NAT instance
 	if providerSpec.SrcAndDstChecksEnabled != nil && !*providerSpec.SrcAndDstChecksEnabled && *targetInstance.SourceDestCheck {
 		klog.V(3).Infof("Disabling SourceDestCheck on VM %q associated with machine %s", providerID, request.Machine.Name)
@@ -279,7 +281,6 @@ func (d *Driver) InitializeMachine(_ context.Context, request *driver.Initialize
 			return nil, status.Error(codes.Uninitialized, err.Error())
 		}
 	}
-
 	for i, netIf := range providerSpec.NetworkInterfaces {
 		for _, instanceNetIf := range targetInstance.NetworkInterfaces {
 			if netIf.Ipv6PrefixCount != nil && *instanceNetIf.Attachment.DeviceIndex == int64(i) {
@@ -333,7 +334,7 @@ func (d *Driver) DeleteMachine(_ context.Context, req *driver.DeleteMachineReque
 
 	// Check if the MachineClass is for the supported cloud provider
 	if req.MachineClass.Provider != ProviderAWS {
-		err = fmt.Errorf("Requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderAWS)
+		err = fmt.Errorf("requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderAWS)
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
@@ -368,10 +369,9 @@ func (d *Driver) DeleteMachine(_ context.Context, req *driver.DeleteMachineReque
 
 	} else {
 		// ProviderID doesn't exist, hence check for any existing machine and then delete if exists
-		instances, err = d.getInstancesFromMachineName(req.Machine.Name, providerSpec, req.Secret)
+		instances, err = getMachineInstancesByTagsAndStatus(svc, req.Machine.Name, providerSpec.Tags)
 		if err != nil {
-			errorStatus, ok := status.FromError(err)
-			if ok && errorStatus.Code() == codes.NotFound {
+			if isNotFoundError(err) {
 				klog.V(3).Infof("No matching VM found. Termination successful for machine object %q", req.Machine.Name)
 				return &driver.DeleteMachineResponse{}, nil
 			}
@@ -403,24 +403,27 @@ func (d *Driver) GetMachineStatus(_ context.Context, req *driver.GetMachineStatu
 
 	// Check if the MachineClass is for the supported cloud provider
 	if req.MachineClass.Provider != ProviderAWS {
-		err = fmt.Errorf("Requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderAWS)
+		err = fmt.Errorf("requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderAWS)
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	// Log messages to track start and end of request
 	klog.V(3).Infof("Get request has been recieved for %q", req.Machine.Name)
-
 	providerSpec, err := decodeProviderSpecAndSecret(machineClass, secret)
 	if err != nil {
 		return nil, err
 	}
 
-	instances, err := d.getInstancesFromMachineName(req.Machine.Name, providerSpec, secret)
+	svc, err := d.createSVC(secret, providerSpec.Region)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 
+	instances, err := d.getMatchingInstancesForMachine(req.Machine, svc, providerSpec.Tags)
 	if err != nil {
 		return nil, err
 	} else if len(instances) > 1 {
-		instanceIDs := []string{}
+		instanceIDs := make([]string, 0, len(instances))
 		for _, instance := range instances {
 			instanceIDs = append(instanceIDs, *instance.InstanceId)
 		}
@@ -430,6 +433,10 @@ func (d *Driver) GetMachineStatus(_ context.Context, req *driver.GetMachineStatu
 	}
 
 	requiredInstance := instances[0]
+	response := &driver.GetMachineStatusResponse{
+		NodeName:   *requiredInstance.PrivateDnsName,
+		ProviderID: encodeInstanceID(providerSpec.Region, *requiredInstance.InstanceId),
+	}
 
 	// if SrcAnDstCheckEnabled is false then check attribute on instance and return Uninitialized error if not matching.
 	if providerSpec.SrcAndDstChecksEnabled != nil && !*providerSpec.SrcAndDstChecksEnabled {
@@ -437,13 +444,8 @@ func (d *Driver) GetMachineStatus(_ context.Context, req *driver.GetMachineStatu
 			msg := fmt.Sprintf("VM %q associated with machine %q has SourceDestCheck=%t despite providerSpec.SrcAndDstChecksEnabled=%t",
 				*requiredInstance.InstanceId, req.Machine.Name, *requiredInstance.SourceDestCheck, *providerSpec.SrcAndDstChecksEnabled)
 			klog.Warning(msg)
-			return nil, status.Error(codes.Uninitialized, msg)
+			return response, status.Error(codes.Uninitialized, msg)
 		}
-	}
-
-	response := &driver.GetMachineStatusResponse{
-		NodeName:   *requiredInstance.PrivateDnsName,
-		ProviderID: encodeInstanceID(providerSpec.Region, *requiredInstance.InstanceId),
 	}
 
 	klog.V(3).Infof("Machine get request has been processed successfully for %q", req.Machine.Name)
@@ -461,7 +463,7 @@ func (d *Driver) ListMachines(_ context.Context, req *driver.ListMachinesRequest
 
 	// Check if the MachineClass is for the supported cloud provider
 	if req.MachineClass.Provider != ProviderAWS {
-		err = fmt.Errorf("Requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderAWS)
+		err = fmt.Errorf("requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderAWS)
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 

@@ -52,7 +52,7 @@ func decodeProviderSpecAndSecret(machineClass *v1alpha1.MachineClass, secret *co
 	// Validate the Spec and Secrets
 	validationErr := validation.ValidateAWSProviderSpec(providerSpec, secret, field.NewPath("providerSpec"))
 	if validationErr.ToAggregate() != nil && len(validationErr.ToAggregate().Errors()) > 0 {
-		err = fmt.Errorf("Error while validating ProviderSpec %v", validationErr.ToAggregate().Error())
+		err = fmt.Errorf("error while validating ProviderSpec %v", validationErr.ToAggregate().Error())
 		klog.V(2).Infof("Validation of AWSMachineClass failed %s", err)
 
 		return nil, status.Error(codes.InvalidArgument, err.Error())
@@ -79,27 +79,18 @@ func disableSrcAndDestCheck(svc ec2iface.EC2API, instanceID *string) error {
 	return nil
 }
 
-// getInstancesFromMachineName extracts AWS Instance object from given machine name
-func (d *Driver) getInstancesFromMachineName(machineName string, providerSpec *api.AWSProviderSpec, secret *corev1.Secret) ([]*ec2.Instance, error) {
+func getMachineInstancesByTagsAndStatus(svc ec2iface.EC2API, machineName string, providerSpecTags map[string]string) ([]*ec2.Instance, error) {
 	var (
 		clusterName string
 		nodeRole    string
-		instances   []*ec2.Instance
 	)
-
-	svc, err := d.createSVC(secret, providerSpec.Region)
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	for key := range providerSpec.Tags {
+	for key := range providerSpecTags {
 		if strings.Contains(key, "kubernetes.io/cluster/") {
 			clusterName = key
 		} else if strings.Contains(key, "kubernetes.io/role/") {
 			nodeRole = key
 		}
 	}
-
 	input := ec2.DescribeInstancesInput{
 		Filters: []*ec2.Filter{
 			{
@@ -131,41 +122,79 @@ func (d *Driver) getInstancesFromMachineName(machineName string, providerSpec *a
 			},
 		},
 	}
-
 	runResult, err := svc.DescribeInstances(&input)
+
 	if err != nil {
 		klog.Errorf("AWS plugin is returning error while describe instances request is sent: %s", err)
 		return nil, status.Error(codes.Internal, err.Error())
+	} else {
+		var instances []*ec2.Instance
+		for _, reservation := range runResult.Reservations {
+			instances = append(instances, reservation.Instances...)
+		}
+		return instances, nil
 	}
+}
 
-	for _, reservation := range runResult.Reservations {
-		instances = append(instances, reservation.Instances...)
+// getMatchingInstancesForMachine extracts AWS Instance object for a given machine
+func (d *Driver) getMatchingInstancesForMachine(machine *v1alpha1.Machine, svc ec2iface.EC2API, providerSpecTags map[string]string) (instances []*ec2.Instance, err error) {
+	instances, err = getMachineInstancesByTagsAndStatus(svc, machine.Name, providerSpecTags)
+	if err != nil {
+		return nil, err
 	}
 	if len(instances) == 0 {
-		errMessage := "AWS plugin is returning no VM instances backing this machine object"
-		return nil, status.Error(codes.NotFound, errMessage)
+		//if getMachineInstancesByTagsAndStatus does not return any instances, try fetching matching instances using ProviderID
+		klog.V(3).Infof("No VM instances found for machine %s using tags/status. Now looking for VM using providerID", machine.Name)
+		if machine.Spec.ProviderID == "" {
+			return nil, status.Error(codes.NotFound, "No ProviderID found on the machine")
+		}
+		_, instanceID, err := decodeRegionAndInstanceID(machine.Spec.ProviderID)
+		if err != nil {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+		runResult, err := getInstanceByID(svc, instanceID)
+		if err != nil {
+			return nil, err
+		}
+		for _, reservation := range runResult.Reservations {
+			instances = append(instances, reservation.Instances...)
+		}
+		if len(instances) == 0 {
+			errMessage := "AWS plugin is returning no VM instances backing this machine object"
+			return nil, status.Error(codes.NotFound, errMessage)
+		}
 	}
-
 	return instances, nil
 }
 
-func confirmInstanceByID(svc ec2iface.EC2API, instanceID string) (bool, error) {
+func getInstanceByID(svc ec2iface.EC2API, instanceID string) (*ec2.DescribeInstancesOutput, error) {
 	input := ec2.DescribeInstancesInput{
 		InstanceIds: []*string{&instanceID},
 	}
+	instances, err := svc.DescribeInstances(&input)
+	if err != nil {
+		if awserror.IsInstanceIDNotFound(err) {
+			errMessage := "AWS plugin is returning no VM instances backing this machine object"
+			return nil, status.Error(codes.NotFound, errMessage)
+		}
+		klog.Errorf("AWS plugin is returning error while describe instances request is sent: %s", err)
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	return instances, err
+}
 
-	_, err := svc.DescribeInstances(&input)
+func confirmInstanceByID(svc ec2iface.EC2API, instanceID string) (bool, error) {
+	_, err := getInstanceByID(svc, instanceID)
 	if err != nil {
 		return false, err
 	}
-
 	return true, nil
 }
 
 func (d *Driver) generateBlockDevices(blockDevices []api.AWSBlockDeviceMappingSpec, rootDeviceName *string) ([]*ec2.BlockDeviceMapping, error) {
 	// If not blockDevices are passed, return an error.
 	if len(blockDevices) == 0 {
-		return nil, fmt.Errorf("No block devices passed")
+		return nil, fmt.Errorf("no block devices passed")
 	}
 
 	var blkDeviceMappings []*ec2.BlockDeviceMapping

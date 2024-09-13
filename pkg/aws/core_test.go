@@ -23,11 +23,11 @@ import (
 )
 
 const (
-	awsAccessKeyIDIsMissing               = "machine codes error: code = [InvalidArgument] message = [Error while validating ProviderSpec secretRef.AWSAccessKeyID: Required value: Mention atleast providerAccessKeyId or accessKeyID]"
-	awsSecretAccessKeyIsMissing           = "machine codes error: code = [InvalidArgument] message = [Error while validating ProviderSpec secretRef.AWSSecretAccessKey: Required value: Mention atleast providerSecretAccessKey or secretAccessKey]"
-	awsSecretAccessKeyNUserDataAreMissing = "machine codes error: code = [InvalidArgument] message = [Error while validating ProviderSpec [secretRef.AWSSecretAccessKey: Required value: Mention atleast providerSecretAccessKey or secretAccessKey, secretRef.userData: Required value: Mention userData]]"
-	regionNAMIMissing                     = "machine codes error: code = [InvalidArgument] message = [Error while validating ProviderSpec [providerSpec.ami: Required value: AMI is required, providerSpec.region: Required value: Region is required]]"
-	userDataIsMissing                     = "machine codes error: code = [InvalidArgument] message = [Error while validating ProviderSpec secretRef.userData: Required value: Mention userData]"
+	awsAccessKeyIDIsMissing               = "machine codes error: code = [InvalidArgument] message = [error while validating ProviderSpec secretRef.AWSAccessKeyID: Required value: Mention atleast providerAccessKeyId or accessKeyID]"
+	awsSecretAccessKeyIsMissing           = "machine codes error: code = [InvalidArgument] message = [error while validating ProviderSpec secretRef.AWSSecretAccessKey: Required value: Mention atleast providerSecretAccessKey or secretAccessKey]"
+	awsSecretAccessKeyNUserDataAreMissing = "machine codes error: code = [InvalidArgument] message = [error while validating ProviderSpec [secretRef.AWSSecretAccessKey: Required value: Mention atleast providerSecretAccessKey or secretAccessKey, secretRef.userData: Required value: Mention userData]]"
+	regionNAMIMissing                     = "machine codes error: code = [InvalidArgument] message = [error while validating ProviderSpec [providerSpec.ami: Required value: AMI is required, providerSpec.region: Required value: Region is required]]"
+	userDataIsMissing                     = "machine codes error: code = [InvalidArgument] message = [error while validating ProviderSpec secretRef.userData: Required value: Mention userData]"
 )
 
 var _ = Describe("MachineServer", func() {
@@ -114,7 +114,7 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        "machine codes error: code = [InvalidArgument] message = [Requested for Provider 'azure', we only support 'AWS']",
+					errMessage:        "machine codes error: code = [InvalidArgument] message = [requested for Provider 'azure', we only support 'AWS']",
 				},
 			}),
 			Entry("Machine creation request with IAM ARN", &data{
@@ -191,7 +191,7 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        "machine codes error: code = [InvalidArgument] message = [Error while validating ProviderSpec providerSpec.capacityReservation: Required value: CapacityReservationResourceGroupArn or CapacityReservationId are optional but only one should be used]",
+					errMessage:        "machine codes error: code = [InvalidArgument] message = [error while validating ProviderSpec providerSpec.capacityReservation: Required value: CapacityReservationResourceGroupArn or CapacityReservationId are optional but only one should be used]",
 				},
 			}),
 			Entry("Machine creation request for an AWS Capacity Reservation Group with capacityReservationPreference only", &data{
@@ -681,7 +681,7 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        "machine codes error: code = [InvalidArgument] message = [Requested for Provider 'azure', we only support 'AWS']",
+					errMessage:        "machine codes error: code = [InvalidArgument] message = [requested for Provider 'azure', we only support 'AWS']",
 				},
 			}),
 			Entry("providerAccessKeyId missing for secret", &data{
@@ -891,7 +891,7 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        "machine codes error: code = [InvalidArgument] message = [Requested for Provider 'azure', we only support 'AWS']",
+					errMessage:        "machine codes error: code = [InvalidArgument] message = [requested for Provider 'azure', we only support 'AWS']",
 				},
 			}),
 			Entry("providerAccessKeyId missing for secret", &data{
@@ -1093,7 +1093,7 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        "machine codes error: code = [InvalidArgument] message = [Requested for Provider 'azure', we only support 'AWS']",
+					errMessage:        "machine codes error: code = [InvalidArgument] message = [requested for Provider 'azure', we only support 'AWS']",
 				},
 			}),
 			Entry("Unexpected end of JSON input", &data{
@@ -1198,7 +1198,7 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        "machine codes error: code = [InvalidArgument] message = [Error while validating ProviderSpec providerSpec.tags[]: Required value: Tag required of the form kubernetes.io/cluster/****]",
+					errMessage:        "machine codes error: code = [InvalidArgument] message = [error while validating ProviderSpec providerSpec.tags[]: Required value: Tag required of the form kubernetes.io/cluster/****]",
 				},
 			}),
 			Entry("Cloud provider returned error while describing instance", &data{

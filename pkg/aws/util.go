@@ -12,6 +12,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/codes"
+	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/status"
+
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	backoff "github.com/cenkalti/backoff/v4"
 	corev1 "k8s.io/api/core/v1"
@@ -29,7 +32,7 @@ func encodeInstanceID(region, instanceID string) string {
 func decodeRegionAndInstanceID(id string) (string, string, error) {
 	splitProviderID := strings.Split(id, "/")
 	if len(splitProviderID) < 2 {
-		err := fmt.Errorf("Unable to decode provider-ID")
+		err := fmt.Errorf("unable to decode provider-ID")
 		return "", "", err
 	}
 	return splitProviderID[len(splitProviderID)-2], splitProviderID[len(splitProviderID)-1], nil
@@ -43,6 +46,15 @@ func (d *Driver) createSVC(secret *corev1.Secret, region string) (ec2iface.EC2AP
 	}
 	svc := d.SPI.NewEC2API(session)
 	return svc, nil
+}
+
+// Function returns true only if error code equals codes.NotFound
+func isNotFoundError(err error) bool {
+	errorStatus, ok := status.FromError(err)
+	if ok && errorStatus.Code() == codes.NotFound {
+		return true
+	}
+	return false
 }
 
 // kubernetesVolumeIDToEBSVolumeID translates Kubernetes volume ID to EBS volume ID

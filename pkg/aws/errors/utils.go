@@ -30,3 +30,9 @@ func GetMCMErrorCodeForTerminateInstances(err error) codes.Code {
 		return codes.Internal
 	}
 }
+
+// IsInstanceIDNotFound checks if the provider returned an InstanceIDNotFound error
+func IsInstanceIDNotFound(err error) bool {
+	awsErr := err.(awserr.Error)
+	return awsErr.Code() == InstanceIDNotFound
+}
