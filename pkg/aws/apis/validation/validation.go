@@ -230,14 +230,22 @@ func ValidateSecret(secret *corev1.Secret, fldPath *field.Path) field.ErrorList 
 
 	if secret == nil {
 		allErrs = append(allErrs, field.Required(fldPath.Child(""), "secretRef is required"))
+	} else if workloadIdentityTokenFile, ok := secret.Data["workloadIdentityTokenFile"]; ok {
+		if len(workloadIdentityTokenFile) == 0 {
+			allErrs = append(allErrs, field.Required(fldPath.Child("workloadIdentityTokenFile"), "Workload identity token file is required"))
+		}
+
+		if roleARN, ok := secret.Data["roleARN"]; !ok || len(roleARN) == 0 {
+			allErrs = append(allErrs, field.Required(fldPath.Child("roleARN"), "Role ARN is required when workload identity is used"))
+		}
 	} else {
-		if "" == string(secret.Data[awsapi.AWSAccessKeyID]) && "" == string(secret.Data[awsapi.AWSAlternativeAccessKeyID]) {
+		if string(secret.Data[awsapi.AWSAccessKeyID]) == "" && string(secret.Data[awsapi.AWSAlternativeAccessKeyID]) == "" {
 			allErrs = append(allErrs, field.Required(fldPath.Child("AWSAccessKeyID"), fmt.Sprintf("Mention atleast %s or %s", awsapi.AWSAccessKeyID, awsapi.AWSAlternativeAccessKeyID)))
 		}
-		if "" == string(secret.Data[awsapi.AWSSecretAccessKey]) && "" == string(secret.Data[awsapi.AWSAlternativeSecretAccessKey]) {
+		if string(secret.Data[awsapi.AWSSecretAccessKey]) == "" && string(secret.Data[awsapi.AWSAlternativeSecretAccessKey]) == "" {
 			allErrs = append(allErrs, field.Required(fldPath.Child("AWSSecretAccessKey"), fmt.Sprintf("Mention atleast %s or %s", awsapi.AWSSecretAccessKey, awsapi.AWSAlternativeSecretAccessKey)))
 		}
-		if "" == string(secret.Data["userData"]) {
+		if string(secret.Data["userData"]) == "" {
 			allErrs = append(allErrs, field.Required(fldPath.Child("userData"), "Mention userData"))
 		}
 	}
