@@ -238,6 +238,9 @@ func ValidateSecret(secret *corev1.Secret, fldPath *field.Path) field.ErrorList 
 		if roleARN, ok := secret.Data["roleARN"]; !ok || len(roleARN) == 0 {
 			allErrs = append(allErrs, field.Required(fldPath.Child("roleARN"), "Role ARN is required when workload identity is used"))
 		}
+		if string(secret.Data["userData"]) == "" {
+			allErrs = append(allErrs, field.Required(fldPath.Child("userData"), "Mention userData"))
+		}
 	} else {
 		if string(secret.Data[awsapi.AWSAccessKeyID]) == "" && string(secret.Data[awsapi.AWSAlternativeAccessKeyID]) == "" {
 			allErrs = append(allErrs, field.Required(fldPath.Child("AWSAccessKeyID"), fmt.Sprintf("Mention atleast %s or %s", awsapi.AWSAccessKeyID, awsapi.AWSAlternativeAccessKeyID)))
