@@ -19,11 +19,6 @@ import (
 	awsapi "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
 )
 
-const nameFmt string = `[-a-z0-9]+`
-const nameMaxLength int = 63
-
-var nameRegexp = regexp.MustCompile("^" + nameFmt + "$")
-
 // ValidateAWSProviderSpec validates AWS provider spec
 func ValidateAWSProviderSpec(spec *awsapi.AWSProviderSpec, secret *corev1.Secret, fldPath *field.Path) field.ErrorList {
 	var (
