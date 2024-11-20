@@ -25,16 +25,16 @@ func ValidateAWSProviderSpec(spec *awsapi.AWSProviderSpec, secret *corev1.Secret
 		allErrs = field.ErrorList{}
 	)
 
-	if "" == spec.AMI {
+	if spec.AMI == "" {
 		allErrs = append(allErrs, field.Required(fldPath.Child("ami"), "AMI is required"))
 	}
-	if "" == spec.Region {
+	if spec.Region == "" {
 		allErrs = append(allErrs, field.Required(fldPath.Child("region"), "Region is required"))
 	}
-	if "" == spec.MachineType {
+	if spec.MachineType == "" {
 		allErrs = append(allErrs, field.Required(fldPath.Child("machineType"), "MachineType is required"))
 	}
-	if ("" == spec.IAM.Name && "" == spec.IAM.ARN) || ("" != spec.IAM.Name && "" != spec.IAM.ARN) {
+	if (spec.IAM.Name == "" && spec.IAM.ARN == "") || (spec.IAM.Name != "" && spec.IAM.ARN != "") {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("iam"), spec.IAM, "either IAM Name or ARN must be set"))
 	}
 
@@ -156,15 +156,15 @@ func validateNetworkInterfaces(networkInterfaces []awsapi.AWSNetworkInterfaceSpe
 		allErrs = append(allErrs, field.Required(fldPath.Child(""), "Mention at least one NetworkInterface"))
 	} else {
 		for i := range networkInterfaces {
-			if "" == networkInterfaces[i].SubnetID {
+			if networkInterfaces[i].SubnetID == "" {
 				allErrs = append(allErrs, field.Required(fldPath.Child("subnetID"), "SubnetID is required"))
 			}
 
-			if 0 == len(networkInterfaces[i].SecurityGroupIDs) {
+			if len(networkInterfaces[i].SecurityGroupIDs) == 0 {
 				allErrs = append(allErrs, field.Required(fldPath.Child("securityGroupIDs"), "Mention at least one securityGroupID"))
 			} else {
 				for j := range networkInterfaces[i].SecurityGroupIDs {
-					if "" == networkInterfaces[i].SecurityGroupIDs[j] {
+					if networkInterfaces[i].SecurityGroupIDs[j] == "" {
 						output := strings.Join([]string{"securityGroupIDs cannot be blank for networkInterface:", strconv.Itoa(i), " securityGroupID:", strconv.Itoa(j)}, "")
 						allErrs = append(allErrs, field.Required(fldPath.Child("securityGroupIDs"), output))
 					}
