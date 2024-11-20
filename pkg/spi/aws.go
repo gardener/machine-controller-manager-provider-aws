@@ -28,16 +28,16 @@ func (ms *PluginSPIImpl) NewSession(secret *corev1.Secret, region string) (*sess
 		Region: aws.String(region),
 	}
 
-	if arn, ok := secret.Data["roleARN"]; ok {
+	if workloadIdentityTokenFile, ok := secret.Data["workloadIdentityTokenFile"]; ok {
 		sess, err := session.NewSession()
 		if err != nil {
 			return nil, err
 		}
 		webIDProvider := stscreds.NewWebIdentityRoleProviderWithOptions(
 			sts.New(sess),
-			string(arn),
+			string(secret.Data["roleARN"]),
 			secret.Namespace,
-			stscreds.FetchTokenPath(secret.Data["workloadIdentityTokenFile"]),
+			stscreds.FetchTokenPath(workloadIdentityTokenFile),
 		)
 		creds, err := webIDProvider.Retrieve()
 		if err != nil {
