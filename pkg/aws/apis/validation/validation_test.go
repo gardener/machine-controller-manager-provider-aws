@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/pointer"
@@ -1781,6 +1782,50 @@ var _ = Describe("Validation", func() {
 				},
 			}),
 		)
+	})
+
+	Describe("#ValidateSecret", func() {
+		It("should successfully validate the secret", func() {
+			errList := ValidateSecret(&corev1.Secret{
+				Data: map[string][]byte{
+					"roleARN":                   []byte("arn"),
+					"workloadIdentityTokenFile": []byte("file"),
+					"userData":                  []byte("data"),
+				},
+			}, field.NewPath(""))
+			Expect(errList).To(BeEmpty())
+		})
+
+		It("should fail to validate the secret", func() {
+			errList := ValidateSecret(&corev1.Secret{
+				Data: map[string][]byte{
+					"workloadIdentityTokenFile": []byte(""),
+					"roleARN":                   []byte(""),
+				},
+			}, field.NewPath(""))
+			Expect(errList).To(
+				ConsistOf(
+					PointTo(
+						MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeRequired),
+							"Field": Equal("[].workloadIdentityTokenFile"),
+						}),
+					),
+					PointTo(
+						MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeRequired),
+							"Field": Equal("[].roleARN"),
+						}),
+					),
+					PointTo(
+						MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeRequired),
+							"Field": Equal("[].userData"),
+						}),
+					),
+				),
+			)
+		})
 	})
 })
 
