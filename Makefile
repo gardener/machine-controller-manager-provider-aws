@@ -1,11 +1,13 @@
 # SPDX-FileCopyrightText: 2024 SAP SE or an SAP affiliate company and Gardener contributors
 #
 # SPDX-License-Identifier: Apache-2.0
-
+MCM_DIR   	:= $(shell go list -m -f "{{.Dir}}" github.com/gardener/machine-controller-manager)
+include $(MCM_DIR)/hack/tools.mk
+# TODO(thiyyakat): Variables have to be reset because the MCM repo uses relative paths for them. Once that is fixed, we can remove the reset logic.
+TOOLS_DIR := $(MCM_DIR)/hack/tools
+TOOLS_BIN_DIR := $(TOOLS_DIR)/bin
 -include .env
 export
-include hack/tools.mk
-
 BINARY_PATH         := bin/
 COVERPROFILE        := test/output/coverprofile.out
 IMAGE_REPOSITORY    := europe-docker.pkg.dev/gardener-project/public/gardener/machine-controller-manager-provider-aws
@@ -16,6 +18,8 @@ LEADER_ELECT 	    := "true"
 # If Integration Test Suite is to be run locally against clusters then export the below variable
 # with MCM deployment name in the cluster
 MACHINE_CONTROLLER_MANAGER_DEPLOYMENT_NAME := machine-controller-manager
+
+$(info "before targets" $(TOOLS_DIR) $(GOSEC))
 #########################################
 # Rules for running helper scripts
 #########################################
@@ -55,6 +59,7 @@ start:
 
 .PHONY: check
 check:
+	$(info "in check" $(TOOLS_DIR) $(GOSEC))
 	.ci/check
 
 #########################################
@@ -124,3 +129,14 @@ clean:
 .PHONY: add-license-headers
 add-license-headers: $(GO_ADD_LICENSE)
 	@./hack/add_license_headers.sh ${YEAR}
+
+.PHONY: adjust-install-gosec.sh
+	chmod +xw $(TOOLS_DIR)/install-gosec.sh
+
+.PHONY: sast
+sast: adjust-install-gosec.sh $(GOSEC)
+	./hack/sast.sh
+
+.PHONY: sast-report
+sast-report:  adjust-install-gosec.sh $(GOSEC)
+	./hack/sast.sh --gosec-report true
