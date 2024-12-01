@@ -22,6 +22,7 @@ import (
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/codes"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/status"
 	"k8s.io/klog/v2"
+	"k8s.io/utils/ptr"
 
 	awserror "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/errors"
 	"github.com/gardener/machine-controller-manager-provider-aws/pkg/spi"
@@ -441,7 +442,7 @@ func (d *Driver) GetMachineStatus(_ context.Context, req *driver.GetMachineStatu
 
 	// if SrcAnDstCheckEnabled is false then check attribute on instance and return Uninitialized error if not matching.
 	if providerSpec.SrcAndDstChecksEnabled != nil && !*providerSpec.SrcAndDstChecksEnabled {
-		if *requiredInstance.SourceDestCheck {
+		if ptr.Deref(requiredInstance.SourceDestCheck, false) {
 			msg := fmt.Sprintf("VM %q associated with machine %q has SourceDestCheck=%t despite providerSpec.SrcAndDstChecksEnabled=%t",
 				*requiredInstance.InstanceId, req.Machine.Name, *requiredInstance.SourceDestCheck, *providerSpec.SrcAndDstChecksEnabled)
 			klog.Warning(msg)
