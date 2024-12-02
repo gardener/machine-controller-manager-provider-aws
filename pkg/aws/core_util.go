@@ -22,7 +22,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/klog/v2"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 const (
@@ -67,7 +67,7 @@ func disableSrcAndDestCheck(svc ec2iface.EC2API, instanceID *string) error {
 	srcAndDstCheckEnabled := &ec2.ModifyInstanceAttributeInput{
 		InstanceId: instanceID,
 		SourceDestCheck: &ec2.AttributeBooleanValue{
-			Value: pointer.BoolPtr(false),
+			Value: ptr.To(false),
 		},
 	}
 
