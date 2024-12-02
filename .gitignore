@@ -16,3 +16,5 @@ bin/
 .ci/controllers-test/logs/*.log.*
 kubectl
 yq_linux*
+# gosec
+gosec-report.sarif
