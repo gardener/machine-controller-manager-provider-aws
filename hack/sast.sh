@@ -28,7 +28,7 @@ parse_flags() {
 parse_flags "$@"
 
 echo "> Running gosec"
-$MCM_DIR/hack/tools/bin/gosec --version
+gosec --version
 if [[ "$gosec_report" != "false" ]]; then
   echo "Exporting report to $root_dir/gosec-report.sarif"
   gosec_report_parse_flags="-track-suppressions -fmt=sarif -out=gosec-report.sarif -stdout"
@@ -40,4 +40,4 @@ fi
 # Thus, generated code is excluded from gosec scan.
 # Nested go modules are not supported by gosec (see https://github.com/securego/gosec/issues/501), so the ./hack folder
 # is excluded too. It does not contain productive code anyway.
-$MCM_DIR/hack/tools/bin/gosec -exclude-generated -exclude-dir=hack $gosec_report_parse_flags  ./...
+gosec -exclude-generated -exclude-dir=hack $gosec_report_parse_flags  ./...
