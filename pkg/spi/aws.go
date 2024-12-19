@@ -44,10 +44,7 @@ func (ms *PluginSPIImpl) NewSession(secret *corev1.Secret, region string) (*sess
 			return nil, err
 		}
 		cc := credentials.NewStaticCredentialsFromCreds(creds)
-		config := &aws.Config{
-			Region:      aws.String(region),
-			Credentials: cc,
-		}
+		config.Credentials = cc
 		return session.NewSession(config)
 	}
 
