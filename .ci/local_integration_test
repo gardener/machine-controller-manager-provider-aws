@@ -14,6 +14,7 @@ declare TARGET_CLUSTER
 declare CONTROL_CLUSTER
 declare GARDEN_CORE_NAMESPACE
 declare CONTROL_KUBECONFIG
+declare GNA_SECRET_NAME
 DEFAULT_MCM_REPO_PATH=$(realpath "$(pwd)/../machine-controller-manager")
 
 
@@ -158,6 +159,14 @@ then
     printf "\e[31mtarget cluster cannot be empty\e[0m\n"
     exit 1
 fi
+
+printf "\e[33mEnter the gardener-node-agent secret name. (If gardener-node-agent authorizer webhook is enabled, then this value is compulsory. Link to PR:https://github.com/gardener/gardener/pull/10535. The value can be found in machineClass.providerSpec.tags/labels. \e[0m\n"
+read GNA_SECRET_NAME
+if [ -z "GNA_SECRET_NAME" ]
+then
+    printf "\e[31m GNA Secret name is empty\e[0m\n"
+fi
+export GNA_SECRET_NAME=$GNA_SECRET_NAME
 
 if [ "$IS_CONTROL_CLUSTER_SEED" = true ]
 then
