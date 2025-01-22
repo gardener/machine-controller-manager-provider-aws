@@ -76,10 +76,14 @@ update-dependencies:
 .PHONY: test-unit
 test-unit:
 	@SKIP_INTEGRATION_TESTS=X .ci/test
-	
+
 .PHONY: test-integration
 test-integration:
 	.ci/local_integration_test
+
+.PHONY: test
+test:
+	.ci/test
 
 #########################################
 # Rules for build/release
@@ -132,3 +136,6 @@ sast: $(GOSEC)
 .PHONY: sast-report
 sast-report: $(GOSEC)
 	@./hack/sast.sh --gosec-report true
+
+.PHONY: verify
+verify: check build test
