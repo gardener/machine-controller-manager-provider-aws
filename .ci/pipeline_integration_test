@@ -13,6 +13,7 @@ TEST_RESULT=
 cli_path=/cc/utils/cli.py
 num_of_existing_nodes=1
 TEST_SHOOT=aws-ci-it
+SEED_NAME=
 CREDENTIALS_SECRET_NAME=shoot-operator-aws-team
 GARDEN_CORE_NAMESPACE=garden-core
 KUBECONFIG_EXPIRY=10800
@@ -21,65 +22,18 @@ KUBECONFIG_EXPIRY=10800
 declare CONTROL_KUBECONFIG=${SOURCE_PATH}/dev/control_kubeconfig.yaml
 declare TARGET_KUBECONFIG=${SOURCE_PATH}/dev/target_kubeconfig.yaml
 declare TEST_CREDS_SECRET=test-mc-secret
+declare IS_CONTROL_CLUSTER_SEED=true
+declare PROJECT=mcm-ci
+declare CONTROL_CLUSTER_NAMESPACE=shoot--"${PROJECT}"--"${TEST_SHOOT}"
+declate GNA_SECRET_NAME
 
 export CONTROL_KUBECONFIG
 export TARGET_KUBECONFIG
 export TEST_CREDS_SECRET
-export MACHINECLASS_V1=${SOURCE_PATH}/dev/v1machineclass_converted.yaml
+export IS_CONTROL_CLUSTER_SEED
+export PROJECT
+export CONTROL_CLUSTER_NAMESPACE
 export MACHINE_CONTROLLER_MANAGER_DEPLOYMENT_NAME="machine-controller-manager"
-
-############################################## <Helper fn> ##############################################
-
-function hf_num_of_objects() {
-    output=$(kubectl --kubeconfig=dev/control_kubeconfig.yaml get "$1" | grep machine.sapcloud.io 2>&1)
-    
-    if [ -z "$output" ]; then
-       return 0 
-    fi
-
-    object_count=$(echo "$output" | wc -l)
-
-    return "$object_count"
-}
-
-function hf_num_of_ready_nodes() {
-    output=$(kubectl --kubeconfig=dev/target_kubeconfig.yaml get "$1" 2>&1)
-    
-    ready_count=$(echo "$output" | tr " " "\n" | grep ^Ready -c)
-
-    return $((ready_count-num_of_existing_nodes))
-}
-
-function hf_wait_on() {
-    wait_interval=30
-    function_name=$1
-    function_param=$2
-    count_to_match=$3
-    seconds_to_wait=$4
-    iteration_count=$(($seconds_to_wait/30))
-
-    while
-        "$function_name" "$function_param"
-        ret=$?
-        [[ $ret -ne $count_to_match ]]
-    do
-        printf "\n\t Error: %s invoked with %s did not return expected value %s. Will retry again in %s...\n" "$function_name" "$function_param" "$count_to_match" "$wait_interval"
-        sleep $wait_interval
-        ((iteration_count--))
-
-        # Exit script when timeout occurs
-        if [ $iteration_count -le 0 ]; then
-            printf "\tFailed: Timeout occured while waiting for operation. Exiting Test to avoid further conflicts.\n"
-            printf "\tWas Executing function: %s, %s\n" $function_name $function_param
-            printf "${RED}There is another PR running its integration test on the clusters. Waiting Timed Out. Kindly re-run the tests.${NC}\n"
-            exit 1
-        fi
-
-    done
-}
-
-############################################## </Helper fn> ##############################################
-
 
 ############################################## <Initialization> ##############################################
 
@@ -105,69 +59,24 @@ function fetch_oot_cluster_kubeconfig() {
     NAMESPACE=garden-mcm-ci
     SHOOT_NAME=aws-ci-it
     request_kubeconfig $NAMESPACE $SHOOT_NAME "dev/target_kubeconfig.yaml"
-    request_kubeconfig $NAMESPACE $SHOOT_NAME "dev/control_kubeconfig.yaml"
 }
 
-function fetch_userdata(){
+function fetch_control_cluster_kubeconfig() {
     NAMESPACE='garden'
     kubectl --kubeconfig=dev/sa_kubeconfig.yaml get shoot $TEST_SHOOT -oyaml > dev/shoot.yaml
     SEED_NAME=$(yq eval '.status.seedName' dev/shoot.yaml)
-    request_kubeconfig $NAMESPACE $SEED_NAME "dev/seed_kubeconfig.yaml"
-    USERDATA_SECRET_NAME=$(kubectl --kubeconfig=dev/seed_kubeconfig.yaml get secrets -n shoot--mcm-ci--$TEST_SHOOT -o custom-columns=Name:.metadata.name --no-headers | grep shoot--mcm-ci)
-    kubectl --kubeconfig=dev/seed_kubeconfig.yaml get secret $USERDATA_SECRET_NAME -n shoot--mcm-ci--$TEST_SHOOT -oyaml > dev/userData.yaml
-    userData=$(yq eval '.data.userData' dev/userData.yaml)
-    echo $userData
+    request_kubeconfig $NAMESPACE $SEED_NAME "dev/control_kubeconfig.yaml"
 }
 
-function fetch_machine_class(){
-    MCC_NAME=$(kubectl --kubeconfig=dev/seed_kubeconfig.yaml get mcc -n shoot--mcm-ci--$TEST_SHOOT -o custom-columns=Name:.metadata.name --no-headers | grep shoot--mcm-ci)
-    kubectl --kubeconfig=dev/seed_kubeconfig.yaml get mcc $MCC_NAME -n shoot--mcm-ci--$TEST_SHOOT -oyaml > ${SOURCE_PATH}/dev/v1machineclass_converted.yaml
-    yq eval 'del(.metadata.creationTimestamp) | del(.metadata.finalizers) | del(.metadata.generation) | del(.metadata.resourceVersion) | del(.metadata.uid) | del(.credentialsSecretRef)'  dev/v1machineclass_converted.yaml -i
-    yq eval '.metadata.name = "test-mc-v1" | .metadata.namespace = "default" | .secretRef.name = env(TEST_CREDS_SECRET) | .secretRef.namespace = "default"' dev/v1machineclass_converted.yaml -i
+function fetch_gna_secret_name(){
+    MCC_NAME=$(kubectl --kubeconfig=dev/control_kubeconfig.yaml get mcc -n $CONTROL_CLUSTER_NAMESPACE -o custom-columns=Name:.metadata.name --no-headers | grep shoot--mcm-ci)
+    kubectl --kubeconfig=dev/control_kubeconfig.yaml get mcc "$MCC_NAME" -n $CONTROL_CLUSTER_NAMESPACE -oyaml > "${SOURCE_PATH}"/dev/v1machineclass_converted.yaml
+    GNA_SECRET_NAME=$(yq eval '.providerSpec.tags."worker.gardener.cloud/gardener-node-agent-secret-name"' dev/v1machineclass_converted.yaml)
+    export GNA_SECRET_NAME=$GNA_SECRET_NAME
 }
 
-function fetch_credentials(){
-   kubectl --kubeconfig=dev/sa_kubeconfig.yaml get secret $CREDENTIALS_SECRET_NAME -n $GARDEN_CORE_NAMESPACE -o yaml > dev/credentials.yaml
-   accessKeyID=$(yq eval '.data.accessKeyID' dev/credentials.yaml)
-   secretAccessKey=$(yq eval '.data.secretAccessKey' dev/credentials.yaml)
-   echo $accessKeyID
-   echo $secretAccessKey
-}
-
-function create_test_mc_secret() {
-    result=$(fetch_credentials)
-    accessKeyID=$(echo "$result" | head -n 1)
-    secretAccessKey=$(echo "$result" | tail -n 1)
-    userData=$(fetch_userdata)
-    rm -f dev/credentials.yaml
-    rm -f dev/userData.yaml
-secret_yaml=$(cat <<EOF
-apiVersion: v1
-data:
-  accessKeyID: $accessKeyID
-  secretAccessKey: $secretAccessKey
-  userData: $userData
-kind: Secret
-metadata:
-  name: $TEST_CREDS_SECRET
-  namespace: default
-type: Opaque
-EOF
-)
-    echo "$secret_yaml" | kubectl --kubeconfig=$CONTROL_KUBECONFIG apply -f -
-}
-
-function delete_test_mc_secret() {
-    kubectl --kubeconfig=$CONTROL_KUBECONFIG delete secret $TEST_CREDS_SECRET
-}
-
-function  cleanup_environment() {
-    printf "\n\t\t\t----- Deleting the test_mc_secret --------\n"
-    delete_test_mc_secret
-}
-
-function setup_environment() {
-    printf "\n\t\t\t----- Setup Test Environment --------\n"
+function install_dependencies() {
+    printf "\n\t\t\t----- Installing Dependencies --------\n"
 
     #installing yq
     printf "\nDownloading and installing yq\n"
@@ -189,47 +98,56 @@ function setup_environment() {
     if ! [ -x "$(command -v ginkgo)" ]; then
     setup_ginkgo
     fi
+}
+
+function setup_environment() {
+    printf "\n\t\t\t----- Setup Test Environment --------\n"
 
     # Clone MCM Repo into $mcm_repo_path
     if [[ ! -d "$mcm_repo_path" ]]; then
       printf "Cloning machine-controller-manager repo into %s.\n" "$mcm_repo_path"
       MCM_VERSION=$(go list -mod=mod -f '{{ .Version }}' -m "github.com/gardener/machine-controller-manager")
-      local cloneCmd="git clone --branch "$MCM_VERSION" --depth 1 https://github.com/gardener/machine-controller-manager.git "$mcm_repo_path" --recursive"
+#      local cloneCmd="git clone --branch "$MCM_VERSION" --depth 1 https://github.com/gardener/machine-controller-manager.git "$mcm_repo_path" --recursive"
+      #TODO: Revert this
+      local cloneCmd="git clone --branch it-fix --depth 1 https://github.com/aaronfern/machine-controller-manager.git "$mcm_repo_path" --recursive"
       printf "Executing %s...\n" "$cloneCmd"
       eval $cloneCmd
     fi
 
-    #fetching kubeconfigs and machineClass from secret_server
-    create_test_mc_secret
-    echo "test-mc-secret created successfully"
-    fetch_machine_class
-    echo "machineclass fetched successfully"
+    fetch_gna_secret_name
 }
 
-function fetch_existing_nodes() {
-    kubectl --kubeconfig=$TARGET_KUBECONFIG get nodes --no-headers | wc -l
+function check_running_machines() {
+    MC_NUM=$(kubectl --kubeconfig=dev/control_kubeconfig.yaml -n $CONTROL_CLUSTER_NAMESPACE get mc --no-headers | wc -l)
+    if [ "$MC_NUM" -ne 1 ]; then
+        echo "Number of machines in the cluster are not what is expected. There might be another PR running its integration tests on this cluster. Kindly check and rerun your tests."
+        exit 1
+    fi
 }
 
 function check_cluster_state() {
     printf "\t\t\t----- Checking Test Environment -------\n"
 
-    printf "\nChecking existance of machine crds\n"
-    # Wait 60mins for any existing PRs to cleanup machine crds, as crd cleanup is last step.
-    hf_wait_on "hf_num_of_objects" crd 0 3600
-    printf "No machine crds in control test cluster\n"
-
-    printf "\nChecking existance of node objects\n"
-    num_of_existing_nodes=$(($(fetch_existing_nodes)))
-    printf "\nexisting_default_nodes=$num_of_existing_nodes\n"
-    # Wait 60mins for any existing PRs to cleanup nodes
-    hf_wait_on "hf_num_of_ready_nodes" nodes 0 3600
-    printf "No additional node objects in target test cluster\n"
-
+    check_running_machines
     #wait in case some orphan resources are terminating
     sleep 30
     
     printf "\nCluster state looks clean\n"
     printf "\t\t\t----- Checking Test Environment DONE -------\n"
+}
+
+function scale_down_mcm() {
+    echo "annotating deployment/machine-controller-manager with dependency-watchdog.gardener.cloud/ignore-scaling=true..."
+    kubectl --kubeconfig=dev/control_kubeconfig.yaml -n $CONTROL_CLUSTER_NAMESPACE annotate --overwrite=true deployment/machine-controller-manager dependency-watchdog.gardener.cloud/ignore-scaling=true
+    echo "scaling down deployment/machine-controller-manager to 0..."
+    kubectl --kubeconfig=dev/control_kubeconfig.yaml -n $CONTROL_CLUSTER_NAMESPACE scale deployment/machine-controller-manager --replicas=0
+}
+
+function scale_up_mcm() {
+    echo "annotating deployment/machine-controller-manager with dependency-watchdog.gardener.cloud/ignore-scaling=true..."
+    kubectl --kubeconfig=dev/control_kubeconfig.yaml -n $CONTROL_CLUSTER_NAMESPACE annotate --overwrite=true deployment/machine-controller-manager dependency-watchdog.gardener.cloud/ignore-scaling-
+    echo "scaling up deployment/machine-controller-manager to 1..."
+    kubectl --kubeconfig=dev/control_kubeconfig.yaml -n $CONTROL_CLUSTER_NAMESPACE scale deployment/machine-controller-manager --replicas=1
 }
 
 ############################################## </Initialization> ##############################################
@@ -268,8 +186,10 @@ function print_controller_logs {
 ############################################## <Main> ########################################################
 
 printf "\n\t\t\t----- Start of Test Script -----------\n"
+install_dependencies
 fetch_service_account_kubeconfig
 fetch_oot_cluster_kubeconfig
+fetch_control_cluster_kubeconfig
 #if cluster state is not clean then don't run the tests
 check_cluster_state
 # sets up the environment for the tests
@@ -278,8 +198,9 @@ result=$?
 if [ ${result} -ne 0 ]; then
 exit $result
 fi
+scale_down_mcm
 run_integration_tests
-cleanup_environment
+scale_up_mcm
 print_controller_logs
 printf "\n\t\t\t----- End of Test Script -----------\n"
 printf "\n\t\t\t----- Exiting with TEST_RESULT: %s -----------\n" "$TEST_RESULT"
