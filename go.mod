@@ -7,7 +7,7 @@ toolchain go1.23.3
 require (
 	github.com/aws/aws-sdk-go v1.51.28
 	github.com/cenkalti/backoff/v4 v4.3.0
-	github.com/gardener/machine-controller-manager v0.55.1
+	github.com/gardener/machine-controller-manager v0.56.0
 	github.com/onsi/ginkgo/v2 v2.19.0
 	github.com/onsi/gomega v1.33.1
 	github.com/prometheus/client_golang v1.19.1
@@ -77,7 +77,3 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
-
-//replace github.com/gardener/machine-controller-manager => github.com/thiyyakat/machine-controller-manager v0.0.0-20241227125634-f9ea909b73a8
-//replace github.com/gardener/machine-controller-manager => /Users/i544000/go/src/github.com/gardener/machine-controller-manager
-replace github.com/gardener/machine-controller-manager => github.com/aaronfern/machine-controller-manager v0.0.0-20250121164622-8f3a2d57141a
