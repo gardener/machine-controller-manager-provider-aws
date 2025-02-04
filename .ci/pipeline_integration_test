@@ -11,11 +11,8 @@ mcm_repo_path="dev/mcm"
 logs_path=.ci/controllers-test/logs
 TEST_RESULT=
 cli_path=/cc/utils/cli.py
-num_of_existing_nodes=1
 TEST_SHOOT=aws-ci-it
 SEED_NAME=
-CREDENTIALS_SECRET_NAME=shoot-operator-aws-team
-GARDEN_CORE_NAMESPACE=garden-core
 KUBECONFIG_EXPIRY=10800
 
 #these variables are accessed in test/integration/controller so prefixed by ${SOURCE_PATH} for absolute path
@@ -25,7 +22,7 @@ declare TEST_CREDS_SECRET=test-mc-secret
 declare IS_CONTROL_CLUSTER_SEED=true
 declare PROJECT=mcm-ci
 declare CONTROL_CLUSTER_NAMESPACE=shoot--"${PROJECT}"--"${TEST_SHOOT}"
-declate GNA_SECRET_NAME
+declare GNA_SECRET_NAME
 
 export CONTROL_KUBECONFIG
 export TARGET_KUBECONFIG
