@@ -10,9 +10,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	awsapi "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
 )
@@ -77,7 +78,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     pointer.String("test-ssh-publickey"),
+						KeyName:     ptr.To("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -116,7 +117,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     pointer.String("test-ssh-publickey"),
+						KeyName:     ptr.To("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -156,7 +157,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     pointer.String("test-ssh-publickey"),
+						KeyName:     ptr.To("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -193,7 +194,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     pointer.String("test-ssh-publickey"),
+						KeyName:     ptr.To("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -238,7 +239,7 @@ var _ = Describe("Validation", func() {
 							Name: "test-iam",
 						},
 						MachineType: "m4.large",
-						KeyName:     pointer.String("test-ssh-publickey"),
+						KeyName:     ptr.To("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -283,7 +284,7 @@ var _ = Describe("Validation", func() {
 							Name: "test-iam",
 						},
 						Region:  "eu-west-1",
-						KeyName: pointer.String("test-ssh-publickey"),
+						KeyName: ptr.To("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -327,7 +328,7 @@ var _ = Describe("Validation", func() {
 						IAM:         awsapi.AWSIAMProfileSpec{},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     pointer.String("test-ssh-publickey"),
+						KeyName:     ptr.To("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -374,7 +375,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     pointer.String("test-ssh-publickey"),
+						KeyName:     ptr.To("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -423,7 +424,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     pointer.String("test-ssh-publickey"),
+						KeyName:     ptr.To("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -468,7 +469,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     pointer.String("test-ssh-publickey"),
+						KeyName:     ptr.To("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -521,7 +522,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     pointer.String("test-ssh-publickey"),
+						KeyName:     ptr.To("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -567,7 +568,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     pointer.String("test-ssh-publickey"),
+						KeyName:     ptr.To("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -628,7 +629,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     pointer.String("test-ssh-publickey"),
+						KeyName:     ptr.To("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -674,7 +675,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     pointer.String("test-ssh-publickey"),
+						KeyName:     ptr.To("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -719,7 +720,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     pointer.String("test-ssh-publickey"),
+						KeyName:     ptr.To("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -765,7 +766,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     pointer.String("test-ssh-publickey"),
+						KeyName:     ptr.To("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -811,7 +812,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     pointer.String("test-ssh-publickey"),
+						KeyName:     ptr.To("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -857,7 +858,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     pointer.String("test-ssh-publickey"),
+						KeyName:     ptr.To("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -896,7 +897,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     pointer.String("test-ssh-publickey"),
+						KeyName:     ptr.To("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -944,7 +945,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     pointer.String("test-ssh-publickey"),
+						KeyName:     ptr.To("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -990,7 +991,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     pointer.String("test-ssh-publickey"),
+						KeyName:     ptr.To("test-ssh-publickey"),
 						Tags: map[string]string{
 							"kubernetes.io/cluster/shoot--test": "1",
 							"kubernetes.io/role/test":           "1",
@@ -1028,7 +1029,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     pointer.String("test-ssh-publickey"),
+						KeyName:     ptr.To("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -1073,7 +1074,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     pointer.String("test-ssh-publickey"),
+						KeyName:     ptr.To("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SubnetID: "subnet-123456",
@@ -1116,7 +1117,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     pointer.String("test-ssh-publickey"),
+						KeyName:     ptr.To("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -1167,7 +1168,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     pointer.String("test-ssh-publickey"),
+						KeyName:     ptr.To("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -1218,7 +1219,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     pointer.String("test-ssh-publickey"),
+						KeyName:     ptr.To("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -1262,7 +1263,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     pointer.String("test-ssh-publickey"),
+						KeyName:     ptr.To("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -1313,7 +1314,7 @@ var _ = Describe("Validation", func() {
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     pointer.String("test-ssh-publickey"),
+						KeyName:     ptr.To("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -1345,7 +1346,7 @@ var _ = Describe("Validation", func() {
 				setup: setup{
 					apply: func(spec *awsapi.AWSProviderSpec) {
 						spec.InstanceMetadataOptions = &awsapi.InstanceMetadataOptions{
-							HTTPPutResponseHopLimit: pointer.Int64(32),
+							HTTPPutResponseHopLimit: ptr.To[int64](32),
 						}
 					},
 				},
@@ -1361,7 +1362,7 @@ var _ = Describe("Validation", func() {
 				setup: setup{
 					apply: func(spec *awsapi.AWSProviderSpec) {
 						spec.InstanceMetadataOptions = &awsapi.InstanceMetadataOptions{
-							HTTPPutResponseHopLimit: pointer.Int64(72),
+							HTTPPutResponseHopLimit: ptr.To[int64](72),
 						}
 					},
 				},
@@ -1385,7 +1386,7 @@ var _ = Describe("Validation", func() {
 				setup: setup{
 					apply: func(spec *awsapi.AWSProviderSpec) {
 						spec.InstanceMetadataOptions = &awsapi.InstanceMetadataOptions{
-							HTTPEndpoint: pointer.String(awsapi.HTTPEndpointDisabled),
+							HTTPEndpoint: ptr.To(awsapi.HTTPEndpointDisabled),
 						}
 					},
 				},
@@ -1401,7 +1402,7 @@ var _ = Describe("Validation", func() {
 				setup: setup{
 					apply: func(spec *awsapi.AWSProviderSpec) {
 						spec.InstanceMetadataOptions = &awsapi.InstanceMetadataOptions{
-							HTTPEndpoint: pointer.String("foobar"),
+							HTTPEndpoint: ptr.To("foobar"),
 						}
 					},
 				},
@@ -1425,7 +1426,7 @@ var _ = Describe("Validation", func() {
 				setup: setup{
 					apply: func(spec *awsapi.AWSProviderSpec) {
 						spec.InstanceMetadataOptions = &awsapi.InstanceMetadataOptions{
-							HTTPTokens: pointer.String(awsapi.HTTPTokensRequired),
+							HTTPTokens: ptr.To(awsapi.HTTPTokensRequired),
 						}
 					},
 				},
@@ -1441,7 +1442,7 @@ var _ = Describe("Validation", func() {
 				setup: setup{
 					apply: func(spec *awsapi.AWSProviderSpec) {
 						spec.InstanceMetadataOptions = &awsapi.InstanceMetadataOptions{
-							HTTPTokens: pointer.String("foobar"),
+							HTTPTokens: ptr.To("foobar"),
 						}
 					},
 				},
@@ -1475,16 +1476,16 @@ var _ = Describe("Validation", func() {
 							},
 						},
 						CapacityReservationTarget: &awsapi.AWSCapacityReservationTargetSpec{
-							CapacityReservationPreference:       pointer.String("open"),
-							CapacityReservationID:               pointer.String("capacity-reservation-id-abcd1234"),
-							CapacityReservationResourceGroupArn: pointer.String("arn:01234:/my-resource-group"),
+							CapacityReservationPreference:       ptr.To("open"),
+							CapacityReservationID:               ptr.To("capacity-reservation-id-abcd1234"),
+							CapacityReservationResourceGroupArn: ptr.To("arn:01234:/my-resource-group"),
 						},
 						IAM: awsapi.AWSIAMProfileSpec{
 							Name: "test-iam",
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     pointer.String("test-ssh-publickey"),
+						KeyName:     ptr.To("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -1532,15 +1533,15 @@ var _ = Describe("Validation", func() {
 							},
 						},
 						CapacityReservationTarget: &awsapi.AWSCapacityReservationTargetSpec{
-							CapacityReservationPreference: pointer.String("open"),
-							CapacityReservationID:         pointer.String("capacity-reservation-id-abcd1234"),
+							CapacityReservationPreference: ptr.To("open"),
+							CapacityReservationID:         ptr.To("capacity-reservation-id-abcd1234"),
 						},
 						IAM: awsapi.AWSIAMProfileSpec{
 							Name: "test-iam",
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     pointer.String("test-ssh-publickey"),
+						KeyName:     ptr.To("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -1588,15 +1589,15 @@ var _ = Describe("Validation", func() {
 							},
 						},
 						CapacityReservationTarget: &awsapi.AWSCapacityReservationTargetSpec{
-							CapacityReservationPreference:       pointer.String("open"),
-							CapacityReservationResourceGroupArn: pointer.String("arn:01234:/my-resource-group"),
+							CapacityReservationPreference:       ptr.To("open"),
+							CapacityReservationResourceGroupArn: ptr.To("arn:01234:/my-resource-group"),
 						},
 						IAM: awsapi.AWSIAMProfileSpec{
 							Name: "test-iam",
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     pointer.String("test-ssh-publickey"),
+						KeyName:     ptr.To("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -1644,15 +1645,15 @@ var _ = Describe("Validation", func() {
 							},
 						},
 						CapacityReservationTarget: &awsapi.AWSCapacityReservationTargetSpec{
-							CapacityReservationID:               pointer.String("capacity-reservation-id-abcd1234"),
-							CapacityReservationResourceGroupArn: pointer.String("arn:01234:/my-resource-group"),
+							CapacityReservationID:               ptr.To("capacity-reservation-id-abcd1234"),
+							CapacityReservationResourceGroupArn: ptr.To("arn:01234:/my-resource-group"),
 						},
 						IAM: awsapi.AWSIAMProfileSpec{
 							Name: "test-iam",
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     pointer.String("test-ssh-publickey"),
+						KeyName:     ptr.To("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -1700,14 +1701,14 @@ var _ = Describe("Validation", func() {
 							},
 						},
 						CapacityReservationTarget: &awsapi.AWSCapacityReservationTargetSpec{
-							CapacityReservationID: pointer.String("capacity-reservation-id-abcd1234"),
+							CapacityReservationID: ptr.To("capacity-reservation-id-abcd1234"),
 						},
 						IAM: awsapi.AWSIAMProfileSpec{
 							Name: "test-iam",
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     pointer.String("test-ssh-publickey"),
+						KeyName:     ptr.To("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -1747,14 +1748,14 @@ var _ = Describe("Validation", func() {
 							},
 						},
 						CapacityReservationTarget: &awsapi.AWSCapacityReservationTargetSpec{
-							CapacityReservationResourceGroupArn: pointer.String("arn:01234:/my-resource-group"),
+							CapacityReservationResourceGroupArn: ptr.To("arn:01234:/my-resource-group"),
 						},
 						IAM: awsapi.AWSIAMProfileSpec{
 							Name: "test-iam",
 						},
 						Region:      "eu-west-1",
 						MachineType: "m4.large",
-						KeyName:     pointer.String("test-ssh-publickey"),
+						KeyName:     ptr.To("test-ssh-publickey"),
 						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 							{
 								SecurityGroupIDs: []string{
@@ -1782,6 +1783,50 @@ var _ = Describe("Validation", func() {
 			}),
 		)
 	})
+
+	Describe("#ValidateSecret", func() {
+		It("should successfully validate the secret", func() {
+			errList := ValidateSecret(&corev1.Secret{
+				Data: map[string][]byte{
+					"roleARN":                   []byte("arn"),
+					"workloadIdentityTokenFile": []byte("file"),
+					"userData":                  []byte("data"),
+				},
+			}, field.NewPath(""))
+			Expect(errList).To(BeEmpty())
+		})
+
+		It("should fail to validate the secret", func() {
+			errList := ValidateSecret(&corev1.Secret{
+				Data: map[string][]byte{
+					"workloadIdentityTokenFile": []byte(""),
+					"roleARN":                   []byte(""),
+				},
+			}, field.NewPath(""))
+			Expect(errList).To(
+				ConsistOf(
+					PointTo(
+						MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeRequired),
+							"Field": Equal("[].workloadIdentityTokenFile"),
+						}),
+					),
+					PointTo(
+						MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeRequired),
+							"Field": Equal("[].roleARN"),
+						}),
+					),
+					PointTo(
+						MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeRequired),
+							"Field": Equal("[].userData"),
+						}),
+					),
+				),
+			)
+		})
+	})
 })
 
 func validAWSProviderSpec() *awsapi.AWSProviderSpec {
@@ -1796,14 +1841,14 @@ func validAWSProviderSpec() *awsapi.AWSProviderSpec {
 			},
 		},
 		CapacityReservationTarget: &awsapi.AWSCapacityReservationTargetSpec{
-			CapacityReservationPreference: pointer.String("open"),
+			CapacityReservationPreference: ptr.To("open"),
 		},
 		IAM: awsapi.AWSIAMProfileSpec{
 			Name: "test-iam",
 		},
 		Region:      "eu-west-1",
 		MachineType: "m4.large",
-		KeyName:     pointer.String("test-ssh-publickey"),
+		KeyName:     ptr.To("test-ssh-publickey"),
 		NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
 			{
 				SecurityGroupIDs: []string{

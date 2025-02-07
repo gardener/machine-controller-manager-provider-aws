@@ -19,27 +19,22 @@ import (
 	awsapi "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
 )
 
-const nameFmt string = `[-a-z0-9]+`
-const nameMaxLength int = 63
-
-var nameRegexp = regexp.MustCompile("^" + nameFmt + "$")
-
 // ValidateAWSProviderSpec validates AWS provider spec
 func ValidateAWSProviderSpec(spec *awsapi.AWSProviderSpec, secret *corev1.Secret, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs = field.ErrorList{}
 	)
 
-	if "" == spec.AMI {
+	if spec.AMI == "" {
 		allErrs = append(allErrs, field.Required(fldPath.Child("ami"), "AMI is required"))
 	}
-	if "" == spec.Region {
+	if spec.Region == "" {
 		allErrs = append(allErrs, field.Required(fldPath.Child("region"), "Region is required"))
 	}
-	if "" == spec.MachineType {
+	if spec.MachineType == "" {
 		allErrs = append(allErrs, field.Required(fldPath.Child("machineType"), "MachineType is required"))
 	}
-	if ("" == spec.IAM.Name && "" == spec.IAM.ARN) || ("" != spec.IAM.Name && "" != spec.IAM.ARN) {
+	if (spec.IAM.Name == "" && spec.IAM.ARN == "") || (spec.IAM.Name != "" && spec.IAM.ARN != "") {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("iam"), spec.IAM, "either IAM Name or ARN must be set"))
 	}
 
@@ -161,15 +156,15 @@ func validateNetworkInterfaces(networkInterfaces []awsapi.AWSNetworkInterfaceSpe
 		allErrs = append(allErrs, field.Required(fldPath.Child(""), "Mention at least one NetworkInterface"))
 	} else {
 		for i := range networkInterfaces {
-			if "" == networkInterfaces[i].SubnetID {
+			if networkInterfaces[i].SubnetID == "" {
 				allErrs = append(allErrs, field.Required(fldPath.Child("subnetID"), "SubnetID is required"))
 			}
 
-			if 0 == len(networkInterfaces[i].SecurityGroupIDs) {
+			if len(networkInterfaces[i].SecurityGroupIDs) == 0 {
 				allErrs = append(allErrs, field.Required(fldPath.Child("securityGroupIDs"), "Mention at least one securityGroupID"))
 			} else {
 				for j := range networkInterfaces[i].SecurityGroupIDs {
-					if "" == networkInterfaces[i].SecurityGroupIDs[j] {
+					if networkInterfaces[i].SecurityGroupIDs[j] == "" {
 						output := strings.Join([]string{"securityGroupIDs cannot be blank for networkInterface:", strconv.Itoa(i), " securityGroupID:", strconv.Itoa(j)}, "")
 						allErrs = append(allErrs, field.Required(fldPath.Child("securityGroupIDs"), output))
 					}
@@ -230,14 +225,25 @@ func ValidateSecret(secret *corev1.Secret, fldPath *field.Path) field.ErrorList 
 
 	if secret == nil {
 		allErrs = append(allErrs, field.Required(fldPath.Child(""), "secretRef is required"))
+	} else if workloadIdentityTokenFile, ok := secret.Data["workloadIdentityTokenFile"]; ok {
+		if len(workloadIdentityTokenFile) == 0 {
+			allErrs = append(allErrs, field.Required(fldPath.Child("workloadIdentityTokenFile"), "Workload identity token file is required"))
+		}
+
+		if roleARN, ok := secret.Data["roleARN"]; !ok || len(roleARN) == 0 {
+			allErrs = append(allErrs, field.Required(fldPath.Child("roleARN"), "Role ARN is required when workload identity is used"))
+		}
+		if string(secret.Data["userData"]) == "" {
+			allErrs = append(allErrs, field.Required(fldPath.Child("userData"), "Mention userData"))
+		}
 	} else {
-		if "" == string(secret.Data[awsapi.AWSAccessKeyID]) && "" == string(secret.Data[awsapi.AWSAlternativeAccessKeyID]) {
+		if string(secret.Data[awsapi.AWSAccessKeyID]) == "" && string(secret.Data[awsapi.AWSAlternativeAccessKeyID]) == "" {
 			allErrs = append(allErrs, field.Required(fldPath.Child("AWSAccessKeyID"), fmt.Sprintf("Mention atleast %s or %s", awsapi.AWSAccessKeyID, awsapi.AWSAlternativeAccessKeyID)))
 		}
-		if "" == string(secret.Data[awsapi.AWSSecretAccessKey]) && "" == string(secret.Data[awsapi.AWSAlternativeSecretAccessKey]) {
+		if string(secret.Data[awsapi.AWSSecretAccessKey]) == "" && string(secret.Data[awsapi.AWSAlternativeSecretAccessKey]) == "" {
 			allErrs = append(allErrs, field.Required(fldPath.Child("AWSSecretAccessKey"), fmt.Sprintf("Mention atleast %s or %s", awsapi.AWSSecretAccessKey, awsapi.AWSAlternativeSecretAccessKey)))
 		}
-		if "" == string(secret.Data["userData"]) {
+		if string(secret.Data["userData"]) == "" {
 			allErrs = append(allErrs, field.Required(fldPath.Child("userData"), "Mention userData"))
 		}
 	}
