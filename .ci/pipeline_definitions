@@ -14,13 +14,9 @@ machine-controller-manager-provider-aws:
   inherit:
     steps_template: &steps_anchor
       steps:
-        check:
-          image: 'golang:1.23.3'
-        build:
+        verify:
           image: 'golang:1.23.3'
           output_dir: 'binary'
-        test:
-          image: 'europe-docker.pkg.dev/gardener-project/releases/testmachinery/base-step:stable'
     version_template: &version_anchor
       version:
         inject_effective_version: true
