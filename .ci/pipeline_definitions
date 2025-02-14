@@ -14,13 +14,9 @@ machine-controller-manager-provider-aws:
   inherit:
     steps_template: &steps_anchor
       steps:
-        check:
-          image: 'golang:1.23.3'
-        build:
+        verify:
           image: 'golang:1.23.3'
           output_dir: 'binary'
-        test:
-          image: 'europe-docker.pkg.dev/gardener-project/releases/testmachinery/base-step:stable'
     version_template: &version_anchor
       version:
         inject_effective_version: true
@@ -40,7 +36,7 @@ machine-controller-manager-provider-aws:
                 repos:
                   source: ~ # default
                 steps:
-                  build: ~
+                  verify: ~
               image: europe-docker.pkg.dev/gardener-project/snapshots/gardener/machine-controller-manager-provider-aws
               resource_labels:
               - name: 'gardener.cloud/cve-categorisation'
@@ -81,7 +77,7 @@ machine-controller-manager-provider-aws:
           nextversion: 'bump_minor'
           assets:
             - type: build-step-log
-              step_name: check
+              step_name: verify
               purposes:
                 - lint
                 - sast
