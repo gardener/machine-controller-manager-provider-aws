@@ -109,13 +109,13 @@ if ! hash ginkgo; then
     echo "Successfully fetched Ginkgo frawework"
 fi
 
-printf  "\e[33mIs the control cluster a seed? (true/false)\e[0m\n"
+printf  "\e[33mIs the control cluster a seed? (true/false) (defaults to true)\e[0m\n"
 read IS_CONTROL_CLUSTER_SEED
 
 if [ -z "$IS_CONTROL_CLUSTER_SEED" ]
 then
-      printf "\e[31mentered value cannot be empty\e[0m\n"
-      exit 1
+      printf "\e[31mentered value cannot be empty (defaulting to true)\e[0m\n"
+      IS_CONTROL_CLUSTER_SEED=true
 fi
 
 if [ "$IS_CONTROL_CLUSTER_SEED" != true ] && [ "$IS_CONTROL_CLUSTER_SEED" != false ]
@@ -159,14 +159,6 @@ then
     printf "\e[31mtarget cluster cannot be empty\e[0m\n"
     exit 1
 fi
-
-printf "\e[33mEnter the gardener-node-agent secret name. (If gardener-node-agent authorizer webhook is enabled, then this value is compulsory. Link to PR:https://github.com/gardener/gardener/pull/10535. The value can be found in machineClass.providerSpec.tags/labels. \e[0m\n"
-read GNA_SECRET_NAME
-if [ -z "GNA_SECRET_NAME" ]
-then
-    printf "\e[31m GNA Secret name is empty\e[0m\n"
-fi
-export GNA_SECRET_NAME=$GNA_SECRET_NAME
 
 if [ "$IS_CONTROL_CLUSTER_SEED" = true ]
 then
@@ -241,6 +233,13 @@ fi
 
 set -o allexport
 source .env
+printf "\e[33mFetching the gardener-node-agent secret name. (If gardener-node-agent authorizer webhook is enabled, then this value is compulsory. Link to PR:https://github.com/gardener/gardener/pull/10535. The value can be found in machineClass.providerSpec.tags/labels. \e[0m\n"
+GNA_SECRET_NAME=$(kubectl --kubeconfig=$CONTROL_KUBECONFIG get mcc -n $CONTROL_CLUSTER_NAMESPACE -o jsonpath='{.items[0].providerSpec.tags.worker\.gardener\.cloud/gardener-node-agent-secret-name}')
+if [ -z "GNA_SECRET_NAME" ]
+then
+    printf "\e[31m GNA Secret name is empty\e[0m\n"
+fi
+export GNA_SECRET_NAME=$GNA_SECRET_NAME
 set +o allexport
 
 CREDENTIALS_SECRET_NAME=shoot-operator-"$PROVIDER"-team
