@@ -114,7 +114,7 @@ read IS_CONTROL_CLUSTER_SEED
 
 if [ -z "$IS_CONTROL_CLUSTER_SEED" ]
 then
-      printf "\e[31mentered value cannot be empty (defaulting to true)\e[0m\n"
+      printf "\e[31No value entered. Defaulting to true\e[0m\n"
       IS_CONTROL_CLUSTER_SEED=true
 fi
 
