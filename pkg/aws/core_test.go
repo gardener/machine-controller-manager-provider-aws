@@ -425,6 +425,119 @@ var _ = Describe("MachineServer", func() {
 		)
 	})
 
+	Describe("#InitializeMachine", func() {
+		type setup struct {
+			createMachineRequest *driver.CreateMachineRequest
+		}
+		type action struct {
+			initializeMachineRequest *driver.InitializeMachineRequest
+		}
+		type expect struct {
+			initializeMachineResponse *driver.InitializeMachineResponse
+			errToHaveOccurred         bool
+			errMessage                string
+		}
+		type data struct {
+			setup  setup
+			action action
+			expect expect
+		}
+		DescribeTable("##table",
+			func(data *data) {
+				mockPluginSPIImpl := &mockclient.MockPluginSPIImpl{FakeInstances: make([]ec2.Instance, 0)}
+				ms := NewAWSDriver(mockPluginSPIImpl)
+
+				ctx := context.Background()
+
+				if data.setup.createMachineRequest != nil {
+					_, err := ms.CreateMachine(ctx, data.setup.createMachineRequest)
+					Expect(err).ToNot(HaveOccurred())
+				}
+
+				_, err := ms.InitializeMachine(ctx, data.action.initializeMachineRequest)
+
+				if data.expect.errToHaveOccurred {
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(Equal(data.expect.errMessage))
+				} else {
+					Expect(err).ToNot(HaveOccurred())
+				}
+			},
+			Entry("Simple Machine Initialize Request", &data{
+				setup: setup{
+					createMachineRequest: &driver.CreateMachineRequest{
+						Machine:      newMachine(0, nil),
+						MachineClass: newMachineClass(providerSpec),
+						Secret:       providerSecret,
+					},
+				},
+				action: action{
+					initializeMachineRequest: &driver.InitializeMachineRequest{
+						Machine:      newMachine(0, nil),
+						MachineClass: newMachineClass(providerSpec),
+						Secret:       providerSecret,
+					},
+				},
+				expect: expect{
+					initializeMachineResponse: &driver.InitializeMachineResponse{},
+					errToHaveOccurred:         false,
+				},
+			}),
+			Entry("Machine Initialization failure at describe instances", &data{
+				setup: setup{
+					createMachineRequest: &driver.CreateMachineRequest{
+						Machine:      newMachine(0, nil),
+						MachineClass: newMachineClass(providerSpec),
+						Secret:       providerSecret,
+					},
+				},
+				action: action{
+					initializeMachineRequest: &driver.InitializeMachineRequest{
+						Machine:      newMachine(0, nil),
+						MachineClass: newMachineClass([]byte(`{"ami":"ami-123456789","blockDevices":[{"ebs":{"volumeSize":50,"volumeType":"gp2"}}],"iam":{"name":"test-iam"},"keyName":"test-ssh-publickey","machineType":"m4.large","networkInterfaces":[{"securityGroupIDs":["sg-00002132323"],"subnetID":"subnet-123456"}],"region":"eu-west-1","tags":{"kubernetes.io/cluster/` + mockclient.ReturnErrorAtDescribeInstances + `":"1","kubernetes.io/role/test":"1"}}`)),
+						Secret:       providerSecret,
+					},
+				},
+				expect: expect{
+					initializeMachineResponse: &driver.InitializeMachineResponse{},
+					errToHaveOccurred:         true,
+					errMessage:                fmt.Sprintf("machine codes error: code = [Internal] message = [%s]", mockclient.AWSInternalErrorForDescribeInstances),
+				},
+			}),
+			Entry("Initialization of machine with no backing instance and no providerID", &data{
+				setup: setup{},
+				action: action{
+					initializeMachineRequest: &driver.InitializeMachineRequest{
+						// Setting machineIndex to -1 to simulate no providerID
+						Machine:      newMachine(-1, nil),
+						MachineClass: newMachineClass(providerSpec),
+						Secret:       providerSecret,
+					},
+				},
+				expect: expect{
+					initializeMachineResponse: &driver.InitializeMachineResponse{},
+					errToHaveOccurred:         true,
+					errMessage:                "machine codes error: code = [Uninitialized] message = [machine codes error: code = [NotFound] message = [No ProviderID found on the machine]]",
+				},
+			}),
+			Entry("Initialization of machine with no backing instance but providerID", &data{
+				setup: setup{},
+				action: action{
+					initializeMachineRequest: &driver.InitializeMachineRequest{
+						Machine:      newMachine(0, nil),
+						MachineClass: newMachineClass(providerSpec),
+						Secret:       providerSecret,
+					},
+				},
+				expect: expect{
+					initializeMachineResponse: &driver.InitializeMachineResponse{},
+					errToHaveOccurred:         true,
+					errMessage:                "machine codes error: code = [Uninitialized] message = [machine codes error: code = [NotFound] message = [AWS plugin is returning no VM instances backing this machine object]]",
+				},
+			}),
+		)
+	})
+
 	Describe("#GetPlacementObject", func() {
 		type setup struct {
 			objectmeta v1.ObjectMeta
