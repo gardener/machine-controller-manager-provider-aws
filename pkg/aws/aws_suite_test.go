@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"testing"
 
+	"maps"
+
 	v1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -28,11 +30,7 @@ const (
 func newMachine(
 	setMachineIndex int, annotations map[string]string,
 ) *v1alpha1.Machine {
-	index := 0
-
-	if setMachineIndex > 0 {
-		index = setMachineIndex
-	}
+	index := max(setMachineIndex, 0)
 
 	machine := &v1alpha1.Machine{
 		TypeMeta: metav1.TypeMeta{
@@ -58,9 +56,7 @@ func newMachine(
 	machine.Spec.NodeTemplateSpec.ObjectMeta.Annotations = make(map[string]string)
 
 	//appending to already existing annotations
-	for k, v := range annotations {
-		machine.Spec.NodeTemplateSpec.ObjectMeta.Annotations[k] = v
-	}
+	maps.Copy(machine.Spec.NodeTemplateSpec.ObjectMeta.Annotations, annotations)
 	return machine
 }
 

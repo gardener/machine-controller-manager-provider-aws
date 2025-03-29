@@ -33,7 +33,7 @@ const (
 var _ = Describe("MachineServer", func() {
 
 	// Some initializations
-	providerSpec := []byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")
+	providerSpec := []byte(`{"ami":"ami-123456789","blockDevices":[{"ebs":{"volumeSize":50,"volumeType":"gp2"}}],"iam":{"name":"test-iam"},"keyName":"test-ssh-publickey","machineType":"m4.large","networkInterfaces":[{"securityGroupIDs":["sg-00002132323"],"subnetID":"subnet-123456"}],"region":"eu-west-1","tags":{"kubernetes.io/cluster/shoot--test":"1","kubernetes.io/role/test":"1"}}`)
 	providerSecret := &corev1.Secret{
 		Data: map[string][]byte{
 			"providerAccessKeyId":     []byte("dummy-id"),
@@ -121,7 +121,7 @@ var _ = Describe("MachineServer", func() {
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
 						Machine:      newMachine(-1, nil),
-						MachineClass: newMachineClass([]byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"arn\":\"some-arn\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
+						MachineClass: newMachineClass([]byte(`{"ami":"ami-123456789","blockDevices":[{"ebs":{"volumeSize":50,"volumeType":"gp2"}}],"iam":{"arn":"some-arn"},"keyName":"test-ssh-publickey","machineType":"m4.large","networkInterfaces":[{"securityGroupIDs":["sg-00002132323"],"subnetID":"subnet-123456"}],"region":"eu-west-1","tags":{"kubernetes.io/cluster/shoot--test":"1","kubernetes.io/role/test":"1"}}`)),
 						Secret:       providerSecret,
 					},
 				},
@@ -137,7 +137,7 @@ var _ = Describe("MachineServer", func() {
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
 						Machine:      newMachine(-1, nil),
-						MachineClass: newMachineClass([]byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"io1\",\"iops\":50}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
+						MachineClass: newMachineClass([]byte(`{"ami":"ami-123456789","blockDevices":[{"ebs":{"volumeSize":50,"volumeType":"io1","iops":50}}],"iam":{"name":"test-iam"},"keyName":"test-ssh-publickey","machineType":"m4.large","networkInterfaces":[{"securityGroupIDs":["sg-00002132323"],"subnetID":"subnet-123456"}],"region":"eu-west-1","tags":{"kubernetes.io/cluster/shoot--test":"1","kubernetes.io/role/test":"1"}}`)),
 						Secret:       providerSecret,
 					},
 				},
@@ -153,7 +153,7 @@ var _ = Describe("MachineServer", func() {
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
 						Machine:      newMachine(-1, nil),
-						MachineClass: newMachineClass([]byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"spotPrice\":\"\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
+						MachineClass: newMachineClass([]byte(`{"ami":"ami-123456789","blockDevices":[{"ebs":{"volumeSize":50,"volumeType":"gp2"}}],"iam":{"name":"test-iam"},"keyName":"test-ssh-publickey","machineType":"m4.large","networkInterfaces":[{"securityGroupIDs":["sg-00002132323"],"subnetID":"subnet-123456"}],"region":"eu-west-1","spotPrice":"","tags":{"kubernetes.io/cluster/shoot--test":"1","kubernetes.io/role/test":"1"}}`)),
 						Secret:       providerSecret,
 					},
 				},
@@ -169,7 +169,7 @@ var _ = Describe("MachineServer", func() {
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
 						Machine:      newMachine(-1, nil),
-						MachineClass: newMachineClass([]byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"spotPrice\":\"500\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
+						MachineClass: newMachineClass([]byte(`{"ami":"ami-123456789","blockDevices":[{"ebs":{"volumeSize":50,"volumeType":"gp2"}}],"iam":{"name":"test-iam"},"keyName":"test-ssh-publickey","machineType":"m4.large","networkInterfaces":[{"securityGroupIDs":["sg-00002132323"],"subnetID":"subnet-123456"}],"region":"eu-west-1","spotPrice":"500","tags":{"kubernetes.io/cluster/shoot--test":"1","kubernetes.io/role/test":"1"}}`)),
 						Secret:       providerSecret,
 					},
 				},
@@ -185,7 +185,7 @@ var _ = Describe("MachineServer", func() {
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
 						Machine:      newMachine(-1, nil),
-						MachineClass: newMachineClass([]byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"capacityReservation\":{\"capacityReservationId\":\"cr-05c28b843c05abcde\",\"capacityReservationResourceGroupArn\":\"arn:aws:resource-groups:us-west-1:123456789012:group/my-test-cr-group\"},\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
+						MachineClass: newMachineClass([]byte(`{"ami":"ami-123456789","blockDevices":[{"ebs":{"volumeSize":50,"volumeType":"gp2"}}],"iam":{"name":"test-iam"},"keyName":"test-ssh-publickey","machineType":"m4.large","networkInterfaces":[{"securityGroupIDs":["sg-00002132323"],"subnetID":"subnet-123456"}],"region":"eu-west-1","capacityReservation":{"capacityReservationId":"cr-05c28b843c05abcde","capacityReservationResourceGroupArn":"arn:aws:resource-groups:us-west-1:123456789012:group/my-test-cr-group"},"tags":{"kubernetes.io/cluster/shoot--test":"1","kubernetes.io/role/test":"1"}}`)),
 						Secret:       providerSecret,
 					},
 				},
@@ -198,7 +198,7 @@ var _ = Describe("MachineServer", func() {
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
 						Machine:      newMachine(-1, nil),
-						MachineClass: newMachineClass([]byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"capacityReservation\":{\"capacityReservationPreference\":\"open\"},\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
+						MachineClass: newMachineClass([]byte(`{"ami":"ami-123456789","blockDevices":[{"ebs":{"volumeSize":50,"volumeType":"gp2"}}],"iam":{"name":"test-iam"},"keyName":"test-ssh-publickey","machineType":"m4.large","networkInterfaces":[{"securityGroupIDs":["sg-00002132323"],"subnetID":"subnet-123456"}],"region":"eu-west-1","capacityReservation":{"capacityReservationPreference":"open"},"tags":{"kubernetes.io/cluster/shoot--test":"1","kubernetes.io/role/test":"1"}}`)),
 						Secret:       providerSecret,
 					},
 				},
@@ -214,7 +214,7 @@ var _ = Describe("MachineServer", func() {
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
 						Machine:      newMachine(-1, nil),
-						MachineClass: newMachineClass([]byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"capacityReservation\":{\"capacityReservationId\":\"cr-05c28b843c05abcde\"},\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
+						MachineClass: newMachineClass([]byte(`{"ami":"ami-123456789","blockDevices":[{"ebs":{"volumeSize":50,"volumeType":"gp2"}}],"iam":{"name":"test-iam"},"keyName":"test-ssh-publickey","machineType":"m4.large","networkInterfaces":[{"securityGroupIDs":["sg-00002132323"],"subnetID":"subnet-123456"}],"region":"eu-west-1","capacityReservation":{"capacityReservationId":"cr-05c28b843c05abcde"},"tags":{"kubernetes.io/cluster/shoot--test":"1","kubernetes.io/role/test":"1"}}`)),
 						Secret:       providerSecret,
 					},
 				},
@@ -230,7 +230,7 @@ var _ = Describe("MachineServer", func() {
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
 						Machine:      newMachine(-1, nil),
-						MachineClass: newMachineClass([]byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"capacityReservation\":{\"capacityReservationResourceGroupArn\":\"arn:aws:resource-groups:us-west-1:123456789012:group/my-test-cr-group\"},\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
+						MachineClass: newMachineClass([]byte(`{"ami":"ami-123456789","blockDevices":[{"ebs":{"volumeSize":50,"volumeType":"gp2"}}],"iam":{"name":"test-iam"},"keyName":"test-ssh-publickey","machineType":"m4.large","networkInterfaces":[{"securityGroupIDs":["sg-00002132323"],"subnetID":"subnet-123456"}],"region":"eu-west-1","capacityReservation":{"capacityReservationResourceGroupArn":"arn:aws:resource-groups:us-west-1:123456789012:group/my-test-cr-group"},"tags":{"kubernetes.io/cluster/shoot--test":"1","kubernetes.io/role/test":"1"}}`)),
 						Secret:       providerSecret,
 					},
 				},
@@ -313,7 +313,7 @@ var _ = Describe("MachineServer", func() {
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
 						Machine:      newMachine(-1, nil),
-						MachineClass: newMachineClass([]byte("{\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
+						MachineClass: newMachineClass([]byte(`{"blockDevices":[{"ebs":{"volumeSize":50,"volumeType":"gp2"}}],"iam":{"name":"test-iam"},"keyName":"test-ssh-publickey","machineType":"m4.large","networkInterfaces":[{"securityGroupIDs":["sg-00002132323"],"subnetID":"subnet-123456"}],"tags":{"kubernetes.io/cluster/shoot--test":"1","kubernetes.io/role/test":"1"}}`)),
 						Secret:       providerSecret,
 					},
 				},
@@ -326,7 +326,7 @@ var _ = Describe("MachineServer", func() {
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
 						Machine:      newMachine(-1, nil),
-						MachineClass: newMachineClass([]byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"" + mockclient.FailAtRegion + "\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
+						MachineClass: newMachineClass([]byte(`{"ami":"ami-123456789","blockDevices":[{"ebs":{"volumeSize":50,"volumeType":"gp2"}}],"iam":{"name":"test-iam"},"keyName":"test-ssh-publickey","machineType":"m4.large","networkInterfaces":[{"securityGroupIDs":["sg-00002132323"],"subnetID":"subnet-123456"}],"region":"` + mockclient.FailAtRegion + `","tags":{"kubernetes.io/cluster/shoot--test":"1","kubernetes.io/role/test":"1"}}`)),
 						Secret:       providerSecret,
 					},
 				},
@@ -355,7 +355,7 @@ var _ = Describe("MachineServer", func() {
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
 						Machine:      newMachine(-1, nil),
-						MachineClass: newMachineClass([]byte(fmt.Sprintf("{\"ami\":\"%s\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}", mockclient.FailQueryAtDescribeImages))),
+						MachineClass: newMachineClass([]byte(`{"ami":"` + mockclient.FailQueryAtDescribeImages + `","blockDevices":[{"ebs":{"volumeSize":50,"volumeType":"gp2"}}],"iam":{"name":"test-iam"},"keyName":"test-ssh-publickey","machineType":"m4.large","networkInterfaces":[{"securityGroupIDs":["sg-00002132323"],"subnetID":"subnet-123456"}],"region":"eu-west-1","tags":{"kubernetes.io/cluster/shoot--test":"1","kubernetes.io/role/test":"1"}}`)),
 						Secret:       providerSecret,
 					},
 				},
@@ -368,7 +368,7 @@ var _ = Describe("MachineServer", func() {
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
 						Machine:      newMachine(-1, nil),
-						MachineClass: newMachineClass([]byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\",\"Name\":\"dummy\"}}")),
+						MachineClass: newMachineClass([]byte(`{"ami":"ami-123456789","blockDevices":[{"ebs":{"volumeSize":50,"volumeType":"gp2"}}],"iam":{"name":"test-iam"},"keyName":"test-ssh-publickey","machineType":"m4.large","networkInterfaces":[{"securityGroupIDs":["sg-00002132323"],"subnetID":"subnet-123456"}],"region":"eu-west-1","tags":{"kubernetes.io/cluster/shoot--test":"1","kubernetes.io/role/test":"1","Name":"dummy"}}`)),
 						Secret:       providerSecret,
 					},
 				},
@@ -384,7 +384,7 @@ var _ = Describe("MachineServer", func() {
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
 						Machine:      newMachine(-1, nil),
-						MachineClass: newMachineClass([]byte(fmt.Sprintf("{\"ami\":\"%s\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}", mockclient.FailQueryAtRunInstances))),
+						MachineClass: newMachineClass([]byte(`{"ami":"` + mockclient.FailQueryAtRunInstances + `","blockDevices":[{"ebs":{"volumeSize":50,"volumeType":"gp2"}}],"iam":{"name":"test-iam"},"keyName":"test-ssh-publickey","machineType":"m4.large","networkInterfaces":[{"securityGroupIDs":["sg-00002132323"],"subnetID":"subnet-123456"}],"region":"eu-west-1","tags":{"kubernetes.io/cluster/shoot--test":"1","kubernetes.io/role/test":"1"}}`)),
 						Secret:       providerSecret,
 					},
 				},
@@ -397,7 +397,7 @@ var _ = Describe("MachineServer", func() {
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
 						Machine:      newMachine(-1, nil),
-						MachineClass: newMachineClass([]byte(fmt.Sprintf("{\"ami\":\"%s\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"%s\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}", mockclient.FailQueryAtRunInstances, mockclient.InsufficientCapacity))),
+						MachineClass: newMachineClass([]byte(`{"ami":"` + mockclient.FailQueryAtRunInstances + `","blockDevices":[{"ebs":{"volumeSize":50,"volumeType":"gp2"}}],"iam":{"name":"test-iam"},"keyName":"` + mockclient.InsufficientCapacity + `","machineType":"m4.large","networkInterfaces":[{"securityGroupIDs":["sg-00002132323"],"subnetID":"subnet-123456"}],"region":"eu-west-1","tags":{"kubernetes.io/cluster/shoot--test":"1","kubernetes.io/role/test":"1"}}`)),
 						Secret:       providerSecret,
 					},
 				},
@@ -413,13 +413,126 @@ var _ = Describe("MachineServer", func() {
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
 						Machine:      newMachine(-1, nil),
-						MachineClass: newMachineClass([]byte("{\"ami\":\"" + mockclient.SetInstanceID + "\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"" + mockclient.InconsistencyInAPIs + "\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
+						MachineClass: newMachineClass([]byte(`{"ami":"` + mockclient.SetInstanceID + `","blockDevices":[{"ebs":{"volumeSize":50,"volumeType":"gp2"}}],"iam":{"name":"test-iam"},"keyName":"` + mockclient.InconsistencyInAPIs + `","machineType":"m4.large","networkInterfaces":[{"securityGroupIDs":["sg-00002132323"],"subnetID":"subnet-123456"}],"region":"eu-west-1","tags":{"kubernetes.io/cluster/shoot--test":"1","kubernetes.io/role/test":"1"}}`)),
 						Secret:       providerSecret,
 					},
 				},
 				expect: expect{
 					errToHaveOccurred: true,
 					errMessage:        "machine codes error: code = [Internal] message = [creation of VM \"aws:///eu-west-1/i-instance-doesnt-exist\" failed, timed out waiting for eventual consistency. Multiple VMs backing machine obj might spawn, they will be orphan collected]",
+				},
+			}),
+		)
+	})
+
+	Describe("#InitializeMachine", func() {
+		type setup struct {
+			createMachineRequest *driver.CreateMachineRequest
+		}
+		type action struct {
+			initializeMachineRequest *driver.InitializeMachineRequest
+		}
+		type expect struct {
+			initializeMachineResponse *driver.InitializeMachineResponse
+			errToHaveOccurred         bool
+			errMessage                string
+		}
+		type data struct {
+			setup  setup
+			action action
+			expect expect
+		}
+		DescribeTable("##table",
+			func(data *data) {
+				mockPluginSPIImpl := &mockclient.MockPluginSPIImpl{FakeInstances: make([]ec2.Instance, 0)}
+				ms := NewAWSDriver(mockPluginSPIImpl)
+
+				ctx := context.Background()
+
+				if data.setup.createMachineRequest != nil {
+					_, err := ms.CreateMachine(ctx, data.setup.createMachineRequest)
+					Expect(err).ToNot(HaveOccurred())
+				}
+
+				_, err := ms.InitializeMachine(ctx, data.action.initializeMachineRequest)
+
+				if data.expect.errToHaveOccurred {
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(Equal(data.expect.errMessage))
+				} else {
+					Expect(err).ToNot(HaveOccurred())
+				}
+			},
+			Entry("Simple Machine Initialize Request", &data{
+				setup: setup{
+					createMachineRequest: &driver.CreateMachineRequest{
+						Machine:      newMachine(0, nil),
+						MachineClass: newMachineClass(providerSpec),
+						Secret:       providerSecret,
+					},
+				},
+				action: action{
+					initializeMachineRequest: &driver.InitializeMachineRequest{
+						Machine:      newMachine(0, nil),
+						MachineClass: newMachineClass(providerSpec),
+						Secret:       providerSecret,
+					},
+				},
+				expect: expect{
+					initializeMachineResponse: &driver.InitializeMachineResponse{},
+					errToHaveOccurred:         false,
+				},
+			}),
+			Entry("Machine Initialization failure at describe instances", &data{
+				setup: setup{
+					createMachineRequest: &driver.CreateMachineRequest{
+						Machine:      newMachine(0, nil),
+						MachineClass: newMachineClass(providerSpec),
+						Secret:       providerSecret,
+					},
+				},
+				action: action{
+					initializeMachineRequest: &driver.InitializeMachineRequest{
+						Machine:      newMachine(0, nil),
+						MachineClass: newMachineClass([]byte(`{"ami":"ami-123456789","blockDevices":[{"ebs":{"volumeSize":50,"volumeType":"gp2"}}],"iam":{"name":"test-iam"},"keyName":"test-ssh-publickey","machineType":"m4.large","networkInterfaces":[{"securityGroupIDs":["sg-00002132323"],"subnetID":"subnet-123456"}],"region":"eu-west-1","tags":{"kubernetes.io/cluster/` + mockclient.ReturnErrorAtDescribeInstances + `":"1","kubernetes.io/role/test":"1"}}`)),
+						Secret:       providerSecret,
+					},
+				},
+				expect: expect{
+					initializeMachineResponse: &driver.InitializeMachineResponse{},
+					errToHaveOccurred:         true,
+					errMessage:                fmt.Sprintf("machine codes error: code = [Internal] message = [%s]", mockclient.AWSInternalErrorForDescribeInstances),
+				},
+			}),
+			Entry("Initialization of machine with no backing instance and no providerID", &data{
+				setup: setup{},
+				action: action{
+					initializeMachineRequest: &driver.InitializeMachineRequest{
+						// Setting machineIndex to -1 to simulate no providerID
+						Machine:      newMachine(-1, nil),
+						MachineClass: newMachineClass(providerSpec),
+						Secret:       providerSecret,
+					},
+				},
+				expect: expect{
+					initializeMachineResponse: &driver.InitializeMachineResponse{},
+					errToHaveOccurred:         true,
+					errMessage:                "machine codes error: code = [Uninitialized] message = [machine codes error: code = [NotFound] message = [No ProviderID found on the machine]]",
+				},
+			}),
+			Entry("Initialization of machine with no backing instance but providerID", &data{
+				setup: setup{},
+				action: action{
+					initializeMachineRequest: &driver.InitializeMachineRequest{
+						Machine:      newMachine(0, nil),
+						MachineClass: newMachineClass(providerSpec),
+						Secret:       providerSecret,
+					},
+				},
+				expect: expect{
+					initializeMachineResponse: &driver.InitializeMachineResponse{},
+					errToHaveOccurred:         true,
+					errMessage:                "machine codes error: code = [Uninitialized] message = [machine codes error: code = [NotFound] message = [AWS plugin is returning no VM instances backing this machine object]]",
 				},
 			}),
 		)
@@ -751,7 +864,7 @@ var _ = Describe("MachineServer", func() {
 				setup: setup{
 					createMachineRequest: &driver.CreateMachineRequest{
 						Machine:      newMachine(-1, nil),
-						MachineClass: newMachineClass([]byte("{\"ami\":\"" + mockclient.SetInstanceID + "\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"" + mockclient.FailQueryAtTerminateInstances + "\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
+						MachineClass: newMachineClass([]byte(`{"ami":"` + mockclient.SetInstanceID + `","blockDevices":[{"ebs":{"volumeSize":50,"volumeType":"gp2"}}],"iam":{"name":"test-iam"},"keyName":"` + mockclient.FailQueryAtTerminateInstances + `","machineType":"m4.large","networkInterfaces":[{"securityGroupIDs":["sg-00002132323"],"subnetID":"subnet-123456"}],"region":"eu-west-1","tags":{"kubernetes.io/cluster/shoot--test":"1","kubernetes.io/role/test":"1"}}`)),
 						Secret:       providerSecret,
 					},
 				},
@@ -785,7 +898,7 @@ var _ = Describe("MachineServer", func() {
 				action: action{
 					deleteMachineRequest: &driver.DeleteMachineRequest{
 						Machine:      newMachine(-1, nil),
-						MachineClass: newMachineClass([]byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/" + mockclient.ReturnErrorAtDescribeInstances + "\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
+						MachineClass: newMachineClass([]byte(`{"ami":"ami-123456789","blockDevices":[{"ebs":{"volumeSize":50,"volumeType":"gp2"}}],"iam":{"name":"test-iam"},"keyName":"test-ssh-publickey","machineType":"m4.large","networkInterfaces":[{"securityGroupIDs":["sg-00002132323"],"subnetID":"subnet-123456"}],"region":"eu-west-1","tags":{"kubernetes.io/cluster/` + mockclient.ReturnErrorAtDescribeInstances + `":"1","kubernetes.io/role/test":"1"}}`)),
 						Secret:       providerSecret,
 					},
 				},
@@ -1167,7 +1280,7 @@ var _ = Describe("MachineServer", func() {
 			Entry("Validation for providerSpec fails. Missing AMI & Region.", &data{
 				action: action{
 					listMachineRequest: &driver.ListMachinesRequest{
-						MachineClass: newMachineClass([]byte("{\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
+						MachineClass: newMachineClass([]byte(`{"blockDevices":[{"ebs":{"volumeSize":50,"volumeType":"gp2"}}],"iam":{"name":"test-iam"},"keyName":"test-ssh-publickey","machineType":"m4.large","networkInterfaces":[{"securityGroupIDs":["sg-00002132323"],"subnetID":"subnet-123456"}],"tags":{"kubernetes.io/cluster/shoot--test":"1","kubernetes.io/role/test":"1"}}`)),
 						Secret:       providerSecret,
 					},
 				},
@@ -1180,7 +1293,7 @@ var _ = Describe("MachineServer", func() {
 			Entry("Region doesn't exist", &data{
 				action: action{
 					listMachineRequest: &driver.ListMachinesRequest{
-						MachineClass: newMachineClass([]byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"" + mockclient.FailAtRegion + "\",\"tags\":{\"kubernetes.io/cluster/shoot--test\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
+						MachineClass: newMachineClass([]byte(`{"ami":"ami-123456789","blockDevices":[{"ebs":{"volumeSize":50,"volumeType":"gp2"}}],"iam":{"name":"test-iam"},"keyName":"test-ssh-publickey","machineType":"m4.large","networkInterfaces":[{"securityGroupIDs":["sg-00002132323"],"subnetID":"subnet-123456"}],"region":"` + mockclient.FailAtRegion + `","tags":{"kubernetes.io/cluster/shoot--test":"1","kubernetes.io/role/test":"1"}}`)),
 						Secret:       providerSecret,
 					},
 				},
@@ -1192,7 +1305,7 @@ var _ = Describe("MachineServer", func() {
 			Entry("Cluster details missing in machine class", &data{
 				action: action{
 					listMachineRequest: &driver.ListMachinesRequest{
-						MachineClass: newMachineClass([]byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/role/test\":\"1\"}}")),
+						MachineClass: newMachineClass([]byte(`{"ami":"ami-123456789","blockDevices":[{"ebs":{"volumeSize":50,"volumeType":"gp2"}}],"iam":{"name":"test-iam"},"keyName":"test-ssh-publickey","machineType":"m4.large","networkInterfaces":[{"securityGroupIDs":["sg-00002132323"],"subnetID":"subnet-123456"}],"region":"eu-west-1","tags":{"kubernetes.io/role/test":"1"}}`)),
 						Secret:       providerSecret,
 					},
 				},
@@ -1204,7 +1317,7 @@ var _ = Describe("MachineServer", func() {
 			Entry("Cloud provider returned error while describing instance", &data{
 				action: action{
 					listMachineRequest: &driver.ListMachinesRequest{
-						MachineClass: newMachineClass([]byte("{\"ami\":\"ami-123456789\",\"blockDevices\":[{\"ebs\":{\"volumeSize\":50,\"volumeType\":\"gp2\"}}],\"iam\":{\"name\":\"test-iam\"},\"keyName\":\"test-ssh-publickey\",\"machineType\":\"m4.large\",\"networkInterfaces\":[{\"securityGroupIDs\":[\"sg-00002132323\"],\"subnetID\":\"subnet-123456\"}],\"region\":\"eu-west-1\",\"tags\":{\"kubernetes.io/cluster/" + mockclient.ReturnErrorAtDescribeInstances + "\":\"1\",\"kubernetes.io/role/test\":\"1\"}}")),
+						MachineClass: newMachineClass([]byte(`{"ami":"ami-123456789","blockDevices":[{"ebs":{"volumeSize":50,"volumeType":"gp2"}}],"iam":{"name":"test-iam"},"keyName":"test-ssh-publickey","machineType":"m4.large","networkInterfaces":[{"securityGroupIDs":["sg-00002132323"],"subnetID":"subnet-123456"}],"region":"eu-west-1","tags":{"kubernetes.io/cluster/` + mockclient.ReturnErrorAtDescribeInstances + `":"1","kubernetes.io/role/test":"1"}}`)),
 						Secret:       providerSecret,
 					},
 				},
