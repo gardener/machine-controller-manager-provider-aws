@@ -25,6 +25,37 @@ var (
 
 const serviceName = "test-service"
 
+func TestAPIMetricRecorderFn(t *testing.T) {
+	testCases := []struct {
+		name string
+		err  error
+	}{
+		{"assert that function captures failed API request count when the error is not nil", testErr},
+		{"assert that function captures successful API request count when the error is nil", nil},
+	}
+	g := NewWithT(t)
+	reg := prometheus.NewRegistry()
+	g.Expect(reg.Register(metrics.APIRequestCount)).To(Succeed())
+	g.Expect(reg.Register(metrics.APIFailedRequestCount)).To(Succeed())
+	for _, tc := range testCases {
+		t.Run(tc.name, func(_ *testing.T) {
+			defer metrics.APIRequestCount.Reset()
+			defer metrics.APIFailedRequestCount.Reset()
+			defer metrics.APIRequestDuration.Reset()
+			_ = deferredMetricsRecorderInvoker(tc.err != nil, false, AwsAPIMetricRecorderFn)
+			if tc.err != nil {
+				g.Expect(testutil.CollectAndCount(metrics.APIRequestCount)).To(Equal(0))
+				g.Expect(testutil.CollectAndCount(metrics.APIFailedRequestCount)).To(Equal(1))
+				g.Expect(testutil.ToFloat64(metrics.APIFailedRequestCount.WithLabelValues(prometheusProviderLabelValue, serviceName))).To(Equal(float64(1)))
+			} else {
+				g.Expect(testutil.CollectAndCount(metrics.APIRequestCount)).To(Equal(1))
+				g.Expect(testutil.CollectAndCount(metrics.APIFailedRequestCount)).To(Equal(0))
+				g.Expect(testutil.ToFloat64(metrics.APIRequestCount.WithLabelValues(prometheusProviderLabelValue, serviceName))).To(Equal(float64(1)))
+			}
+		})
+	}
+}
+
 func TestDriverAPIMetricRecorderFn(t *testing.T) {
 	testCases := []struct {
 		name string

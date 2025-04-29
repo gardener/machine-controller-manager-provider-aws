@@ -15,6 +15,7 @@ import (
 	api "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
 	validation "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis/validation"
 	awserror "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/errors"
+	"github.com/gardener/machine-controller-manager-provider-aws/pkg/instrument"
 	v1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/driver"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/codes"
@@ -25,12 +26,13 @@ import (
 	"k8s.io/utils/ptr"
 )
 
+// labels used for recording prometheus metrics
 const (
-	// AWSMachineClassKind for AWSMachineClass
-	AWSMachineClassKind = "AWSMachineClass"
-
-	// MachineClassKind for MachineClass
-	MachineClassKind = "MachineClass"
+	instanceDisableSourceDestCheckServiceLabel = "instance_disable_source_dest_check"
+	instanceGetByTagsAndStatusServiceLabel     = "instance_get_by_tag_and_status"
+	instanceGetByMachineServiceLabel           = "instance_get_by_machine"
+	instanceGetByIDServiceLabel                = "instance_get_by_id"
+	instanceTerminateServiceLabel              = "instance_terminate"
 )
 
 // decodeProviderSpecAndSecret converts request parameters to api.ProviderSpec & api.Secrets
@@ -62,7 +64,8 @@ func decodeProviderSpecAndSecret(machineClass *v1alpha1.MachineClass, secret *co
 }
 
 // disableSrcAndDestCheck disbales the SrcAndDestCheck for NAT instances
-func disableSrcAndDestCheck(svc ec2iface.EC2API, instanceID *string) error {
+func disableSrcAndDestCheck(svc ec2iface.EC2API, instanceID *string) (err error) {
+	defer instrument.AwsAPIMetricRecorderFn(instanceDisableSourceDestCheckServiceLabel, &err)()
 
 	srcAndDstCheckEnabled := &ec2.ModifyInstanceAttributeInput{
 		InstanceId: instanceID,
@@ -71,7 +74,7 @@ func disableSrcAndDestCheck(svc ec2iface.EC2API, instanceID *string) error {
 		},
 	}
 
-	_, err := svc.ModifyInstanceAttribute(srcAndDstCheckEnabled)
+	_, err = svc.ModifyInstanceAttribute(srcAndDstCheckEnabled)
 	if err != nil {
 		return err
 	}
@@ -79,7 +82,9 @@ func disableSrcAndDestCheck(svc ec2iface.EC2API, instanceID *string) error {
 	return nil
 }
 
-func getMachineInstancesByTagsAndStatus(svc ec2iface.EC2API, machineName string, providerSpecTags map[string]string) ([]*ec2.Instance, error) {
+func getMachineInstancesByTagsAndStatus(svc ec2iface.EC2API, machineName string, providerSpecTags map[string]string) (instances []*ec2.Instance, err error) {
+	defer instrument.AwsAPIMetricRecorderFn(instanceGetByTagsAndStatusServiceLabel, &err)()
+
 	var (
 		clusterName string
 		nodeRole    string
@@ -122,13 +127,13 @@ func getMachineInstancesByTagsAndStatus(svc ec2iface.EC2API, machineName string,
 			},
 		},
 	}
-	runResult, err := svc.DescribeInstances(&input)
+	var runResult *ec2.DescribeInstancesOutput
+	runResult, err = svc.DescribeInstances(&input)
 
 	if err != nil {
 		klog.Errorf("AWS plugin is returning error while describe instances request is sent: %s", err)
 		return nil, status.Error(codes.Internal, err.Error())
 	} else {
-		var instances []*ec2.Instance
 		for _, reservation := range runResult.Reservations {
 			instances = append(instances, reservation.Instances...)
 		}
@@ -138,6 +143,8 @@ func getMachineInstancesByTagsAndStatus(svc ec2iface.EC2API, machineName string,
 
 // getMatchingInstancesForMachine extracts AWS Instance object for a given machine
 func (d *Driver) getMatchingInstancesForMachine(machine *v1alpha1.Machine, svc ec2iface.EC2API, providerSpecTags map[string]string) (instances []*ec2.Instance, err error) {
+	defer instrument.AwsAPIMetricRecorderFn(instanceGetByMachineServiceLabel, &err)()
+
 	instances, err = getMachineInstancesByTagsAndStatus(svc, machine.Name, providerSpecTags)
 	if err != nil {
 		return nil, err
@@ -167,11 +174,13 @@ func (d *Driver) getMatchingInstancesForMachine(machine *v1alpha1.Machine, svc e
 	return instances, nil
 }
 
-func getInstanceByID(svc ec2iface.EC2API, instanceID string) (*ec2.DescribeInstancesOutput, error) {
+func getInstanceByID(svc ec2iface.EC2API, instanceID string) (instances *ec2.DescribeInstancesOutput, err error) {
+	defer instrument.AwsAPIMetricRecorderFn(instanceGetByIDServiceLabel, &err)()
+
 	input := ec2.DescribeInstancesInput{
 		InstanceIds: []*string{&instanceID},
 	}
-	instances, err := svc.DescribeInstances(&input)
+	instances, err = svc.DescribeInstances(&input)
 	if err != nil {
 		if awserror.IsInstanceIDNotFound(err) {
 			errMessage := "AWS plugin is returning no VM instances backing this machine object"
@@ -273,7 +282,9 @@ func (d *Driver) generateTags(tags map[string]string, resourceType string, machi
 	return tagInstance, nil
 }
 
-func terminateInstance(req *driver.DeleteMachineRequest, svc ec2iface.EC2API, machineID string) error {
+func terminateInstance(req *driver.DeleteMachineRequest, svc ec2iface.EC2API, machineID string) (err error) {
+	defer instrument.AwsAPIMetricRecorderFn(instanceTerminateServiceLabel, &err)()
+
 	input := &ec2.TerminateInstancesInput{
 		InstanceIds: []*string{
 			aws.String(machineID),
@@ -281,7 +292,7 @@ func terminateInstance(req *driver.DeleteMachineRequest, svc ec2iface.EC2API, ma
 		DryRun: aws.Bool(false),
 	}
 
-	_, err := svc.TerminateInstances(input)
+	_, err = svc.TerminateInstances(input)
 	if err != nil {
 		// if error code is NotFound, then assume VM is terminated.
 		// In case of eventual consistency, the VM might be present and still we get a NotFound error.

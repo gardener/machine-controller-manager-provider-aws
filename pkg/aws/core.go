@@ -29,11 +29,12 @@ import (
 )
 
 const (
-	createMachineOperationLabel    = "create_machine"
-	deleteMachineOperationLabel    = "delete_machine"
-	listMachinesOperationLabel     = "list_machine"
-	getMachineStatusOperationLabel = "get_machine_status"
-	getVolumeIDsOperationLabel     = "get_volume_ids"
+	createMachineOperationLabel     = "create_machine"
+	initializeMachineOperationLabel = "initialize_machine"
+	deleteMachineOperationLabel     = "delete_machine"
+	listMachinesOperationLabel      = "list_machine"
+	getMachineStatusOperationLabel  = "get_machine_status"
+	getVolumeIDsOperationLabel      = "get_volume_ids"
 )
 
 // Driver is the driver struct for holding AWS machine information
@@ -256,7 +257,9 @@ func (d *Driver) CreateMachine(_ context.Context, req *driver.CreateMachineReque
 // InitializeMachine should handle post-creation, one-time VM instance initialization operations. (Ex: Like setting up special network config, etc)
 // The AWS Provider leverages this method to perform disabling of source destination checks for NAT instances.
 // See [driver.Driver.InitializeMachine] for further information
-func (d *Driver) InitializeMachine(_ context.Context, request *driver.InitializeMachineRequest) (*driver.InitializeMachineResponse, error) {
+func (d *Driver) InitializeMachine(_ context.Context, request *driver.InitializeMachineRequest) (resp *driver.InitializeMachineResponse, err error) {
+	defer instrument.DriverAPIMetricRecorderFn(initializeMachineOperationLabel, &err)()
+
 	providerSpec, err := decodeProviderSpecAndSecret(request.MachineClass, request.Secret)
 	if err != nil {
 		return nil, err
