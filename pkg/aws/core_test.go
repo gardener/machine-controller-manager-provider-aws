@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aws/aws-sdk-go/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -64,8 +64,8 @@ var _ = Describe("MachineServer", func() {
 		}
 		DescribeTable("##table",
 			func(data *data) {
-				mockPluginSPIImpl := &mockclient.MockPluginSPIImpl{FakeInstances: make([]ec2.Instance, 0)}
-				ms := NewAWSDriver(mockPluginSPIImpl)
+				mockClientProvider := &mockclient.MockClientProvider{FakeInstances: make([]ec2types.Instance, 0)}
+				md := NewAWSDriver(mockClientProvider)
 
 				ctx := context.Background()
 				var temp time.Duration
@@ -74,7 +74,7 @@ var _ = Describe("MachineServer", func() {
 					temp = maxElapsedTimeInBackoff
 					maxElapsedTimeInBackoff = data.setup.maxElapsedTimeForRetry
 				}
-				response, err := ms.CreateMachine(ctx, data.action.machineRequest)
+				response, err := md.CreateMachine(ctx, data.action.machineRequest)
 
 				maxElapsedTimeInBackoff = temp
 
@@ -394,6 +394,7 @@ var _ = Describe("MachineServer", func() {
 				},
 			}),
 			Entry("RunInstance call fails with error code as InsufficientCapacity", &data{
+
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
 						Machine:      newMachine(-1, nil),
@@ -403,7 +404,7 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: true,
-					errMessage:        fmt.Sprintf("machine codes error: code = [%s] message = [%s]", codes.ResourceExhausted, mockclient.AWSInsufficientCapacityError),
+					errMessage:        fmt.Sprintf("machine codes error: code = [%s] message = [%s]", codes.ResourceExhausted, mockclient.AWSInsufficientCapacityError.Error()),
 				},
 			}),
 			Entry("Should Fail when APIs are not consistent for 10sec(in real situation its 5min)", &data{
@@ -444,17 +445,17 @@ var _ = Describe("MachineServer", func() {
 		}
 		DescribeTable("##table",
 			func(data *data) {
-				mockPluginSPIImpl := &mockclient.MockPluginSPIImpl{FakeInstances: make([]ec2.Instance, 0)}
-				ms := NewAWSDriver(mockPluginSPIImpl)
+				mockPluginSPIImpl := &mockclient.MockClientProvider{FakeInstances: make([]ec2types.Instance, 0)}
+				md := NewAWSDriver(mockPluginSPIImpl)
 
 				ctx := context.Background()
 
 				if data.setup.createMachineRequest != nil {
-					_, err := ms.CreateMachine(ctx, data.setup.createMachineRequest)
+					_, err := md.CreateMachine(ctx, data.setup.createMachineRequest)
 					Expect(err).ToNot(HaveOccurred())
 				}
 
-				_, err := ms.InitializeMachine(ctx, data.action.initializeMachineRequest)
+				_, err := md.InitializeMachine(ctx, data.action.initializeMachineRequest)
 
 				if data.expect.errToHaveOccurred {
 					Expect(err).To(HaveOccurred())
@@ -546,7 +547,7 @@ var _ = Describe("MachineServer", func() {
 			createMachineRequest *driver.CreateMachineRequest
 		}
 		type expect struct {
-			placementobj      *ec2.Placement
+			placementobj      *ec2types.Placement
 			errToHaveOccurred bool
 		}
 		type data struct {
@@ -584,10 +585,10 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: false,
-					placementobj: &ec2.Placement{
+					placementobj: &ec2types.Placement{
 						AvailabilityZone: getStringPtr("eu-west-1a"),
-						Affinity:         getStringPtr(ec2.AffinityHost),
-						Tenancy:          getStringPtr(ec2.TenancyHost),
+						Affinity:         getStringPtr(string(ec2types.AffinityHost)),
+						Tenancy:          ec2types.TenancyHost,
 					},
 				},
 			}),
@@ -607,9 +608,9 @@ var _ = Describe("MachineServer", func() {
 					},
 				},
 				expect: expect{
-					placementobj: &ec2.Placement{
-						Affinity: getStringPtr(ec2.AffinityHost),
-						Tenancy:  getStringPtr(ec2.TenancyHost),
+					placementobj: &ec2types.Placement{
+						Affinity: getStringPtr(string(ec2types.AffinityHost)),
+						Tenancy:  ec2types.TenancyHost,
 					},
 				},
 			}),
@@ -685,10 +686,10 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: false,
-					placementobj: &ec2.Placement{
-						Affinity:         getStringPtr(ec2.AffinityDefault),
+					placementobj: &ec2types.Placement{
+						Affinity:         getStringPtr(string(ec2types.AffinityDefault)),
 						AvailabilityZone: getStringPtr("eu-west-1a"),
-						Tenancy:          getStringPtr(ec2.TenancyDefault),
+						Tenancy:          ec2types.TenancyDefault,
 					},
 				},
 			}),
@@ -709,9 +710,9 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: false,
-					placementobj: &ec2.Placement{
+					placementobj: &ec2types.Placement{
 						HostId:          getStringPtr("h-0123b456af7f89123"),
-						PartitionNumber: getIntPtrForString("7"),
+						PartitionNumber: getInt32PtrForString("7"),
 					},
 				},
 			}),
@@ -738,17 +739,17 @@ var _ = Describe("MachineServer", func() {
 		}
 		DescribeTable("##table",
 			func(data *data) {
-				mockPluginSPIImpl := &mockclient.MockPluginSPIImpl{FakeInstances: make([]ec2.Instance, 0)}
-				ms := NewAWSDriver(mockPluginSPIImpl)
+				mockClientProvider := &mockclient.MockClientProvider{FakeInstances: make([]ec2types.Instance, 0)}
+				md := NewAWSDriver(mockClientProvider)
 
 				ctx := context.Background()
 
 				if data.setup.createMachineRequest != nil {
-					_, err := ms.CreateMachine(ctx, data.setup.createMachineRequest)
+					_, err := md.CreateMachine(ctx, data.setup.createMachineRequest)
 					Expect(err).ToNot(HaveOccurred())
 				}
 
-				_, err := ms.DeleteMachine(ctx, data.action.deleteMachineRequest)
+				_, err := md.DeleteMachine(ctx, data.action.deleteMachineRequest)
 
 				if data.expect.errToHaveOccurred {
 					Expect(err).To(HaveOccurred())
@@ -951,17 +952,17 @@ var _ = Describe("MachineServer", func() {
 		}
 		DescribeTable("##table",
 			func(data *data) {
-				mockPluginSPIImpl := &mockclient.MockPluginSPIImpl{FakeInstances: make([]ec2.Instance, 0)}
-				ms := NewAWSDriver(mockPluginSPIImpl)
+				mockClientProvider := &mockclient.MockClientProvider{FakeInstances: make([]ec2types.Instance, 0)}
+				md := NewAWSDriver(mockClientProvider)
 				ctx := context.Background()
 
 				// if there is a create machine request by the test case then create the machine
 				if data.setup.createMachineRequest != nil {
-					_, err := ms.CreateMachine(ctx, data.setup.createMachineRequest)
+					_, err := md.CreateMachine(ctx, data.setup.createMachineRequest)
 					Expect(err).ToNot(HaveOccurred())
 				}
 
-				_, err := ms.GetMachineStatus(ctx, data.action.getMachineRequest)
+				_, err := md.GetMachineStatus(ctx, data.action.getMachineRequest)
 
 				if data.expect.errToHaveOccurred {
 					Expect(err).To(HaveOccurred())
@@ -1138,16 +1139,16 @@ var _ = Describe("MachineServer", func() {
 		}
 		DescribeTable("##table",
 			func(data *data) {
-				mockPluginSPIImpl := &mockclient.MockPluginSPIImpl{FakeInstances: make([]ec2.Instance, 0)}
-				ms := NewAWSDriver(mockPluginSPIImpl)
+				mockClientProvider := &mockclient.MockClientProvider{FakeInstances: make([]ec2types.Instance, 0)}
+				md := NewAWSDriver(mockClientProvider)
 				ctx := context.Background()
 
 				for _, createReq := range data.setup.createMachineRequest {
-					_, err := ms.CreateMachine(ctx, createReq)
+					_, err := md.CreateMachine(ctx, createReq)
 					Expect(err).ToNot(HaveOccurred())
 				}
 
-				listResponse, err := ms.ListMachines(ctx, data.action.listMachineRequest)
+				listResponse, err := md.ListMachines(ctx, data.action.listMachineRequest)
 
 				if data.expect.errToHaveOccurred {
 					Expect(err).To(HaveOccurred())
@@ -1359,8 +1360,8 @@ var _ = Describe("MachineServer", func() {
 		}
 		DescribeTable("##table",
 			func(data *data) {
-				mockPluginSPIImpl := &mockclient.MockPluginSPIImpl{FakeInstances: make([]ec2.Instance, 0)}
-				ms := NewAWSDriver(mockPluginSPIImpl)
+				mockClientProvider := &mockclient.MockClientProvider{FakeInstances: make([]ec2types.Instance, 0)}
+				ms := NewAWSDriver(mockClientProvider)
 				ctx := context.Background()
 
 				response, err := ms.GetVolumeIDs(
