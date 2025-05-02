@@ -26,7 +26,7 @@ import (
 	"os"
 
 	"github.com/gardener/machine-controller-manager-provider-aws/pkg/aws"
-	"github.com/gardener/machine-controller-manager-provider-aws/pkg/spi"
+	"github.com/gardener/machine-controller-manager-provider-aws/pkg/cpi"
 	_ "github.com/gardener/machine-controller-manager/pkg/util/client/metrics/prometheus" // for client metric registration
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/app"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/app/options"
@@ -46,7 +46,7 @@ func main() {
 	logs.InitLogs()
 	defer logs.FlushLogs()
 
-	driver := aws.NewAWSDriver(&spi.PluginSPIImpl{})
+	driver := aws.NewAWSDriver(&cpi.ClientProvider{})
 
 	if err := app.Run(s, driver); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
