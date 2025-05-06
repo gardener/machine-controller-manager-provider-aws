@@ -59,12 +59,12 @@ var (
 	AWSInstanceNotFoundError = &smithy.GenericAPIError{Code: string(errors.InstanceIDNotFound)}
 )
 
-// MockClientProvider is the mock implementation of CPI interface
+// MockClientProvider is the mock implementation of ClientProvider interface that makes dummy calls
 type MockClientProvider struct {
 	FakeInstances []ec2types.Instance
 }
 
-// NewConfig returns a mock config
+// NewConfig returns a new AWS Config
 func (ms *MockClientProvider) NewConfig(_ context.Context, _ *corev1.Secret, region string) (*aws.Config, error) {
 	if region == FailAtRegion {
 		return nil, AWSInvalidRegionError
@@ -72,7 +72,7 @@ func (ms *MockClientProvider) NewConfig(_ context.Context, _ *corev1.Secret, reg
 	return &aws.Config{}, nil
 }
 
-// NewEC2Client returns a mock EC2Client
+// NewEC2Client Returns a new mock for the EC2 Client
 func (ms *MockClientProvider) NewEC2Client(_ *aws.Config) interfaces.Ec2Client {
 	return &MockEC2Client{
 		FakeInstances: &ms.FakeInstances,
