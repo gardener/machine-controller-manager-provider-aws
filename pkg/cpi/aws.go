@@ -66,7 +66,7 @@ func (cp *ClientProvider) NewConfig(ctx context.Context, secret *corev1.Secret, 
 	return &cfg, nil
 }
 
-// NewEC2API Returns an EC2Client object
+// NewEC2Client Returns an EC2Client object
 func (cp *ClientProvider) NewEC2Client(config *aws.Config) interfaces.Ec2Client {
 	client := ec2.NewFromConfig(*config)
 	return client
