@@ -59,12 +59,12 @@ var (
 	AWSInstanceNotFoundError = &smithy.GenericAPIError{Code: string(errors.InstanceIDNotFound)}
 )
 
-// MockPluginSPIImpl is the mock implementation of PluginSPI interface that makes dummy calls
+// MockClientProvider is the mock implementation of ClientProvider interface that makes dummy calls
 type MockClientProvider struct {
 	FakeInstances []ec2types.Instance
 }
 
-// NewSession starts a new AWS session
+// NewConfig returns a new AWS Config
 func (ms *MockClientProvider) NewConfig(_ context.Context, _ *corev1.Secret, region string) (*aws.Config, error) {
 	if region == FailAtRegion {
 		return nil, AWSInvalidRegionError
@@ -72,7 +72,7 @@ func (ms *MockClientProvider) NewConfig(_ context.Context, _ *corev1.Secret, reg
 	return &aws.Config{}, nil
 }
 
-// NewEC2API Returns a EC2API object
+// NewEC2Client Returns a new mock for the EC2 Client
 func (ms *MockClientProvider) NewEC2Client(_ *aws.Config) interfaces.Ec2Client {
 	return &MockEC2Client{
 		FakeInstances: &ms.FakeInstances,
@@ -86,7 +86,7 @@ type MockEC2Client struct {
 }
 
 // DescribeImages implements a mock describe image method
-func (ms *MockEC2Client) DescribeImages(ctx context.Context, input *ec2.DescribeImagesInput, opts ...func(*ec2.Options)) (*ec2.DescribeImagesOutput, error) {
+func (ms *MockEC2Client) DescribeImages(_ context.Context, input *ec2.DescribeImagesInput, opts ...func(*ec2.Options)) (*ec2.DescribeImagesOutput, error) {
 
 	if input.ImageIds[0] == FailQueryAtDescribeImages {
 		return nil, AWSImageNotFoundError
@@ -105,7 +105,7 @@ func (ms *MockEC2Client) DescribeImages(ctx context.Context, input *ec2.Describe
 
 // RunInstances implements a mock run instance method
 // The name of the newly created instances depends on the number of instances in cache starts from 0
-func (ms *MockEC2Client) RunInstances(ctx context.Context, input *ec2.RunInstancesInput, opts ...func(*ec2.Options)) (*ec2.RunInstancesOutput, error) {
+func (ms *MockEC2Client) RunInstances(_ context.Context, input *ec2.RunInstancesInput, opts ...func(*ec2.Options)) (*ec2.RunInstancesOutput, error) {
 
 	if *input.ImageId == FailQueryAtRunInstances {
 		if *input.KeyName == InsufficientCapacity {
@@ -155,7 +155,7 @@ func (ms *MockEC2Client) RunInstances(ctx context.Context, input *ec2.RunInstanc
 }
 
 // DescribeInstances implements a mock run instance method
-func (ms *MockEC2Client) DescribeInstances(ctx context.Context, input *ec2.DescribeInstancesInput, opts ...func(*ec2.Options)) (*ec2.DescribeInstancesOutput, error) {
+func (ms *MockEC2Client) DescribeInstances(_ context.Context, input *ec2.DescribeInstancesInput, opts ...func(*ec2.Options)) (*ec2.DescribeInstancesOutput, error) {
 	found := false
 	instanceList := make([]ec2types.Instance, 0)
 
@@ -210,7 +210,7 @@ func (ms *MockEC2Client) DescribeInstances(ctx context.Context, input *ec2.Descr
 }
 
 // TerminateInstances implements a mock terminate instance method
-func (ms *MockEC2Client) TerminateInstances(ctx context.Context, input *ec2.TerminateInstancesInput, opts ...func(*ec2.Options)) (*ec2.TerminateInstancesOutput, error) {
+func (ms *MockEC2Client) TerminateInstances(_ context.Context, input *ec2.TerminateInstancesInput, opts ...func(*ec2.Options)) (*ec2.TerminateInstancesOutput, error) {
 
 	if input.InstanceIds[0] == FailQueryAtTerminateInstances {
 		return nil, &smithy.GenericAPIError{Code: string(ec2types.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceId)}
@@ -252,7 +252,7 @@ func (ms *MockEC2Client) TerminateInstances(ctx context.Context, input *ec2.Term
 }
 
 // StopInstances implements a mock stop instance method
-func (ms *MockEC2Client) StopInstances(ctx context.Context, input *ec2.StopInstancesInput, opts ...func(*ec2.Options)) (*ec2.StopInstancesOutput, error) {
+func (ms *MockEC2Client) StopInstances(_ context.Context, input *ec2.StopInstancesInput, opts ...func(*ec2.Options)) (*ec2.StopInstancesOutput, error) {
 
 	if input.InstanceIds[0] == InstanceStopError {
 		return nil, fmt.Errorf("Stopping of instance errored out")
