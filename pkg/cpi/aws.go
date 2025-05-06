@@ -25,7 +25,6 @@ type ClientProvider struct{}
 
 // NewConfig returns the config used to create a new EC2 Client set-up with the provided values.
 func (cp *ClientProvider) NewConfig(ctx context.Context, secret *corev1.Secret, region string) (*aws.Config, error) {
-
 	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
 	if err != nil {
 		return nil, err

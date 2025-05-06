@@ -176,10 +176,6 @@ func (ms *MockEC2Client) DescribeInstances(ctx context.Context, input *ec2.Descr
 			}, nil
 		} else if input.InstanceIds[0] == InstanceDoesntExistError {
 			return nil, &smithy.GenericAPIError{Code: string(ec2types.UnsuccessfulInstanceCreditSpecificationErrorCodeInstanceNotFound)}
-			// awserr.New(
-			// 	ec2.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceIdNotFound, "",
-			// 	fmt.Errorf("Instance with instance-ID doesn't exist"),
-			// )
 		}
 
 		// Target Specific instances
