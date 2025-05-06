@@ -111,8 +111,7 @@ func getIntPtrForString(s string) *int64 {
 }
 
 func getInt32PtrForString(s string) *int32 {
-	var num int64
-	num, _ = strconv.ParseInt(s, 10, 32)
+	num, _ := strconv.ParseInt(s, 10, 32)
 	return ptr.To(int32(num))
 }
 

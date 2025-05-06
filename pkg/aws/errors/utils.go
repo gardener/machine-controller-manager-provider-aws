@@ -22,7 +22,7 @@ func GetMCMErrorCodeForCreateMachine(err error) codes.Code {
 			return codes.Internal
 		}
 	}
-	return codes.Internal
+	return codes.Unknown
 }
 
 // GetMCMErrorCodeForTerminateInstances takes the error returned from the EC2API during the terminateInstance call and returns the corresponding MCM error code.
@@ -36,7 +36,7 @@ func GetMCMErrorCodeForTerminateInstances(err error) codes.Code {
 			return codes.Internal
 		}
 	}
-	return codes.Internal
+	return codes.Unknown
 }
 
 // IsInstanceIDNotFound checks if the provider returned an InstanceIDNotFound error
