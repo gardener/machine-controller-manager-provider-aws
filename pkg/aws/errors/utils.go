@@ -18,11 +18,9 @@ func GetMCMErrorCodeForCreateMachine(err error) codes.Code {
 		switch awsErr.ErrorCode() {
 		case InsufficientCapacity, InsufficientAddressCapacity, InsufficientInstanceCapacity, InsufficientVolumeCapacity, InstanceLimitExceeded, VcpuLimitExceeded, VolumeLimitExceeded, MaxIOPSLimitExceeded, RouteLimitExceeded:
 			return codes.ResourceExhausted
-		default:
-			return codes.Internal
 		}
 	}
-	return codes.Unknown
+	return codes.Internal
 }
 
 // GetMCMErrorCodeForTerminateInstances takes the error returned from the EC2API during the terminateInstance call and returns the corresponding MCM error code.
@@ -32,11 +30,9 @@ func GetMCMErrorCodeForTerminateInstances(err error) codes.Code {
 		switch awsErr.ErrorCode() {
 		case string(InstanceIDNotFound):
 			return codes.NotFound
-		default:
-			return codes.Internal
 		}
 	}
-	return codes.Unknown
+	return codes.Internal
 }
 
 // IsInstanceIDNotFound checks if the provider returned an InstanceIDNotFound error
