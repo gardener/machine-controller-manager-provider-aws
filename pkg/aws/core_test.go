@@ -394,7 +394,6 @@ var _ = Describe("MachineServer", func() {
 				},
 			}),
 			Entry("RunInstance call fails with error code as InsufficientCapacity", &data{
-
 				action: action{
 					machineRequest: &driver.CreateMachineRequest{
 						Machine:      newMachine(-1, nil),
@@ -1361,10 +1360,10 @@ var _ = Describe("MachineServer", func() {
 		DescribeTable("##table",
 			func(data *data) {
 				mockClientProvider := &mockclient.MockClientProvider{FakeInstances: make([]ec2types.Instance, 0)}
-				ms := NewAWSDriver(mockClientProvider)
+				md := NewAWSDriver(mockClientProvider)
 				ctx := context.Background()
 
-				response, err := ms.GetVolumeIDs(
+				response, err := md.GetVolumeIDs(
 					ctx,
 					data.action.getListOfVolumeIDsForExistingPVsRequest,
 				)
