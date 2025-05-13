@@ -5,6 +5,7 @@
 package provider
 
 import (
+	"context"
 	"fmt"
 
 	v1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -35,7 +36,14 @@ func (r *ResourcesTrackerImpl) InitializeResourcesTracker(machineClass *v1alpha1
 		return err
 	}
 
-	delErrOrphanVMs, delErrOrphanVolumes, delErrOrphanNICs := cleanOrphanResources(initialVMs, initialVolumes, initialNICs, r.MachineClass, r.SecretData)
+	delErrOrphanVMs, delErrOrphanVolumes, delErrOrphanNICs := cleanOrphanResources(
+		context.TODO(),
+		initialVMs,
+		initialVolumes,
+		initialNICs,
+		r.MachineClass,
+		r.SecretData,
+	)
 	if delErrOrphanVMs != nil || delErrOrphanVolumes != nil || initialMachines != nil || delErrOrphanNICs != nil {
 		err := fmt.Errorf("error in cleaning the following orphan resources. Clean them up before proceeding with the test.\nvirtual machines: %v\ndisks: %v\nmcm machines: %v\nnics: %v", delErrOrphanVMs, delErrOrphanVolumes, initialMachines, delErrOrphanNICs)
 		return err
@@ -53,23 +61,23 @@ func (r *ResourcesTrackerImpl) probeResources() ([]string, []string, []string, [
 	integrationTestTag := "tag:kubernetes.io/role/integration-test"
 	integrationTestTagValue := "1"
 
-	orphanVMs, err := getOrphanedInstances(integrationTestTag, integrationTestTagValue, r.MachineClass, r.SecretData)
+	orphanVMs, err := getOrphanedInstances(context.TODO(), integrationTestTag, integrationTestTagValue, r.MachineClass, r.SecretData)
 	if err != nil {
 		return orphanVMs, nil, nil, nil, err
 	}
 
 	// Check for available volumes in cloud provider with tag/label [Status:available]
-	orphanVols, err := getOrphanedDisks(integrationTestTag, integrationTestTagValue, r.MachineClass, r.SecretData)
+	orphanVols, err := getOrphanedDisks(context.TODO(), integrationTestTag, integrationTestTagValue, r.MachineClass, r.SecretData)
 	if err != nil {
 		return orphanVMs, orphanVols, nil, nil, err
 	}
 
-	availMachines, err := getMachines(r.MachineClass, r.SecretData)
+	availMachines, err := getMachines(context.TODO(), r.MachineClass, r.SecretData)
 	if err != nil {
 		return orphanVMs, orphanVols, availMachines, nil, err
 	}
 
-	orphanNICs, err := getOrphanedNICs(integrationTestTag, integrationTestTagValue, r.MachineClass, r.SecretData)
+	orphanNICs, err := getOrphanedNICs(context.TODO(), integrationTestTag, integrationTestTagValue, r.MachineClass, r.SecretData)
 
 	return orphanVMs, orphanVols, availMachines, orphanNICs, err
 
