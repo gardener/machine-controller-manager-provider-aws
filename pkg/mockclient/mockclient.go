@@ -86,7 +86,7 @@ type MockEC2Client struct {
 }
 
 // DescribeImages implements a mock describe image method
-func (ms *MockEC2Client) DescribeImages(_ context.Context, input *ec2.DescribeImagesInput, opts ...func(*ec2.Options)) (*ec2.DescribeImagesOutput, error) {
+func (ms *MockEC2Client) DescribeImages(_ context.Context, input *ec2.DescribeImagesInput, _ ...func(*ec2.Options)) (*ec2.DescribeImagesOutput, error) {
 
 	if input.ImageIds[0] == FailQueryAtDescribeImages {
 		return nil, AWSImageNotFoundError
@@ -105,7 +105,7 @@ func (ms *MockEC2Client) DescribeImages(_ context.Context, input *ec2.DescribeIm
 
 // RunInstances implements a mock run instance method
 // The name of the newly created instances depends on the number of instances in cache starts from 0
-func (ms *MockEC2Client) RunInstances(_ context.Context, input *ec2.RunInstancesInput, opts ...func(*ec2.Options)) (*ec2.RunInstancesOutput, error) {
+func (ms *MockEC2Client) RunInstances(_ context.Context, input *ec2.RunInstancesInput, _ ...func(*ec2.Options)) (*ec2.RunInstancesOutput, error) {
 
 	if *input.ImageId == FailQueryAtRunInstances {
 		if *input.KeyName == InsufficientCapacity {
@@ -155,7 +155,7 @@ func (ms *MockEC2Client) RunInstances(_ context.Context, input *ec2.RunInstances
 }
 
 // DescribeInstances implements a mock run instance method
-func (ms *MockEC2Client) DescribeInstances(_ context.Context, input *ec2.DescribeInstancesInput, opts ...func(*ec2.Options)) (*ec2.DescribeInstancesOutput, error) {
+func (ms *MockEC2Client) DescribeInstances(_ context.Context, input *ec2.DescribeInstancesInput, _ ...func(*ec2.Options)) (*ec2.DescribeInstancesOutput, error) {
 	found := false
 	instanceList := make([]ec2types.Instance, 0)
 
