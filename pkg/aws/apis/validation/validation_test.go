@@ -7,7 +7,7 @@ package validation
 import (
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -148,7 +148,7 @@ var _ = Describe("Validation", func() {
 									VolumeSize: 50,
 									VolumeType: "gp3",
 									Iops:       3500,
-									Throughput: aws.Int64(200),
+									Throughput: aws.Int32(200),
 								},
 							},
 						},
@@ -935,7 +935,7 @@ var _ = Describe("Validation", func() {
 								Ebs: awsapi.AWSEbsBlockDeviceSpec{
 									VolumeSize: 50,
 									Iops:       100,
-									Throughput: aws.Int64(-200),
+									Throughput: aws.Int32(-200),
 									VolumeType: "gp3",
 								},
 							},
@@ -967,7 +967,7 @@ var _ = Describe("Validation", func() {
 						{
 							Type:     "FieldValueInvalid",
 							Field:    "providerSpec.blockDevices[0].ebs.throughput",
-							BadValue: int64(-200),
+							BadValue: int32(-200),
 							Detail:   "Throughput should be a positive value",
 						},
 					},
@@ -1346,7 +1346,7 @@ var _ = Describe("Validation", func() {
 				setup: setup{
 					apply: func(spec *awsapi.AWSProviderSpec) {
 						spec.InstanceMetadataOptions = &awsapi.InstanceMetadataOptions{
-							HTTPPutResponseHopLimit: ptr.To[int64](32),
+							HTTPPutResponseHopLimit: ptr.To[int32](32),
 						}
 					},
 				},
@@ -1362,7 +1362,7 @@ var _ = Describe("Validation", func() {
 				setup: setup{
 					apply: func(spec *awsapi.AWSProviderSpec) {
 						spec.InstanceMetadataOptions = &awsapi.InstanceMetadataOptions{
-							HTTPPutResponseHopLimit: ptr.To[int64](72),
+							HTTPPutResponseHopLimit: ptr.To[int32](72),
 						}
 					},
 				},
@@ -1376,7 +1376,7 @@ var _ = Describe("Validation", func() {
 						{
 							Type:     "FieldValueInvalid",
 							Field:    "providerSpec.instanceMetadata.httpPutResponseHopLimit",
-							BadValue: int64(72),
+							BadValue: int32(72),
 							Detail:   "Only values between 0 and 64, both included, are accepted",
 						},
 					},
@@ -1386,7 +1386,7 @@ var _ = Describe("Validation", func() {
 				setup: setup{
 					apply: func(spec *awsapi.AWSProviderSpec) {
 						spec.InstanceMetadataOptions = &awsapi.InstanceMetadataOptions{
-							HTTPEndpoint: ptr.To(awsapi.HTTPEndpointDisabled),
+							HTTPEndpoint: awsapi.HTTPEndpointDisabled,
 						}
 					},
 				},
@@ -1402,7 +1402,7 @@ var _ = Describe("Validation", func() {
 				setup: setup{
 					apply: func(spec *awsapi.AWSProviderSpec) {
 						spec.InstanceMetadataOptions = &awsapi.InstanceMetadataOptions{
-							HTTPEndpoint: ptr.To("foobar"),
+							HTTPEndpoint: "foobar",
 						}
 					},
 				},
@@ -1426,7 +1426,7 @@ var _ = Describe("Validation", func() {
 				setup: setup{
 					apply: func(spec *awsapi.AWSProviderSpec) {
 						spec.InstanceMetadataOptions = &awsapi.InstanceMetadataOptions{
-							HTTPTokens: ptr.To(awsapi.HTTPTokensRequired),
+							HTTPTokens: awsapi.HTTPTokensRequired,
 						}
 					},
 				},
@@ -1442,7 +1442,7 @@ var _ = Describe("Validation", func() {
 				setup: setup{
 					apply: func(spec *awsapi.AWSProviderSpec) {
 						spec.InstanceMetadataOptions = &awsapi.InstanceMetadataOptions{
-							HTTPTokens: ptr.To("foobar"),
+							HTTPTokens: "foobar",
 						}
 					},
 				},
@@ -1476,7 +1476,7 @@ var _ = Describe("Validation", func() {
 							},
 						},
 						CapacityReservationTarget: &awsapi.AWSCapacityReservationTargetSpec{
-							CapacityReservationPreference:       ptr.To("open"),
+							CapacityReservationPreference:       "open",
 							CapacityReservationID:               ptr.To("capacity-reservation-id-abcd1234"),
 							CapacityReservationResourceGroupArn: ptr.To("arn:01234:/my-resource-group"),
 						},
@@ -1533,7 +1533,7 @@ var _ = Describe("Validation", func() {
 							},
 						},
 						CapacityReservationTarget: &awsapi.AWSCapacityReservationTargetSpec{
-							CapacityReservationPreference: ptr.To("open"),
+							CapacityReservationPreference: "open",
 							CapacityReservationID:         ptr.To("capacity-reservation-id-abcd1234"),
 						},
 						IAM: awsapi.AWSIAMProfileSpec{
@@ -1589,7 +1589,7 @@ var _ = Describe("Validation", func() {
 							},
 						},
 						CapacityReservationTarget: &awsapi.AWSCapacityReservationTargetSpec{
-							CapacityReservationPreference:       ptr.To("open"),
+							CapacityReservationPreference:       "open",
 							CapacityReservationResourceGroupArn: ptr.To("arn:01234:/my-resource-group"),
 						},
 						IAM: awsapi.AWSIAMProfileSpec{
@@ -1841,7 +1841,7 @@ func validAWSProviderSpec() *awsapi.AWSProviderSpec {
 			},
 		},
 		CapacityReservationTarget: &awsapi.AWSCapacityReservationTargetSpec{
-			CapacityReservationPreference: ptr.To("open"),
+			CapacityReservationPreference: "open",
 		},
 		IAM: awsapi.AWSIAMProfileSpec{
 			Name: "test-iam",
