@@ -279,7 +279,7 @@ func (d *Driver) InitializeMachine(_ context.Context, request *driver.Initialize
 	targetInstance := instances[0]
 	providerID := encodeInstanceID(providerSpec.Region, *targetInstance.InstanceId)
 	// if SrcAnDstCheckEnabled is false then disable the SrcAndDestCheck on running NAT instance
-	if providerSpec.SrcAndDstChecksEnabled != nil && !*providerSpec.SrcAndDstChecksEnabled && *targetInstance.SourceDestCheck {
+	if providerSpec.SrcAndDstChecksEnabled != nil && !*providerSpec.SrcAndDstChecksEnabled && ptr.Deref(targetInstance.SourceDestCheck, true) {
 		klog.V(3).Infof("Disabling SourceDestCheck on VM %q associated with machine %s", providerID, request.Machine.Name)
 		err = disableSrcAndDestCheck(svc, targetInstance.InstanceId)
 		if err != nil {
@@ -445,7 +445,7 @@ func (d *Driver) GetMachineStatus(_ context.Context, req *driver.GetMachineStatu
 
 	// if SrcAnDstCheckEnabled is false then check attribute on instance and return Uninitialized error if not matching.
 	if providerSpec.SrcAndDstChecksEnabled != nil && !*providerSpec.SrcAndDstChecksEnabled {
-		if ptr.Deref(requiredInstance.SourceDestCheck, false) {
+		if ptr.Deref(requiredInstance.SourceDestCheck, true) {
 			msg := fmt.Sprintf("VM %q associated with machine %q has SourceDestCheck=%t despite providerSpec.SrcAndDstChecksEnabled=%t",
 				*requiredInstance.InstanceId, req.Machine.Name, *requiredInstance.SourceDestCheck, *providerSpec.SrcAndDstChecksEnabled)
 			klog.Warning(msg)
