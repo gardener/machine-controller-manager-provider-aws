@@ -29,7 +29,7 @@ func (ms *PluginSPIImpl) NewSession(secret *corev1.Secret, region string) (*sess
 	}
 
 	if workloadIdentityTokenFile, ok := secret.Data["workloadIdentityTokenFile"]; ok {
-		sess, err := session.NewSession()
+		sess, err := session.NewSession(aws.NewConfig().WithRegion(region))
 		if err != nil {
 			return nil, err
 		}
