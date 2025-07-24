@@ -1,12 +1,12 @@
+componentReferences:
+- componentName: github.com/gardener/machine-controller-manager
+  name: machine-controller-manager
+  version: v0.59.2
 main-source:
   labels:
-    - name: cloud.gardener.cnudie/dso/scanning-hints/source_analysis/v1
-      value:
-        policy: skip
-        comment: |
-          we use gosec for sast scanning. See attached log.
+  - name: cloud.gardener.cnudie/dso/scanning-hints/source_analysis/v1
+    value:
+      comment: 'we use gosec for sast scanning. See attached log.
 
-componentReferences:
-  - name: machine-controller-manager
-    componentName: github.com/gardener/machine-controller-manager
-    version: v0.58.0
+        '
+      policy: skip
