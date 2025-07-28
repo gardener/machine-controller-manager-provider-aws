@@ -210,7 +210,7 @@ func (ms *MockEC2Client) DescribeInstances(_ context.Context, input *ec2.Describ
 }
 
 // TerminateInstances implements a mock terminate instance method
-func (ms *MockEC2Client) TerminateInstances(_ context.Context, input *ec2.TerminateInstancesInput, opts ...func(*ec2.Options)) (*ec2.TerminateInstancesOutput, error) {
+func (ms *MockEC2Client) TerminateInstances(_ context.Context, input *ec2.TerminateInstancesInput, _ ...func(*ec2.Options)) (*ec2.TerminateInstancesOutput, error) {
 
 	if input.InstanceIds[0] == FailQueryAtTerminateInstances {
 		return nil, &smithy.GenericAPIError{Code: string(ec2types.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceId)}
@@ -252,7 +252,7 @@ func (ms *MockEC2Client) TerminateInstances(_ context.Context, input *ec2.Termin
 }
 
 // StopInstances implements a mock stop instance method
-func (ms *MockEC2Client) StopInstances(_ context.Context, input *ec2.StopInstancesInput, opts ...func(*ec2.Options)) (*ec2.StopInstancesOutput, error) {
+func (ms *MockEC2Client) StopInstances(_ context.Context, input *ec2.StopInstancesInput, _ ...func(*ec2.Options)) (*ec2.StopInstancesOutput, error) {
 
 	if input.InstanceIds[0] == InstanceStopError {
 		return nil, fmt.Errorf("Stopping of instance errored out")
