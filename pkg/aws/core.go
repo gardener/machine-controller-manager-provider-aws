@@ -134,10 +134,11 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 	}
 
 	var networkInterfaceSpecs []ec2types.InstanceNetworkInterfaceSpecification
+
 	for i, netIf := range providerSpec.NetworkInterfaces {
 		spec := ec2types.InstanceNetworkInterfaceSpecification{
 			Groups:                   netIf.SecurityGroupIDs,
-			DeviceIndex:              aws.Int32(int32(i)),
+			DeviceIndex:              aws.Int32(int32(i)), // #nosec: G115 -- index will not exceed int32 limits
 			AssociatePublicIpAddress: netIf.AssociatePublicIPAddress,
 			DeleteOnTermination:      netIf.DeleteOnTermination,
 			Description:              netIf.Description,
@@ -289,6 +290,7 @@ func (d *Driver) InitializeMachine(ctx context.Context, request *driver.Initiali
 	}
 	for i, netIf := range providerSpec.NetworkInterfaces {
 		for _, instanceNetIf := range targetInstance.NetworkInterfaces {
+			// #nosec: G115 -- index will not exceed int32 limits
 			if netIf.Ipv6PrefixCount != nil && *instanceNetIf.Attachment.DeviceIndex == int32(i) {
 				input := &ec2.AssignIpv6AddressesInput{
 					NetworkInterfaceId: instanceNetIf.NetworkInterfaceId,
