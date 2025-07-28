@@ -444,8 +444,8 @@ var _ = Describe("MachineServer", func() {
 		}
 		DescribeTable("##table",
 			func(data *data) {
-				mockPluginSPIImpl := &mockclient.MockClientProvider{FakeInstances: make([]ec2types.Instance, 0)}
-				md := NewAWSDriver(mockPluginSPIImpl)
+				mockClientProvider := &mockclient.MockClientProvider{FakeInstances: make([]ec2types.Instance, 0)}
+				md := NewAWSDriver(mockClientProvider)
 
 				ctx := context.Background()
 

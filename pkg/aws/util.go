@@ -104,11 +104,6 @@ func kubernetesVolumeIDToEBSVolumeID(kubernetesID string) (string, error) {
 func getStringPtr(s string) *string {
 	return &s
 }
-func getIntPtrForString(s string) *int64 {
-	var num int64
-	num, _ = strconv.ParseInt(s, 10, 64)
-	return &num
-}
 
 func getInt32PtrForString(s string) *int32 {
 	num, _ := strconv.ParseInt(s, 10, 32)
