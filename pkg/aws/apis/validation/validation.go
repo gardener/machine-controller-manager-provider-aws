@@ -135,7 +135,7 @@ func validateCapacityReservations(capacityReservation *awsapi.AWSCapacityReserva
 	)
 
 	if capacityReservation != nil {
-		if capacityReservation.CapacityReservationPreference != nil {
+		if capacityReservation.CapacityReservationPreference != "" {
 			if capacityReservation.CapacityReservationID != nil || capacityReservation.CapacityReservationResourceGroupArn != nil {
 				allErrs = append(allErrs, field.Required(fldPath, "CapacityReservationPreference cannot be set when also providing a CapacityReservationID or CapacityReservationResourceGroupArn"))
 			}
@@ -185,12 +185,12 @@ func validateInstanceMetadata(metadata *awsapi.InstanceMetadataOptions, fldPath 
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("httpPutResponseHopLimit"), *metadata.HTTPPutResponseHopLimit, "Only values between 0 and 64, both included, are accepted"))
 	}
 
-	if metadata.HTTPEndpoint != nil {
-		allErrs = append(allErrs, validateStringValues(fldPath.Child("httpEndpoint"), *metadata.HTTPEndpoint, []string{awsapi.HTTPEndpointDisabled, awsapi.HTTPEndpointEnabled})...)
+	if metadata.HTTPEndpoint != "" {
+		allErrs = append(allErrs, validateStringValues(fldPath.Child("httpEndpoint"), metadata.HTTPEndpoint, []string{awsapi.HTTPEndpointDisabled, awsapi.HTTPEndpointEnabled})...)
 	}
 
-	if metadata.HTTPTokens != nil {
-		allErrs = append(allErrs, validateStringValues(fldPath.Child("httpTokens"), *metadata.HTTPTokens, []string{awsapi.HTTPTokensRequired, awsapi.HTTPTokensOptional})...)
+	if metadata.HTTPTokens != "" {
+		allErrs = append(allErrs, validateStringValues(fldPath.Child("httpTokens"), metadata.HTTPTokens, []string{awsapi.HTTPTokensRequired, awsapi.HTTPTokensOptional})...)
 	}
 
 	return allErrs

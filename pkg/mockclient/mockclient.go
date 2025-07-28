@@ -5,15 +5,17 @@
 package mockclient
 
 import (
+	"context"
 	"fmt"
-	awserror "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/errors"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	awssession "github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/aws/smithy-go"
+	"github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/errors"
+	"github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/interfaces"
+
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -44,34 +46,34 @@ const (
 
 var (
 	// AWSInvalidRegionError denotes an error with an InvalidRegion error code.
-	AWSInvalidRegionError = awserr.New("InvalidRegion", "region doesn't exist while trying to create session", fmt.Errorf("region doesn't exist while trying to create session"))
+	AWSInvalidRegionError = &smithy.GenericAPIError{Code: "region doesn't exist while trying to create session"}
 	// AWSImageNotFoundError denotes an error with an ImageNotFound error code.
-	AWSImageNotFoundError = awserr.New("ImageNotFound", "couldn't find image with given ID", fmt.Errorf("couldn't find image with given ID"))
+	AWSImageNotFoundError = &smithy.GenericAPIError{Code: "couldn't find image with given ID"}
 	// AWSInternalErrorForRunInstances denotes an error returned by RunInstances call with Internal error code
-	AWSInternalErrorForRunInstances = awserr.New("Internal", "couldn't run instance with given ID", fmt.Errorf("couldn't run instance with given ID"))
+	AWSInternalErrorForRunInstances = &smithy.GenericAPIError{Code: "couldn't run instance with given ID"}
 	// AWSInsufficientCapacityError denotes an error with an InsufficientCapacity error code.
-	AWSInsufficientCapacityError = awserr.New(awserror.InsufficientCapacity, "insufficient capacity on cloud provider side", fmt.Errorf("insufficient capacity on cloud provider side"))
+	AWSInsufficientCapacityError = &smithy.GenericAPIError{Code: errors.InsufficientCapacity}
 	// AWSInternalErrorForDescribeInstances denotes an error returned by DescribeInstances call with an Internal error code
-	AWSInternalErrorForDescribeInstances = awserr.New("Internal", "cloud provider returned error", fmt.Errorf("cloud provider returned error"))
+	AWSInternalErrorForDescribeInstances = &smithy.GenericAPIError{Code: "cloud provider returned error"}
 	// AWSInstanceNotFoundError returns denotes an error with InvalidInstanceID.NotFound error code
-	AWSInstanceNotFoundError = awserr.New(awserror.InstanceIDNotFound, "InvalidInstanceID.NotFound: The instance IDs do not exist", fmt.Errorf("InvalidInstanceID.NotFound: The instance IDs do not exist"))
+	AWSInstanceNotFoundError = &smithy.GenericAPIError{Code: string(errors.InstanceIDNotFound)}
 )
 
-// MockPluginSPIImpl is the mock implementation of PluginSPI interface that makes dummy calls
-type MockPluginSPIImpl struct {
-	FakeInstances []ec2.Instance
+// MockClientProvider is the mock implementation of ClientProvider interface that makes dummy calls
+type MockClientProvider struct {
+	FakeInstances []ec2types.Instance
 }
 
-// NewSession starts a new AWS session
-func (ms *MockPluginSPIImpl) NewSession(_ *corev1.Secret, region string) (*awssession.Session, error) {
+// NewConfig returns a new AWS Config
+func (ms *MockClientProvider) NewConfig(_ context.Context, _ *corev1.Secret, region string) (*aws.Config, error) {
 	if region == FailAtRegion {
 		return nil, AWSInvalidRegionError
 	}
-	return &awssession.Session{}, nil
+	return &aws.Config{}, nil
 }
 
-// NewEC2API Returns a EC2API object
-func (ms *MockPluginSPIImpl) NewEC2API(_ *awssession.Session) ec2iface.EC2API {
+// NewEC2Client Returns a new mock for the EC2 Client
+func (ms *MockClientProvider) NewEC2Client(_ *aws.Config) interfaces.Ec2Client {
 	return &MockEC2Client{
 		FakeInstances: &ms.FakeInstances,
 	}
@@ -79,21 +81,21 @@ func (ms *MockPluginSPIImpl) NewEC2API(_ *awssession.Session) ec2iface.EC2API {
 
 // MockEC2Client is the mock implementation of an EC2Client
 type MockEC2Client struct {
-	ec2iface.EC2API
-	FakeInstances *[]ec2.Instance
+	interfaces.Ec2Client
+	FakeInstances *[]ec2types.Instance
 }
 
 // DescribeImages implements a mock describe image method
-func (ms *MockEC2Client) DescribeImages(input *ec2.DescribeImagesInput) (*ec2.DescribeImagesOutput, error) {
+func (ms *MockEC2Client) DescribeImages(_ context.Context, input *ec2.DescribeImagesInput, _ ...func(*ec2.Options)) (*ec2.DescribeImagesOutput, error) {
 
-	if *input.ImageIds[0] == FailQueryAtDescribeImages {
+	if input.ImageIds[0] == FailQueryAtDescribeImages {
 		return nil, AWSImageNotFoundError
 	}
 
 	rootDeviceName := "test-root-disk"
 
 	return &ec2.DescribeImagesOutput{
-		Images: []*ec2.Image{
+		Images: []ec2types.Image{
 			{
 				RootDeviceName: &rootDeviceName,
 			},
@@ -103,7 +105,7 @@ func (ms *MockEC2Client) DescribeImages(input *ec2.DescribeImagesInput) (*ec2.De
 
 // RunInstances implements a mock run instance method
 // The name of the newly created instances depends on the number of instances in cache starts from 0
-func (ms *MockEC2Client) RunInstances(input *ec2.RunInstancesInput) (*ec2.Reservation, error) {
+func (ms *MockEC2Client) RunInstances(_ context.Context, input *ec2.RunInstancesInput, _ ...func(*ec2.Options)) (*ec2.RunInstancesOutput, error) {
 
 	if *input.ImageId == FailQueryAtRunInstances {
 		if *input.KeyName == InsufficientCapacity {
@@ -117,7 +119,13 @@ func (ms *MockEC2Client) RunInstances(input *ec2.RunInstancesInput) (*ec2.Reserv
 
 	placement := input.Placement
 	if placement != nil {
-		instanceID = fmt.Sprintf("i-0123456789-%d/placement={affinity:%s,availabilityZone:%s,tenancy:%s}", len(*ms.FakeInstances), *placement.Affinity, *placement.AvailabilityZone, *placement.Tenancy)
+		instanceID = fmt.Sprintf(
+			"i-0123456789-%d/placement={affinity:%s,availabilityZone:%s,tenancy:%s}",
+			len(*ms.FakeInstances),
+			*placement.Affinity,
+			*placement.AvailabilityZone,
+			placement.Tenancy,
+		)
 	}
 
 	if strings.Contains(*input.ImageId, SetInstanceID) {
@@ -128,58 +136,55 @@ func (ms *MockEC2Client) RunInstances(input *ec2.RunInstancesInput) (*ec2.Reserv
 		}
 	}
 
-	newInstance := ec2.Instance{
+	newInstance := ec2types.Instance{
 		InstanceId:     &instanceID,
 		PrivateDnsName: &privateDNSName,
-		State: &ec2.InstanceState{
-			Code: aws.Int64(16),
-			Name: aws.String("running"),
+		State: &ec2types.InstanceState{
+			Code: aws.Int32(16),
+			Name: ec2types.InstanceStateName("running"),
 		},
 		Tags: deepCopyTagList(input.TagSpecifications[0].Tags),
 	}
 	*ms.FakeInstances = append(*ms.FakeInstances, newInstance)
 
-	return &ec2.Reservation{
-		Instances: []*ec2.Instance{
-			&newInstance,
+	return &ec2.RunInstancesOutput{
+		Instances: []ec2types.Instance{
+			newInstance,
 		},
 	}, nil
 }
 
 // DescribeInstances implements a mock run instance method
-func (ms *MockEC2Client) DescribeInstances(input *ec2.DescribeInstancesInput) (*ec2.DescribeInstancesOutput, error) {
+func (ms *MockEC2Client) DescribeInstances(_ context.Context, input *ec2.DescribeInstancesInput, _ ...func(*ec2.Options)) (*ec2.DescribeInstancesOutput, error) {
 	found := false
-	instanceList := make([]*ec2.Instance, 0)
+	instanceList := make([]ec2types.Instance, 0)
 
 	for _, filter := range input.Filters {
-		if *filter.Values[0] == "kubernetes.io/cluster/"+ReturnErrorAtDescribeInstances {
+		if filter.Values[0] == "kubernetes.io/cluster/"+ReturnErrorAtDescribeInstances {
 			return nil, AWSInternalErrorForDescribeInstances
 		}
 	}
 
 	if len(input.InstanceIds) > 0 {
-		if *input.InstanceIds[0] == ReturnEmptyListAtDescribeInstances {
+		if input.InstanceIds[0] == ReturnEmptyListAtDescribeInstances {
 			return &ec2.DescribeInstancesOutput{
-				Reservations: []*ec2.Reservation{
+				Reservations: []ec2types.Reservation{
 					{
 						Instances: instanceList,
 					},
 				},
 			}, nil
-		} else if *input.InstanceIds[0] == InstanceDoesntExistError {
-			return nil, awserr.New(
-				ec2.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceIdNotFound, "",
-				fmt.Errorf("Instance with instance-ID doesn't exist"),
-			)
+		} else if input.InstanceIds[0] == InstanceDoesntExistError {
+			return nil, &smithy.GenericAPIError{Code: string(ec2types.UnsuccessfulInstanceCreditSpecificationErrorCodeInstanceNotFound)}
 		}
 
 		// Target Specific instances
 		for _, instanceID := range input.InstanceIds {
 			for _, instance := range *ms.FakeInstances {
-				if *instance.InstanceId == *instanceID {
+				if *instance.InstanceId == instanceID {
 					found = true
 					instanceToCopy := instance
-					instanceList = append(instanceList, &instanceToCopy)
+					instanceList = append(instanceList, instanceToCopy)
 				}
 			}
 		}
@@ -191,12 +196,12 @@ func (ms *MockEC2Client) DescribeInstances(input *ec2.DescribeInstancesInput) (*
 		// Target all instances
 		for _, instance := range *ms.FakeInstances {
 			instanceToCopy := instance
-			instanceList = append(instanceList, &instanceToCopy)
+			instanceList = append(instanceList, instanceToCopy)
 		}
 	}
 
 	return &ec2.DescribeInstancesOutput{
-		Reservations: []*ec2.Reservation{
+		Reservations: []ec2types.Reservation{
 			{
 				Instances: instanceList,
 			},
@@ -205,22 +210,19 @@ func (ms *MockEC2Client) DescribeInstances(input *ec2.DescribeInstancesInput) (*
 }
 
 // TerminateInstances implements a mock terminate instance method
-func (ms *MockEC2Client) TerminateInstances(input *ec2.TerminateInstancesInput) (*ec2.TerminateInstancesOutput, error) {
+func (ms *MockEC2Client) TerminateInstances(_ context.Context, input *ec2.TerminateInstancesInput, _ ...func(*ec2.Options)) (*ec2.TerminateInstancesOutput, error) {
 
-	if *input.InstanceIds[0] == FailQueryAtTerminateInstances {
-		return nil, awserr.New(
-			ec2.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceIdMalformed, "",
-			fmt.Errorf("Termination of instance errorred out"),
-		)
+	if input.InstanceIds[0] == FailQueryAtTerminateInstances {
+		return nil, &smithy.GenericAPIError{Code: string(ec2types.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceId)}
 	}
 
-	var desiredInstance ec2.Instance
+	var desiredInstance ec2types.Instance
 	found := false
-	newInstanceList := make([]ec2.Instance, 0)
+	newInstanceList := make([]ec2types.Instance, 0)
 
 	for _, instanceID := range input.InstanceIds {
 		for _, instance := range *ms.FakeInstances {
-			if *instance.InstanceId == *instanceID {
+			if *instance.InstanceId == instanceID {
 				// Do not append InstanceID, there by removing it
 				found = true
 				desiredInstance = instance
@@ -236,13 +238,13 @@ func (ms *MockEC2Client) TerminateInstances(input *ec2.TerminateInstancesInput) 
 	}
 
 	return &ec2.TerminateInstancesOutput{
-		TerminatingInstances: []*ec2.InstanceStateChange{
+		TerminatingInstances: []ec2types.InstanceStateChange{
 			{
 				PreviousState: desiredInstance.State,
-				InstanceId:    input.InstanceIds[0],
-				CurrentState: &ec2.InstanceState{
-					Code: aws.Int64(32),
-					Name: aws.String("shutting-down"),
+				InstanceId:    aws.String(input.InstanceIds[0]),
+				CurrentState: &ec2types.InstanceState{
+					Code: aws.Int32(32),
+					Name: ec2types.InstanceStateName("shutting-down"),
 				},
 			},
 		},
@@ -250,25 +252,21 @@ func (ms *MockEC2Client) TerminateInstances(input *ec2.TerminateInstancesInput) 
 }
 
 // StopInstances implements a mock stop instance method
-func (ms *MockEC2Client) StopInstances(input *ec2.StopInstancesInput) (*ec2.StopInstancesOutput, error) {
+func (ms *MockEC2Client) StopInstances(_ context.Context, input *ec2.StopInstancesInput, _ ...func(*ec2.Options)) (*ec2.StopInstancesOutput, error) {
 
-	if *input.InstanceIds[0] == InstanceStopError {
+	if input.InstanceIds[0] == InstanceStopError {
 		return nil, fmt.Errorf("Stopping of instance errored out")
 	} else if *input.DryRun {
 		// If it is a dry run
-		return nil, awserr.New(
-			"DryRunOperation",
-			"This is a dryRun call",
-			fmt.Errorf("This is a dry run call"),
-		)
+		return nil, fmt.Errorf("This is a dry run call")
 	}
 
-	var desiredInstance ec2.Instance
+	var desiredInstance ec2types.Instance
 	found := false
 
 	for _, instanceID := range input.InstanceIds {
 		for _, instance := range *ms.FakeInstances {
-			if *instance.InstanceId == *instanceID {
+			if *instance.InstanceId == instanceID {
 				// Do not append InstanceID, there by removing it
 				found = true
 				desiredInstance = instance
@@ -281,13 +279,13 @@ func (ms *MockEC2Client) StopInstances(input *ec2.StopInstancesInput) (*ec2.Stop
 	}
 
 	return &ec2.StopInstancesOutput{
-		StoppingInstances: []*ec2.InstanceStateChange{
+		StoppingInstances: []ec2types.InstanceStateChange{
 			{
 				PreviousState: desiredInstance.State,
-				InstanceId:    input.InstanceIds[0],
-				CurrentState: &ec2.InstanceState{
-					Code: aws.Int64(64),
-					Name: aws.String("stopping"),
+				InstanceId:    aws.String(input.InstanceIds[0]),
+				CurrentState: &ec2types.InstanceState{
+					Code: aws.Int32(64),
+					Name: ec2types.InstanceStateName("stopping"),
 				},
 			},
 		},
@@ -295,11 +293,11 @@ func (ms *MockEC2Client) StopInstances(input *ec2.StopInstancesInput) (*ec2.Stop
 }
 
 // deepCopyTagList copies inTags list to outTags
-func deepCopyTagList(inTags []*ec2.Tag) []*ec2.Tag {
-	var outTags []*ec2.Tag
+func deepCopyTagList(inTags []ec2types.Tag) []ec2types.Tag {
+	var outTags []ec2types.Tag
 
 	for _, tagPtr := range inTags {
-		tag := &ec2.Tag{}
+		tag := ec2types.Tag{}
 		if tagPtr.Key != nil {
 			key := *tagPtr.Key
 			tag.Key = &key

@@ -4,7 +4,7 @@
 
 package errors
 
-import "github.com/aws/aws-sdk-go/service/ec2"
+import ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 
 // See https://docs.aws.amazon.com/AWSEC2/latest/APIReference/errors-overview.html# for more information on the various error codes
 // returned by the amazon EC2 API
@@ -54,5 +54,5 @@ const (
 
 	// InstanceIDNotFound is returned when the specified instance does not exist. This error might occur because the ID of a recently created instance has not propagated through the system.
 	// For more information, see Eventual consistency(https://docs.aws.amazon.com/AWSEC2/latest/APIReference/query-api-troubleshooting.html#eventual-consistency).
-	InstanceIDNotFound = ec2.UnsuccessfulInstanceCreditSpecificationErrorCodeInvalidInstanceIdNotFound
+	InstanceIDNotFound = ec2types.UnsuccessfulInstanceCreditSpecificationErrorCodeInstanceNotFound
 )

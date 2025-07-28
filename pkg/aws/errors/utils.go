@@ -5,34 +5,41 @@
 package errors
 
 import (
-	"github.com/aws/aws-sdk-go/aws/awserr"
+	"errors"
+
+	"github.com/aws/smithy-go"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/codes"
 )
 
 // GetMCMErrorCodeForCreateMachine takes the error returned from the EC2API during the CreateMachine call and returns the corresponding MCM error code.
 func GetMCMErrorCodeForCreateMachine(err error) codes.Code {
-	awsErr := err.(awserr.Error)
-	switch awsErr.Code() {
-	case InsufficientCapacity, InsufficientAddressCapacity, InsufficientInstanceCapacity, InsufficientVolumeCapacity, InstanceLimitExceeded, VcpuLimitExceeded, VolumeLimitExceeded, MaxIOPSLimitExceeded, RouteLimitExceeded:
-		return codes.ResourceExhausted
-	default:
-		return codes.Internal
+	var awsErr smithy.APIError
+	if errors.As(err, &awsErr) {
+		switch awsErr.ErrorCode() {
+		case InsufficientCapacity, InsufficientAddressCapacity, InsufficientInstanceCapacity, InsufficientVolumeCapacity, InstanceLimitExceeded, VcpuLimitExceeded, VolumeLimitExceeded, MaxIOPSLimitExceeded, RouteLimitExceeded:
+			return codes.ResourceExhausted
+		}
 	}
+	return codes.Internal
 }
 
 // GetMCMErrorCodeForTerminateInstances takes the error returned from the EC2API during the terminateInstance call and returns the corresponding MCM error code.
 func GetMCMErrorCodeForTerminateInstances(err error) codes.Code {
-	awsErr := err.(awserr.Error)
-	switch awsErr.Code() {
-	case InstanceIDNotFound:
-		return codes.NotFound
-	default:
-		return codes.Internal
+	var awsErr smithy.APIError
+	if errors.As(err, &awsErr) {
+		switch awsErr.ErrorCode() {
+		case string(InstanceIDNotFound):
+			return codes.NotFound
+		}
 	}
+	return codes.Internal
 }
 
 // IsInstanceIDNotFound checks if the provider returned an InstanceIDNotFound error
 func IsInstanceIDNotFound(err error) bool {
-	awsErr := err.(awserr.Error)
-	return awsErr.Code() == InstanceIDNotFound
+	var awsErr smithy.APIError
+	if errors.As(err, &awsErr) {
+		return awsErr.ErrorCode() == string(InstanceIDNotFound)
+	}
+	return false
 }
