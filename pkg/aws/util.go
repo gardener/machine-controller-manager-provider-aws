@@ -7,14 +7,14 @@ package aws
 import (
 	"context"
 	"fmt"
-	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
-	"k8s.io/utils/ptr"
-
 	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/interfaces"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/codes"
