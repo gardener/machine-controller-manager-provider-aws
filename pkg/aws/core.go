@@ -232,21 +232,46 @@ func (d *Driver) CreateMachine(_ context.Context, req *driver.CreateMachineReque
 	if err != nil {
 		return nil, status.Error(awserror.GetMCMErrorCodeForCreateMachine(err), err.Error())
 	}
+	var instanceID string
+	var providerID string
+
+	for _, instance := range runResult.Instances {
+		if instance != nil && instance.InstanceId != nil {
+			instanceID = *instance.InstanceId
+			providerID = encodeInstanceID(providerSpec.Region, instanceID)
+			break
+		}
+	}
+
+	if instanceID == "" {
+		return nil, status.Error(codes.Internal, fmt.Sprintf("creation of VM failed for machine %q - no non-empty instanceID found in runResult", machine.Name))
+	}
+
+	klog.V(2).Infof("Waiting for VM with Provider-ID %q, for machine %q to be visible to all AWS endpoints", providerID, machine.Name)
+
+	operation := func() (*ec2.Instance, error) {
+		instancesOutput, err := getInstanceByID(svc, instanceID) //TODO: get non-nil instanceID
+		if err != nil {
+			return nil, err
+		}
+		for _, reservation := range instancesOutput.Reservations {
+			for _, instance := range reservation.Instances {
+				if instance != nil {
+					return instance, nil
+				}
+			}
+		}
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("instance with instanceID %s not found", instanceID))
+	}
+
+	instance, err := retryWithExponentialBackOff(operation, maxElapsedTimeInBackoff)
+	if err != nil {
+		return nil, status.Error(codes.Internal, fmt.Sprintf("creation of VM %q failed, timed out waiting for eventual consistency. Multiple VMs backing machine obj might spawn, they will be orphan collected", providerID))
+	}
 
 	response := &driver.CreateMachineResponse{
 		ProviderID: encodeInstanceID(providerSpec.Region, *runResult.Instances[0].InstanceId),
-		NodeName:   *runResult.Instances[0].PrivateDnsName,
-	}
-
-	klog.V(2).Infof("Waiting for VM with Provider-ID %q, for machine %q to be visible to all AWS endpoints", response.ProviderID, machine.Name)
-
-	operation := func() error {
-		_, err = confirmInstanceByID(svc, *runResult.Instances[0].InstanceId)
-		return err
-	}
-
-	if err = retryWithExponentialBackOff(operation, maxElapsedTimeInBackoff); err != nil {
-		return nil, status.Error(codes.Internal, fmt.Sprintf("creation of VM %q failed, timed out waiting for eventual consistency. Multiple VMs backing machine obj might spawn, they will be orphan collected", response.ProviderID))
+		NodeName:   *instance.PrivateDnsName,
 	}
 
 	klog.V(2).Infof("VM with Provider-ID %q, for machine %q should be visible to all AWS endpoints now", response.ProviderID, machine.Name)
