@@ -276,8 +276,12 @@ func (d *Driver) CreateMachine(_ context.Context, req *driver.CreateMachineReque
 
 	if instance.PrivateDnsName != nil {
 		nodeName = *instance.PrivateDnsName
-	} else {
-		klog.Warningf("VM with Provider-ID %q, for machine %q does not yet have a nodeName (instance.PrivateDnsName)", providerID, machine.Name)
+	}
+
+	if nodeName == "" {
+		msg := fmt.Sprintf("VM with Provider-ID %q, for machine %q does not yet have a nodeName (instance.PrivateDnsName)", providerID, machine.Name)
+		klog.Error(msg)
+		return nil, status.Error(codes.Internal, msg)
 	}
 
 	response := &driver.CreateMachineResponse{
@@ -285,7 +289,7 @@ func (d *Driver) CreateMachine(_ context.Context, req *driver.CreateMachineReque
 		NodeName:   nodeName,
 	}
 
-	klog.V(2).Infof("VM with Provider-ID %q, for machine %q should be visible to all AWS endpoints now", response.ProviderID, machine.Name)
+	klog.V(2).Infof("VM with Provider-ID %q, for machine %q, nodeName: %q should be visible to all AWS endpoints now", response.ProviderID, machine.Name, nodeName)
 	klog.V(3).Infof("VM with Provider-ID: %q created for Machine: %q", response.ProviderID, machine.Name)
 	return response, nil
 }
