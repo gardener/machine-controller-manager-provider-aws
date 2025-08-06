@@ -232,13 +232,15 @@ func (d *Driver) CreateMachine(_ context.Context, req *driver.CreateMachineReque
 	if err != nil {
 		return nil, status.Error(awserror.GetMCMErrorCodeForCreateMachine(err), err.Error())
 	}
-	var instanceID string
-	var providerID string
+	var instanceID, providerID, nodeName string
 
 	for _, instance := range runResult.Instances {
 		if instance != nil && instance.InstanceId != nil {
 			instanceID = *instance.InstanceId
 			providerID = encodeInstanceID(providerSpec.Region, instanceID)
+			if instance.PrivateDnsName != nil {
+				nodeName = *instance.PrivateDnsName
+			}
 			break
 		}
 	}
@@ -248,9 +250,12 @@ func (d *Driver) CreateMachine(_ context.Context, req *driver.CreateMachineReque
 	}
 
 	klog.V(2).Infof("Waiting for VM with Provider-ID %q, for machine %q to be visible to all AWS endpoints", providerID, machine.Name)
+	if nodeName == "" {
+		klog.Warningf("VM with Provider-ID %q, for machine %q does not yet have a nodeName (instance.PrivateDnsName)", providerID, machine.Name)
+	}
 
 	operation := func() (*ec2.Instance, error) {
-		instancesOutput, err := getInstanceByID(svc, instanceID) //TODO: get non-nil instanceID
+		instancesOutput, err := getInstanceByID(svc, instanceID)
 		if err != nil {
 			return nil, err
 		}
@@ -269,9 +274,15 @@ func (d *Driver) CreateMachine(_ context.Context, req *driver.CreateMachineReque
 		return nil, status.Error(codes.Internal, fmt.Sprintf("creation of VM %q failed, timed out waiting for eventual consistency. Multiple VMs backing machine obj might spawn, they will be orphan collected", providerID))
 	}
 
+	if instance.PrivateDnsName != nil {
+		nodeName = *instance.PrivateDnsName
+	} else {
+		klog.Warningf("VM with Provider-ID %q, for machine %q does not yet have a nodeName (instance.PrivateDnsName)", providerID, machine.Name)
+	}
+
 	response := &driver.CreateMachineResponse{
-		ProviderID: encodeInstanceID(providerSpec.Region, *runResult.Instances[0].InstanceId),
-		NodeName:   *instance.PrivateDnsName,
+		ProviderID: providerID,
+		NodeName:   nodeName,
 	}
 
 	klog.V(2).Infof("VM with Provider-ID %q, for machine %q should be visible to all AWS endpoints now", response.ProviderID, machine.Name)
