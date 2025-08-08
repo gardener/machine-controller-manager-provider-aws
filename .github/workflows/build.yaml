@@ -82,3 +82,31 @@ jobs:
                 value: |
                   we use gosec (linter) for SAST scans
                   see: https://github.com/securego/gosec
+
+  unit-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+      - name: run-unit-test
+        run: |
+          set -eu
+          mkdir -p /tmp/blobs.d
+          SKIP_INTEGRATION_TESTS=true .ci/test |& tee /tmp/blobs.d/test-log.txt
+          tar czf /tmp/blobs.d/test-log.tar.gz -C /tmp/blobs.d test-log.txt
+      - name: add-unit-test-to-component-descriptor
+        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@master
+        with:
+          blobs-directory: /tmp/blobs.d
+          ocm-resources: |
+            name: test-results
+            relation: local
+            access:
+              type: localBlob
+              localReference: test-log.tar.gz
+            labels:
+              - name: gardener.cloud/purposes
+                value:
+                  - test
