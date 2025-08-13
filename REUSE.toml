@@ -1,0 +1,22 @@
+version = 1
+SPDX-PackageName = "Gardener machine-controller-manager-provider-aws"
+SPDX-PackageSupplier = "The Gardener project <gardener@googlegroups.com>"
+SPDX-PackageDownloadLocation = "https://github.com/gardener/machine-controller-manager-provider-aws"
+
+[[annotations]]
+path = "**"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2017-2024 SAP SE or an SAP affiliate company and Gardener contributors"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = "**.md"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2017-2024 SAP SE or an SAP affiliate company and Gardener contributors"
+SPDX-License-Identifier = "CC-BY-4.0"
+
+[[annotations]]
+path = "cmd/machine-controller/main.go"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "The Kubernetes Authors"
+SPDX-License-Identifier = "Apache-2.0"
