@@ -1,4 +1,4 @@
-name: Build
+name: Non-Release
 on:
   push:
   pull_request:
