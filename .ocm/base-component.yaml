@@ -16,6 +16,8 @@ labels:
       username: 'elankath'
     - type: 'githubUser'
       username: 'thiyyakat'
+    - type: 'githubUser'
+      username: 'takoverflow'
 
 componentReferences:
   - name: machine-controller-manager
