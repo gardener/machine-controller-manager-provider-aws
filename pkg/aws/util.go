@@ -6,6 +6,7 @@ package aws
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go/service/ec2"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -108,12 +109,8 @@ func getIntPtrForString(s string) *int64 {
 	return &num
 }
 
-func retryWithExponentialBackOff(operation backoff.Operation, _ time.Duration) error {
+func retryWithExponentialBackOff(operation backoff.OperationWithData[*ec2.Instance], _ time.Duration) (*ec2.Instance, error) {
 	expBackOffObj := backoff.NewExponentialBackOff()
 	expBackOffObj.MaxElapsedTime = maxElapsedTimeInBackoff
-	if err := backoff.Retry(operation, expBackOffObj); err != nil {
-		return err
-	}
-
-	return nil
+	return backoff.RetryWithData(operation, expBackOffObj)
 }
