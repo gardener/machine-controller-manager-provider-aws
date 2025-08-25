@@ -5,11 +5,11 @@
 package errors
 
 import (
-	"errors"
-	"github.com/aws/aws-sdk-go/aws/awserr"
+	"testing"
+
+	"github.com/aws/smithy-go"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/codes"
 	. "github.com/onsi/gomega"
-	"testing"
 )
 
 type input struct {
@@ -19,8 +19,8 @@ type input struct {
 
 func TestGetMCMErrorCodeForCreateMachine(t *testing.T) {
 	table := []input{
-		{inputError: awserr.New(InsufficientCapacity, "insufficient-capacity", errors.New("insufficient capacity")), expectedCode: codes.ResourceExhausted},
-		{inputError: awserr.New("UnknownError", "unknown-error", errors.New("unknown error")), expectedCode: codes.Internal},
+		{inputError: &smithy.GenericAPIError{Code: "InsufficientCapacity"}, expectedCode: codes.ResourceExhausted},
+		{inputError: &smithy.GenericAPIError{Code: "unknown error"}, expectedCode: codes.Internal},
 	}
 	g := NewWithT(t)
 	for _, entry := range table {
@@ -30,8 +30,8 @@ func TestGetMCMErrorCodeForCreateMachine(t *testing.T) {
 
 func TestGetMCMErrorCodeForTerminateInstances(t *testing.T) {
 	table := []input{
-		{inputError: awserr.New(InstanceIDNotFound, "instance-id-not-found", errors.New("instance id not found")), expectedCode: codes.NotFound},
-		{inputError: awserr.New("UnknownError", "unknown-error", errors.New("unknown error")), expectedCode: codes.Internal},
+		{inputError: &smithy.GenericAPIError{Code: "InvalidInstanceID.NotFound"}, expectedCode: codes.NotFound},
+		{inputError: &smithy.GenericAPIError{Code: "unknown error"}, expectedCode: codes.Internal},
 	}
 	g := NewWithT(t)
 	for _, entry := range table {
