@@ -1,25 +1,25 @@
+componentReferences:
+- componentName: github.com/gardener/machine-controller-manager
+  name: machine-controller-manager
+  version: v0.60.0
+labels:
+- name: cloud.gardener.cnudie/responsibles
+  value:
+  - type: githubUser
+    username: aaronfern
+  - type: githubUser
+    username: unmarshall
+  - type: githubUser
+    username: elankath
+  - type: githubUser
+    username: thiyyakat
+  - type: githubUser
+    username: takoverflow
 main-source:
   labels:
-    - name: cloud.gardener.cnudie/dso/scanning-hints/source_analysis/v1
-      value:
-        policy: skip
-        comment: |
-          we use gosec for sast scanning. See attached log.
-labels:
-  - name: 'cloud.gardener.cnudie/responsibles'
+  - name: cloud.gardener.cnudie/dso/scanning-hints/source_analysis/v1
     value:
-    - type: 'githubUser'
-      username: 'aaronfern'
-    - type: 'githubUser'
-      username: 'unmarshall'
-    - type: 'githubUser'
-      username: 'elankath'
-    - type: 'githubUser'
-      username: 'thiyyakat'
-    - type: 'githubUser'
-      username: 'takoverflow'
+      comment: 'we use gosec for sast scanning. See attached log.
 
-componentReferences:
-  - name: machine-controller-manager
-    componentName: github.com/gardener/machine-controller-manager
-    version: v0.58.0
+        '
+      policy: skip
