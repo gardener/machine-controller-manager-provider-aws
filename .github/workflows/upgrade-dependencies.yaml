@@ -10,6 +10,6 @@ jobs:
     secrets: inherit
     permissions:
       contents: write
-      pull-requests: write
+      id-token: write
     with:
       prepare-action-path: ./.github/actions/setup-go
