@@ -192,14 +192,6 @@ func getInstanceByID(svc ec2iface.EC2API, instanceID string) (instances *ec2.Des
 	return instances, err
 }
 
-func confirmInstanceByID(svc ec2iface.EC2API, instanceID string) (bool, error) {
-	_, err := getInstanceByID(svc, instanceID)
-	if err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
 func (d *Driver) generateBlockDevices(blockDevices []api.AWSBlockDeviceMappingSpec, rootDeviceName *string) ([]*ec2.BlockDeviceMapping, error) {
 	// If not blockDevices are passed, return an error.
 	if len(blockDevices) == 0 {
