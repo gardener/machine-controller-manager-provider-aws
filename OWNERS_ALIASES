@@ -1,0 +1,29 @@
+# See the OWNERS docs at https://go.k8s.io/owners
+
+aliases:
+  machine-controller-manager-provider-aws-reviewers:
+  - aaronfern
+  - AndreasBurger
+  - ashwani2k
+  - elankath
+  - gagan16k
+  - hebelsan
+  - kon-angelo
+  - matthias-horne
+  - takoverflow
+  - thiyyakat
+  - unmarshall
+  - wpross
+  machine-controller-manager-provider-aws-approvers:
+  - aaronfern
+  - AndreasBurger
+  - ashwani2k
+  - elankath
+  - gagan16k
+  - hebelsan
+  - kon-angelo
+  - matthias-horne
+  - takoverflow
+  - thiyyakat
+  - unmarshall
+  - wpross
