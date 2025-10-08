@@ -5,13 +5,16 @@
 package aws
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/interfaces"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
 	api "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
 	validation "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis/validation"
 	awserror "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/errors"
@@ -64,17 +67,16 @@ func decodeProviderSpecAndSecret(machineClass *v1alpha1.MachineClass, secret *co
 }
 
 // disableSrcAndDestCheck disbales the SrcAndDestCheck for NAT instances
-func disableSrcAndDestCheck(svc ec2iface.EC2API, instanceID *string) (err error) {
+func disableSrcAndDestCheck(ctx context.Context, svc interfaces.Ec2Client, instanceID *string) (err error) {
 	defer instrument.AwsAPIMetricRecorderFn(instanceDisableSourceDestCheckServiceLabel, &err)()
-
 	srcAndDstCheckEnabled := &ec2.ModifyInstanceAttributeInput{
 		InstanceId: instanceID,
-		SourceDestCheck: &ec2.AttributeBooleanValue{
+		SourceDestCheck: &ec2types.AttributeBooleanValue{
 			Value: ptr.To(false),
 		},
 	}
 
-	_, err = svc.ModifyInstanceAttribute(srcAndDstCheckEnabled)
+	_, err = svc.ModifyInstanceAttribute(ctx, srcAndDstCheckEnabled)
 	if err != nil {
 		return err
 	}
@@ -82,9 +84,8 @@ func disableSrcAndDestCheck(svc ec2iface.EC2API, instanceID *string) (err error)
 	return nil
 }
 
-func getMachineInstancesByTagsAndStatus(svc ec2iface.EC2API, machineName string, providerSpecTags map[string]string) (instances []*ec2.Instance, err error) {
+func getMachineInstancesByTagsAndStatus(ctx context.Context, svc interfaces.Ec2Client, machineName string, providerSpecTags map[string]string) (instances []ec2types.Instance, err error) {
 	defer instrument.AwsAPIMetricRecorderFn(instanceGetByTagsAndStatusServiceLabel, &err)()
-
 	var (
 		clusterName string
 		nodeRole    string
@@ -96,39 +97,32 @@ func getMachineInstancesByTagsAndStatus(svc ec2iface.EC2API, machineName string,
 			nodeRole = key
 		}
 	}
-	input := ec2.DescribeInstancesInput{
-		Filters: []*ec2.Filter{
+	input := &ec2.DescribeInstancesInput{
+		Filters: []ec2types.Filter{
 			{
-				Name: aws.String("tag:Name"),
-				Values: []*string{
-					aws.String(machineName),
-				},
+				Name:   aws.String("tag:Name"),
+				Values: []string{machineName},
 			},
 			{
-				Name: aws.String("tag-key"),
-				Values: []*string{
-					&clusterName,
-				},
+				Name:   aws.String("tag-key"),
+				Values: []string{clusterName},
 			},
 			{
-				Name: aws.String("tag-key"),
-				Values: []*string{
-					&nodeRole,
-				},
+				Name:   aws.String("tag-key"),
+				Values: []string{nodeRole},
 			},
 			{
 				Name: aws.String("instance-state-name"),
-				Values: []*string{
-					aws.String("pending"),
-					aws.String("running"),
-					aws.String("stopping"),
-					aws.String("stopped"),
+				Values: []string{
+					string(ec2types.InstanceStateNamePending),
+					string(ec2types.InstanceStateNameRunning),
+					string(ec2types.InstanceStateNameStopping),
+					string(ec2types.InstanceStateNameStopped),
 				},
 			},
 		},
 	}
-	var runResult *ec2.DescribeInstancesOutput
-	runResult, err = svc.DescribeInstances(&input)
+	runResult, err := svc.DescribeInstances(ctx, input)
 
 	if err != nil {
 		klog.Errorf("AWS plugin is returning error while describe instances request is sent: %s", err)
@@ -142,10 +136,9 @@ func getMachineInstancesByTagsAndStatus(svc ec2iface.EC2API, machineName string,
 }
 
 // getMatchingInstancesForMachine extracts AWS Instance object for a given machine
-func (d *Driver) getMatchingInstancesForMachine(machine *v1alpha1.Machine, svc ec2iface.EC2API, providerSpecTags map[string]string) (instances []*ec2.Instance, err error) {
+func (d *Driver) getMatchingInstancesForMachine(ctx context.Context, machine *v1alpha1.Machine, svc interfaces.Ec2Client, providerSpecTags map[string]string) (instances []ec2types.Instance, err error) {
 	defer instrument.AwsAPIMetricRecorderFn(instanceGetByMachineServiceLabel, &err)()
-
-	instances, err = getMachineInstancesByTagsAndStatus(svc, machine.Name, providerSpecTags)
+	instances, err = getMachineInstancesByTagsAndStatus(ctx, svc, machine.Name, providerSpecTags)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +152,7 @@ func (d *Driver) getMatchingInstancesForMachine(machine *v1alpha1.Machine, svc e
 		if err != nil {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
-		runResult, err := getInstanceByID(svc, instanceID)
+		runResult, err := getInstanceByID(ctx, svc, instanceID)
 		if err != nil {
 			return nil, err
 		}
@@ -174,13 +167,12 @@ func (d *Driver) getMatchingInstancesForMachine(machine *v1alpha1.Machine, svc e
 	return instances, nil
 }
 
-func getInstanceByID(svc ec2iface.EC2API, instanceID string) (instances *ec2.DescribeInstancesOutput, err error) {
+func getInstanceByID(ctx context.Context, svc interfaces.Ec2Client, instanceID string) (instances *ec2.DescribeInstancesOutput, err error) {
 	defer instrument.AwsAPIMetricRecorderFn(instanceGetByIDServiceLabel, &err)()
-
-	input := ec2.DescribeInstancesInput{
-		InstanceIds: []*string{&instanceID},
+	input := &ec2.DescribeInstancesInput{
+		InstanceIds: []string{instanceID},
 	}
-	instances, err = svc.DescribeInstances(&input)
+	instances, err = svc.DescribeInstances(ctx, input)
 	if err != nil {
 		if awserror.IsInstanceIDNotFound(err) {
 			errMessage := "AWS plugin is returning no VM instances backing this machine object"
@@ -192,13 +184,13 @@ func getInstanceByID(svc ec2iface.EC2API, instanceID string) (instances *ec2.Des
 	return instances, err
 }
 
-func (d *Driver) generateBlockDevices(blockDevices []api.AWSBlockDeviceMappingSpec, rootDeviceName *string) ([]*ec2.BlockDeviceMapping, error) {
+func (d *Driver) generateBlockDevices(blockDevices []api.AWSBlockDeviceMappingSpec, rootDeviceName *string) ([]ec2types.BlockDeviceMapping, error) {
 	// If not blockDevices are passed, return an error.
 	if len(blockDevices) == 0 {
 		return nil, fmt.Errorf("no block devices passed")
 	}
 
-	var blkDeviceMappings []*ec2.BlockDeviceMapping
+	var blkDeviceMappings []ec2types.BlockDeviceMapping
 	// if blockDevices is empty, AWS will automatically create a root partition
 	for _, disk := range blockDevices {
 
@@ -212,12 +204,12 @@ func (d *Driver) generateBlockDevices(blockDevices []api.AWSBlockDeviceMappingSp
 		encrypted := disk.Ebs.Encrypted
 		snapshotID := disk.Ebs.SnapshotID
 
-		blkDeviceMapping := ec2.BlockDeviceMapping{
+		blkDeviceMapping := ec2types.BlockDeviceMapping{
 			DeviceName: aws.String(deviceName),
-			Ebs: &ec2.EbsBlockDevice{
+			Ebs: &ec2types.EbsBlockDevice{
 				Encrypted:  aws.Bool(encrypted),
-				VolumeSize: aws.Int64(volumeSize),
-				VolumeType: aws.String(volumeType),
+				VolumeSize: aws.Int32(volumeSize),
+				VolumeType: ec2types.VolumeType(volumeType),
 			},
 		}
 
@@ -229,7 +221,7 @@ func (d *Driver) generateBlockDevices(blockDevices []api.AWSBlockDeviceMappingSp
 		}
 
 		if disk.Ebs.Iops > 0 {
-			blkDeviceMapping.Ebs.Iops = aws.Int64(disk.Ebs.Iops)
+			blkDeviceMapping.Ebs.Iops = aws.Int32(disk.Ebs.Iops)
 		}
 
 		// adding throughput
@@ -240,51 +232,48 @@ func (d *Driver) generateBlockDevices(blockDevices []api.AWSBlockDeviceMappingSp
 		if snapshotID != nil {
 			blkDeviceMapping.Ebs.SnapshotId = snapshotID
 		}
-		blkDeviceMappings = append(blkDeviceMappings, &blkDeviceMapping)
+		blkDeviceMappings = append(blkDeviceMappings, blkDeviceMapping)
 	}
 
 	return blkDeviceMappings, nil
 }
 
-func (d *Driver) generateTags(tags map[string]string, resourceType string, machineName string) (*ec2.TagSpecification, error) {
+func (d *Driver) generateTags(tags map[string]string, resourceType string, machineName string) (ec2types.TagSpecification, error) {
 
 	// Add tags to the created machine
-	tagList := []*ec2.Tag{}
+	var tagList []ec2types.Tag
 	for idx, element := range tags {
 		if idx == "Name" {
 			// Name tag cannot be set, as its used to identify backing machine object
 			continue
 		}
-		newTag := ec2.Tag{
+		newTag := ec2types.Tag{
 			Key:   aws.String(idx),
 			Value: aws.String(element),
 		}
-		tagList = append(tagList, &newTag)
+		tagList = append(tagList, newTag)
 	}
-	nameTag := ec2.Tag{
+	nameTag := ec2types.Tag{
 		Key:   aws.String("Name"),
 		Value: aws.String(machineName),
 	}
-	tagList = append(tagList, &nameTag)
+	tagList = append(tagList, nameTag)
 
-	tagInstance := &ec2.TagSpecification{
-		ResourceType: aws.String(resourceType),
+	tagInstance := ec2types.TagSpecification{
+		ResourceType: ec2types.ResourceType(resourceType),
 		Tags:         tagList,
 	}
 	return tagInstance, nil
 }
 
-func terminateInstance(req *driver.DeleteMachineRequest, svc ec2iface.EC2API, machineID string) (err error) {
+func terminateInstance(ctx context.Context, req *driver.DeleteMachineRequest, svc interfaces.Ec2Client, machineID string) (err error) {
 	defer instrument.AwsAPIMetricRecorderFn(instanceTerminateServiceLabel, &err)()
-
 	input := &ec2.TerminateInstancesInput{
-		InstanceIds: []*string{
-			aws.String(machineID),
-		},
-		DryRun: aws.Bool(false),
+		InstanceIds: []string{machineID},
+		DryRun:      aws.Bool(false),
 	}
 
-	_, err = svc.TerminateInstances(input)
+	_, err = svc.TerminateInstances(ctx, input)
 	if err != nil {
 		// if error code is NotFound, then assume VM is terminated.
 		// In case of eventual consistency, the VM might be present and still we get a NotFound error.

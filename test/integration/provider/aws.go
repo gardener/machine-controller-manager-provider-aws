@@ -25,9 +25,9 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	v1 "k8s.io/api/core/v1"
 
 	"github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -35,15 +35,15 @@ import (
 
 	providerDriver "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws"
 	api "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
-	"github.com/gardener/machine-controller-manager-provider-aws/pkg/spi"
+	"github.com/gardener/machine-controller-manager-provider-aws/pkg/cpi"
 )
 
 var _ aws.Config
 
-func newSession(machineClass *v1alpha1.MachineClass, secret *v1.Secret) *session.Session {
+func newConfig(ctx context.Context, machineClass *v1alpha1.MachineClass, secret *v1.Secret) *aws.Config {
 	var (
-		providerSpec *api.AWSProviderSpec
-		sPI          spi.PluginSPIImpl
+		providerSpec   *api.AWSProviderSpec
+		clientProvider cpi.ClientProvider
 	)
 
 	err := json.Unmarshal([]byte(machineClass.ProviderSpec.Raw), &providerSpec)
@@ -51,18 +51,18 @@ func newSession(machineClass *v1alpha1.MachineClass, secret *v1.Secret) *session
 		providerSpec = nil
 		log.Printf("Error occured while performing unmarshal %s", err.Error())
 	}
-	sess, err := sPI.NewSession(secret, providerSpec.Region)
+	config, err := clientProvider.NewConfig(ctx, secret, providerSpec.Region)
 	if err != nil {
 		log.Printf("Error occured while creating new session %s", err)
 	}
-	return sess
+	return config
 }
 
-func getMachines(machineClass *v1alpha1.MachineClass, secretData map[string][]byte) ([]string, error) {
+func getMachines(ctx context.Context, machineClass *v1alpha1.MachineClass, secretData map[string][]byte) ([]string, error) {
 	var machines []string
-	var sPI spi.PluginSPIImpl
-	driverprovider := providerDriver.NewAWSDriver(&sPI)
-	machineList, err := driverprovider.ListMachines(context.TODO(), &driver.ListMachinesRequest{
+	var clientProvider cpi.ClientProvider
+	driverprovider := providerDriver.NewAWSDriver(&clientProvider)
+	machineList, err := driverprovider.ListMachines(ctx, &driver.ListMachinesRequest{
 		MachineClass: machineClass,
 		Secret:       &v1.Secret{Data: secretData},
 	})
@@ -77,28 +77,24 @@ func getMachines(machineClass *v1alpha1.MachineClass, secretData map[string][]by
 }
 
 // getOrphanesInstances returns list of Orphan resources that couldn't be deleted
-func getOrphanedInstances(tagName string, tagValue string, machineClass *v1alpha1.MachineClass, secretData map[string][]byte) ([]string, error) {
-	sess := newSession(machineClass, &v1.Secret{Data: secretData})
-	svc := ec2.New(sess)
+func getOrphanedInstances(ctx context.Context, tagName string, tagValue string, machineClass *v1alpha1.MachineClass, secretData map[string][]byte) ([]string, error) {
+	cfg := newConfig(ctx, machineClass, &v1.Secret{Data: secretData})
+	svc := ec2.NewFromConfig(*cfg)
 	var instancesID []string
 	input := &ec2.DescribeInstancesInput{
-		Filters: []*ec2.Filter{
+		Filters: []ec2types.Filter{
 			{
-				Name: aws.String(tagName),
-				Values: []*string{
-					aws.String(tagValue),
-				},
+				Name:   aws.String(tagName),
+				Values: []string{tagValue},
 			},
 			{
-				Name: aws.String("instance-state-name"),
-				Values: []*string{
-					aws.String("running"),
-				},
+				Name:   aws.String("instance-state-name"),
+				Values: []string{"running"},
 			},
 		},
 	}
 
-	result, err := svc.DescribeInstances(input)
+	result, err := svc.DescribeInstances(ctx, input)
 	if err != nil {
 		return instancesID, err
 	}
@@ -113,16 +109,14 @@ func getOrphanedInstances(tagName string, tagValue string, machineClass *v1alpha
 }
 
 // TerminateInstance terminates the specified EC2 instance.
-func TerminateInstance(ses *session.Session, instanceID string) error {
-	svc := ec2.New(ses)
+func TerminateInstance(ctx context.Context, cfg *aws.Config, instanceID string) error {
+	svc := ec2.NewFromConfig(*cfg)
 	input := &ec2.TerminateInstancesInput{
-		InstanceIds: []*string{
-			aws.String(instanceID),
-		},
-		DryRun: aws.Bool(false),
+		InstanceIds: []string{instanceID},
+		DryRun:      aws.Bool(false),
 	}
 
-	_, err := svc.TerminateInstances(input)
+	_, err := svc.TerminateInstances(ctx, input)
 	if err != nil {
 		fmt.Printf("can't terminate the instance %s,%s\n", instanceID, err.Error())
 		return err
@@ -134,28 +128,24 @@ func TerminateInstance(ses *session.Session, instanceID string) error {
 }
 
 // getOrphanedDisks returns a list of orphan disks that couldn't get deleted
-func getOrphanedDisks(tagName string, tagValue string, machineClass *v1alpha1.MachineClass, secretData map[string][]byte) ([]string, error) {
-	sess := newSession(machineClass, &v1.Secret{Data: secretData})
-	svc := ec2.New(sess)
+func getOrphanedDisks(ctx context.Context, tagName string, tagValue string, machineClass *v1alpha1.MachineClass, secretData map[string][]byte) ([]string, error) {
+	cfg := newConfig(ctx, machineClass, &v1.Secret{Data: secretData})
+	svc := ec2.NewFromConfig(*cfg)
 	var availVolID []string
 	input := &ec2.DescribeVolumesInput{
-		Filters: []*ec2.Filter{
+		Filters: []ec2types.Filter{
 			{
-				Name: aws.String("status"),
-				Values: []*string{
-					aws.String("available"),
-				},
+				Name:   aws.String("status"),
+				Values: []string{"available"},
 			},
 			{
-				Name: aws.String(tagName),
-				Values: []*string{
-					aws.String(tagValue),
-				},
+				Name:   aws.String(tagName),
+				Values: []string{tagValue},
 			},
 		},
 	}
 
-	result, err := svc.DescribeVolumes(input)
+	result, err := svc.DescribeVolumes(ctx, input)
 	if err != nil {
 		return availVolID, err
 	}
@@ -168,13 +158,13 @@ func getOrphanedDisks(tagName string, tagValue string, machineClass *v1alpha1.Ma
 }
 
 // DeleteVolume deletes the specified volume
-func DeleteVolume(ses *session.Session, VolumeID string) error {
-	svc := ec2.New(ses)
+func DeleteVolume(ctx context.Context, cfg *aws.Config, VolumeID string) error {
+	svc := ec2.NewFromConfig(*cfg)
 	input := &ec2.DeleteVolumeInput{
 		VolumeId: aws.String(VolumeID),
 	}
 
-	_, err := svc.DeleteVolume(input)
+	_, err := svc.DeleteVolume(ctx, input)
 	if err != nil {
 		fmt.Printf("can't delete volume .%s\n", err.Error())
 		return err
@@ -186,27 +176,23 @@ func DeleteVolume(ses *session.Session, VolumeID string) error {
 }
 
 // getOrphanedNICs returns a list of orphaned NICs which are present
-func getOrphanedNICs(tagName string, tagValue string, machineClass *v1alpha1.MachineClass, secretData map[string][]byte) ([]string, error) {
+func getOrphanedNICs(ctx context.Context, tagName string, tagValue string, machineClass *v1alpha1.MachineClass, secretData map[string][]byte) ([]string, error) {
 	var orphanNICs []string
-	sess := newSession(machineClass, &v1.Secret{Data: secretData})
-	svc := ec2.New(sess)
+	cfg := newConfig(ctx, machineClass, &v1.Secret{Data: secretData})
+	svc := ec2.NewFromConfig(*cfg)
 	inputNIC := &ec2.DescribeNetworkInterfacesInput{
-		Filters: []*ec2.Filter{
+		Filters: []ec2types.Filter{
 			{
-				Name: aws.String(tagName),
-				Values: []*string{
-					aws.String(tagValue),
-				},
+				Name:   aws.String(tagName),
+				Values: []string{tagValue},
 			},
 			{
-				Name: aws.String("status"),
-				Values: []*string{
-					aws.String("available"),
-				},
+				Name:   aws.String("status"),
+				Values: []string{"available"},
 			},
 		},
 	}
-	resultNetworkInterface, err := svc.DescribeNetworkInterfaces(inputNIC)
+	resultNetworkInterface, err := svc.DescribeNetworkInterfaces(ctx, inputNIC)
 	if err != nil {
 		return orphanNICs, err
 	}
@@ -218,13 +204,13 @@ func getOrphanedNICs(tagName string, tagValue string, machineClass *v1alpha1.Mac
 }
 
 // DeleteNetworkInterface deletes the specified volume
-func DeleteNetworkInterface(ses *session.Session, networkInterfaceID string) error {
-	svc := ec2.New(ses)
+func DeleteNetworkInterface(ctx context.Context, cfg *aws.Config, networkInterfaceID string) error {
+	svc := ec2.NewFromConfig(*cfg)
 	input := &ec2.DeleteNetworkInterfaceInput{
 		NetworkInterfaceId: aws.String(networkInterfaceID),
 	}
 
-	_, err := svc.DeleteNetworkInterface(input)
+	_, err := svc.DeleteNetworkInterface(ctx, input)
 	if err != nil {
 		fmt.Printf("can't delete Network Interface .%s\n", err.Error())
 		return err
@@ -235,22 +221,22 @@ func DeleteNetworkInterface(ses *session.Session, networkInterfaceID string) err
 	return nil
 }
 
-func cleanOrphanResources(orphanVms []string, orphanVolumes []string, orphanNICs []string, machineClass *v1alpha1.MachineClass, secretData map[string][]byte) (delErrOrphanVms []string, delErrOrphanVolumes []string, delErrOrphanNICs []string) {
-	sess := newSession(machineClass, &v1.Secret{Data: secretData})
+func cleanOrphanResources(ctx context.Context, orphanVms []string, orphanVolumes []string, orphanNICs []string, machineClass *v1alpha1.MachineClass, secretData map[string][]byte) (delErrOrphanVms []string, delErrOrphanVolumes []string, delErrOrphanNICs []string) {
+	cfg := newConfig(ctx, machineClass, &v1.Secret{Data: secretData})
 	for _, instanceID := range orphanVms {
-		if err := TerminateInstance(sess, instanceID); err != nil {
+		if err := TerminateInstance(ctx, cfg, instanceID); err != nil {
 			delErrOrphanVms = append(delErrOrphanVms, instanceID)
 		}
 	}
 
 	for _, volumeID := range orphanVolumes {
-		if err := DeleteVolume(sess, volumeID); err != nil {
+		if err := DeleteVolume(ctx, cfg, volumeID); err != nil {
 			delErrOrphanVolumes = append(delErrOrphanVolumes, volumeID)
 		}
 	}
 
 	for _, networkInterfaceID := range orphanNICs {
-		if err := DeleteNetworkInterface(sess, networkInterfaceID); err != nil {
+		if err := DeleteNetworkInterface(ctx, cfg, networkInterfaceID); err != nil {
 			delErrOrphanNICs = append(delErrOrphanNICs, networkInterfaceID)
 		}
 	}

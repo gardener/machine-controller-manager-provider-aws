@@ -133,7 +133,7 @@ type AWSBlockDeviceMappingSpec struct {
 type AWSCapacityReservationTargetSpec struct {
 
 	// CapacityReservationPreference indicates the instance's Capacity Reservation preferences (possible values are 'open' or 'none').
-	CapacityReservationPreference *string `json:"capacityReservationPreference,omitempty"`
+	CapacityReservationPreference string `json:"capacityReservationPreference,omitempty"`
 
 	// CapacityReservationID ID of the Capacity Reservation in which to run the instance.
 	CapacityReservationID *string `json:"capacityReservationId,omitempty"`
@@ -165,14 +165,14 @@ type AWSEbsBlockDeviceSpec struct {
 	//
 	// Condition: This parameter is required for requests to create io1 volumes;
 	// Do not specify it in requests to create gp2, st1, sc1, or standard volumes.
-	Iops int64 `json:"iops,omitempty"`
+	Iops int32 `json:"iops,omitempty"`
 
 	// The throughput that the volume supports, in MiB/s.
 	//
 	// This parameter is valid only for gp3 volumes.
 	//
 	// Valid Range: The range as of 16th Aug 2022 is from 125 MiB/s to 1000 MiB/s. For more info refer (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSVolumeTypes.html)
-	Throughput *int64 `json:"throughput,omitempty"`
+	Throughput *int32 `json:"throughput,omitempty"`
 
 	// Identifier (key ID, key alias, ID ARN, or alias ARN) for a customer managed
 	// CMK under which the EBS volume is encrypted.
@@ -196,7 +196,7 @@ type AWSEbsBlockDeviceSpec struct {
 	//
 	// Default: If you're creating the volume from a snapshot and don't specify
 	// a volume size, the default is the snapshot size.
-	VolumeSize int64 `json:"volumeSize,omitempty"`
+	VolumeSize int32 `json:"volumeSize,omitempty"`
 
 	// The volume type: gp2, gp3, io1, st1, sc1, or standard.
 	//
@@ -225,11 +225,11 @@ type AWSNetworkInterfaceSpec struct {
 
 	// Ipv6AddressCount represents the number of IPv6 addresses to assign to the network interface. Amazon EC2
 	// chooses the IPv6 addresses from the range of the subnet.
-	Ipv6AddressCount *int64 `json:"ipv6AddressCount,omitempty"`
+	Ipv6AddressCount *int32 `json:"ipv6AddressCount,omitempty"`
 
 	// Ipv6PrefixCount represents the number of IPv6 delegated prefixes to be automatically assigned to the
 	// network interface.
-	Ipv6PrefixCount *int64 `json:"ipv6PrefixCount,omitempty"`
+	Ipv6PrefixCount *int32 `json:"ipv6PrefixCount,omitempty"`
 
 	// If set to true, the interface is deleted when the machine is terminated.
 	// You can specify true only if creating a new network interface when launching
@@ -266,19 +266,19 @@ const (
 // InstanceMetadataOptions contains configuration for controlling access to the metadata API.
 type InstanceMetadataOptions struct {
 	// HTTPEndpoint controls whether InstanceMetadataOptions API is enabled. By default, access to the metadata API is enabled.
-	HTTPEndpoint *string `json:"httpEndpoint,omitempty"`
+	HTTPEndpoint string `json:"httpEndpoint,omitempty"`
 	// HTTPPutResponseHopLimit  is the response hop limit for instance metadata requests. It controls which metadata API
 	// version is enabled.
-	HTTPPutResponseHopLimit *int64 `json:"httpPutResponseHopLimit,omitempty"`
+	HTTPPutResponseHopLimit *int32 `json:"httpPutResponseHopLimit,omitempty"`
 	// HTTPTokens enforces the use of metadata v2 API.
-	HTTPTokens *string `json:"httpTokens,omitempty"`
+	HTTPTokens string `json:"httpTokens,omitempty"`
 }
 
 // CPUOptions contains detailed configuration for the number of cores and threads for the instance.
 type CPUOptions struct {
 	// CoreCount specifies the number of CPU cores per instance.
-	CoreCount *int64 `json:"coreCount"`
+	CoreCount *int32 `json:"coreCount"`
 
 	// ThreadsPerCore sets the number of threads per core. Must be either '1' (disable multi-threading) or '2'.
-	ThreadsPerCore *int64 `json:"threadsPerCore"`
+	ThreadsPerCore *int32 `json:"threadsPerCore"`
 }

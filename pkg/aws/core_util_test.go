@@ -10,8 +10,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 
 	api "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
 )
@@ -33,9 +33,9 @@ var _ = Describe("CoreUtils", func() {
 			}
 
 			tagsGenerated, err := awsDriver.generateTags(tags, resourceTypeInstance, testMachine)
-			expectedTags := &ec2.TagSpecification{
-				ResourceType: aws.String("instance"),
-				Tags: []*ec2.Tag{
+			expectedTags := ec2types.TagSpecification{
+				ResourceType: ec2types.ResourceTypeInstance,
+				Tags: []ec2types.Tag{
 					{
 						Key:   aws.String("tag-1"),
 						Value: aws.String("value-tag-1"),
@@ -65,9 +65,9 @@ var _ = Describe("CoreUtils", func() {
 			tags := map[string]string{}
 
 			tagsGenerated, err := awsDriver.generateTags(tags, resourceTypeInstance, testMachine)
-			expectedTags := &ec2.TagSpecification{
-				ResourceType: aws.String("instance"),
-				Tags: []*ec2.Tag{
+			expectedTags := ec2types.TagSpecification{
+				ResourceType: ec2types.ResourceTypeInstance,
+				Tags: []ec2types.Tag{
 					{
 						Key:   aws.String("Name"),
 						Value: aws.String(testMachine),
@@ -121,7 +121,7 @@ var _ = Describe("CoreUtils", func() {
 						Iops:                1000,
 						VolumeSize:          10,
 						VolumeType:          "gp3",
-						Throughput:          aws.Int64(200),
+						Throughput:          aws.Int32(200),
 					},
 				},
 				{
@@ -137,56 +137,56 @@ var _ = Describe("CoreUtils", func() {
 
 			rootDevice := aws.String("/dev/sda")
 			disksGenerated, err := awsDriver.generateBlockDevices(disks, rootDevice)
-			expectedDisks := []*ec2.BlockDeviceMapping{
+			expectedDisks := []ec2types.BlockDeviceMapping{
 				{
 					DeviceName: aws.String("/dev/sda"),
-					Ebs: &ec2.EbsBlockDevice{
+					Ebs: &ec2types.EbsBlockDevice{
 						DeleteOnTermination: aws.Bool(true),
 						Encrypted:           aws.Bool(false),
-						VolumeSize:          aws.Int64(32),
+						VolumeSize:          aws.Int32(32),
 						Iops:                nil,
-						VolumeType:          aws.String("gp2"),
+						VolumeType:          ec2types.VolumeTypeGp2,
 					},
 				},
 				{
 					DeviceName: aws.String("/dev/xvdg"),
-					Ebs: &ec2.EbsBlockDevice{
+					Ebs: &ec2types.EbsBlockDevice{
 						DeleteOnTermination: aws.Bool(false),
 						Encrypted:           aws.Bool(true),
-						VolumeSize:          aws.Int64(64),
-						Iops:                aws.Int64(100),
-						VolumeType:          aws.String("io1"),
+						VolumeSize:          aws.Int32(64),
+						Iops:                aws.Int32(100),
+						VolumeType:          ec2types.VolumeTypeIo1,
 					},
 				},
 				{
 					DeviceName: aws.String("/dev/xvdg2"),
-					Ebs: &ec2.EbsBlockDevice{
+					Ebs: &ec2types.EbsBlockDevice{
 						DeleteOnTermination: aws.Bool(true),
 						Encrypted:           aws.Bool(true),
-						VolumeSize:          aws.Int64(64),
-						Iops:                aws.Int64(100),
-						VolumeType:          aws.String("io1"),
+						VolumeSize:          aws.Int32(64),
+						Iops:                aws.Int32(100),
+						VolumeType:          ec2types.VolumeTypeIo1,
 					},
 				},
 				{
 					DeviceName: aws.String("/dev/xvdg"),
-					Ebs: &ec2.EbsBlockDevice{
+					Ebs: &ec2types.EbsBlockDevice{
 						DeleteOnTermination: aws.Bool(false),
 						Encrypted:           aws.Bool(true),
-						VolumeSize:          aws.Int64(10),
-						Iops:                aws.Int64(1000),
-						Throughput:          aws.Int64(200),
-						VolumeType:          aws.String("gp3"),
+						VolumeSize:          aws.Int32(10),
+						Iops:                aws.Int32(1000),
+						Throughput:          aws.Int32(200),
+						VolumeType:          ec2types.VolumeTypeGp3,
 					},
 				},
 				{
 					DeviceName: aws.String("/dev/xvdg"),
-					Ebs: &ec2.EbsBlockDevice{
+					Ebs: &ec2types.EbsBlockDevice{
 						DeleteOnTermination: aws.Bool(false),
 						Encrypted:           aws.Bool(true),
-						VolumeSize:          aws.Int64(10),
+						VolumeSize:          aws.Int32(10),
 						Iops:                nil,
-						VolumeType:          aws.String("gp3"),
+						VolumeType:          ec2types.VolumeTypeGp3,
 					},
 				},
 			}
@@ -210,15 +210,15 @@ var _ = Describe("CoreUtils", func() {
 
 			rootDevice := aws.String("/dev/sda")
 			disksGenerated, err := awsDriver.generateBlockDevices(disks, rootDevice)
-			expectedDisks := []*ec2.BlockDeviceMapping{
+			expectedDisks := []ec2types.BlockDeviceMapping{
 				{
 					DeviceName: aws.String("/dev/sda"),
-					Ebs: &ec2.EbsBlockDevice{
+					Ebs: &ec2types.EbsBlockDevice{
 						DeleteOnTermination: aws.Bool(true),
 						Encrypted:           aws.Bool(false),
-						VolumeSize:          aws.Int64(32),
+						VolumeSize:          aws.Int32(32),
 						Iops:                nil,
-						VolumeType:          aws.String("gp2"),
+						VolumeType:          ec2types.VolumeTypeGp2,
 					},
 				},
 			}
@@ -233,7 +233,7 @@ var _ = Describe("CoreUtils", func() {
 
 			rootDevice := aws.String("/dev/sda")
 			disksGenerated, err := awsDriver.generateBlockDevices(disks, rootDevice)
-			var expectedDisks []*ec2.BlockDeviceMapping
+			var expectedDisks []ec2types.BlockDeviceMapping
 
 			Expect(disksGenerated).To(Equal(expectedDisks))
 			Expect(err).To(HaveOccurred())
@@ -253,15 +253,15 @@ var _ = Describe("CoreUtils", func() {
 
 			rootDevice := aws.String("/dev/sda")
 			disksGenerated, err := awsDriver.generateBlockDevices(disks, rootDevice)
-			expectedDisks := []*ec2.BlockDeviceMapping{
+			expectedDisks := []ec2types.BlockDeviceMapping{
 				{
 					DeviceName: aws.String("/dev/sda"),
-					Ebs: &ec2.EbsBlockDevice{
+					Ebs: &ec2types.EbsBlockDevice{
 						DeleteOnTermination: aws.Bool(true),
 						Encrypted:           aws.Bool(false),
-						VolumeSize:          aws.Int64(32),
+						VolumeSize:          aws.Int32(32),
 						Iops:                nil,
-						VolumeType:          aws.String("gp2"),
+						VolumeType:          ec2types.VolumeTypeGp2,
 					},
 				},
 			}

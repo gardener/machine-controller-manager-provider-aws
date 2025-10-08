@@ -15,8 +15,9 @@ import (
 
 	"github.com/gardener/machine-controller-manager-provider-aws/pkg/instrument"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/driver"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/codes"
@@ -25,7 +26,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	awserror "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/errors"
-	"github.com/gardener/machine-controller-manager-provider-aws/pkg/spi"
+	"github.com/gardener/machine-controller-manager-provider-aws/pkg/cpi"
 )
 
 const (
@@ -39,7 +40,7 @@ const (
 
 // Driver is the driver struct for holding AWS machine information
 type Driver struct {
-	SPI spi.SessionProviderInterface
+	CPI cpi.ClientProviderInterface
 }
 
 const (
@@ -56,14 +57,14 @@ const (
 var maxElapsedTimeInBackoff = 5 * time.Minute
 
 // NewAWSDriver returns an empty AWSDriver object
-func NewAWSDriver(spi spi.SessionProviderInterface) driver.Driver {
+func NewAWSDriver(cpi cpi.ClientProviderInterface) driver.Driver {
 	return &Driver{
-		SPI: spi,
+		CPI: cpi,
 	}
 }
 
 // CreateMachine handles a machine creation request
-func (d *Driver) CreateMachine(_ context.Context, req *driver.CreateMachineRequest) (resp *driver.CreateMachineResponse, err error) {
+func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineRequest) (resp *driver.CreateMachineResponse, err error) {
 	defer instrument.DriverAPIMetricRecorderFn(createMachineOperationLabel, &err)()
 
 	var (
@@ -88,7 +89,7 @@ func (d *Driver) CreateMachine(_ context.Context, req *driver.CreateMachineReque
 		return nil, err
 	}
 
-	svc, err := d.createSVC(secret, providerSpec.Region)
+	client, err := d.createClient(ctx, secret, providerSpec.Region)
 	if err != nil {
 		return nil, status.Error(awserror.GetMCMErrorCodeForCreateMachine(err), err.Error())
 	}
@@ -98,18 +99,18 @@ func (d *Driver) CreateMachine(_ context.Context, req *driver.CreateMachineReque
 	}
 	UserDataEnc := base64.StdEncoding.EncodeToString([]byte(userData))
 
-	var imageIds []*string
-	imageID := aws.String(providerSpec.AMI)
+	var imageIds []string
+	imageID := providerSpec.AMI
 	imageIds = append(imageIds, imageID)
 
-	describeImagesRequest := ec2.DescribeImagesInput{
+	describeImagesRequest := &ec2.DescribeImagesInput{
 		ImageIds: imageIds,
 	}
-	output, err := svc.DescribeImages(&describeImagesRequest)
+	output, err := client.DescribeImages(ctx, describeImagesRequest)
 	if err != nil {
 		return nil, status.Error(awserror.GetMCMErrorCodeForCreateMachine(err), err.Error())
 	} else if len(output.Images) < 1 {
-		return nil, status.Error(codes.NotFound, fmt.Sprintf("Image %s not found", *imageID))
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("Image %s not found", imageID))
 	}
 
 	blkDeviceMappings, err := d.generateBlockDevices(providerSpec.BlockDevices, output.Images[0].RootDeviceName)
@@ -132,11 +133,12 @@ func (d *Driver) CreateMachine(_ context.Context, req *driver.CreateMachineReque
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	var networkInterfaceSpecs []*ec2.InstanceNetworkInterfaceSpecification
+	var networkInterfaceSpecs []ec2types.InstanceNetworkInterfaceSpecification
+
 	for i, netIf := range providerSpec.NetworkInterfaces {
-		spec := &ec2.InstanceNetworkInterfaceSpecification{
-			Groups:                   aws.StringSlice(netIf.SecurityGroupIDs),
-			DeviceIndex:              aws.Int64(int64(i)),
+		spec := ec2types.InstanceNetworkInterfaceSpecification{
+			Groups:                   netIf.SecurityGroupIDs,
+			DeviceIndex:              aws.Int32(int32(i)), // #nosec: G115 -- index will not exceed int32 limits
 			AssociatePublicIpAddress: netIf.AssociatePublicIPAddress,
 			DeleteOnTermination:      netIf.DeleteOnTermination,
 			Description:              netIf.Description,
@@ -156,32 +158,32 @@ func (d *Driver) CreateMachine(_ context.Context, req *driver.CreateMachineReque
 	}
 
 	// Specify the details of the machine that you want to create.
-	iam := &ec2.IamInstanceProfileSpecification{}
+	iam := &ec2types.IamInstanceProfileSpecification{}
 	if len(providerSpec.IAM.Name) > 0 {
 		iam.Name = &providerSpec.IAM.Name
 	} else if len(providerSpec.IAM.ARN) > 0 {
 		iam.Arn = &providerSpec.IAM.ARN
 	}
 
-	var metadataOptions *ec2.InstanceMetadataOptionsRequest
+	var metadataOptions *ec2types.InstanceMetadataOptionsRequest
 	if providerSpec.InstanceMetadataOptions != nil {
-		metadataOptions = &ec2.InstanceMetadataOptionsRequest{
-			HttpEndpoint:            providerSpec.InstanceMetadataOptions.HTTPEndpoint,
+		metadataOptions = &ec2types.InstanceMetadataOptionsRequest{
+			HttpEndpoint:            ec2types.InstanceMetadataEndpointState(providerSpec.InstanceMetadataOptions.HTTPEndpoint),
 			HttpPutResponseHopLimit: providerSpec.InstanceMetadataOptions.HTTPPutResponseHopLimit,
-			HttpTokens:              providerSpec.InstanceMetadataOptions.HTTPTokens,
+			HttpTokens:              ec2types.HttpTokensState(providerSpec.InstanceMetadataOptions.HTTPTokens),
 		}
 	}
 
-	inputConfig := ec2.RunInstancesInput{
+	inputConfig := &ec2.RunInstancesInput{
 		BlockDeviceMappings: blkDeviceMappings,
 		ImageId:             aws.String(providerSpec.AMI),
-		InstanceType:        aws.String(providerSpec.MachineType),
-		MinCount:            aws.Int64(1),
-		MaxCount:            aws.Int64(1),
+		InstanceType:        ec2types.InstanceType(providerSpec.MachineType),
+		MinCount:            aws.Int32(1),
+		MaxCount:            aws.Int32(1),
 		UserData:            &UserDataEnc,
 		IamInstanceProfile:  iam,
 		NetworkInterfaces:   networkInterfaceSpecs,
-		TagSpecifications:   []*ec2.TagSpecification{tagInstance, tagVolume, tagNetworkInterface},
+		TagSpecifications:   []ec2types.TagSpecification{tagInstance, tagVolume, tagNetworkInterface},
 		MetadataOptions:     metadataOptions,
 	}
 
@@ -190,7 +192,7 @@ func (d *Driver) CreateMachine(_ context.Context, req *driver.CreateMachineReque
 	}
 
 	if cpuOptions := providerSpec.CPUOptions; cpuOptions != nil {
-		inputConfig.CpuOptions = &ec2.CpuOptionsRequest{
+		inputConfig.CpuOptions = &ec2types.CpuOptionsRequest{
 			CoreCount:      cpuOptions.CoreCount,
 			ThreadsPerCore: cpuOptions.ThreadsPerCore,
 		}
@@ -199,9 +201,9 @@ func (d *Driver) CreateMachine(_ context.Context, req *driver.CreateMachineReque
 	// Set the AWS Capacity Reservation target. Using an 'open' preference means that if the reservation is not found, then
 	// instances are launched with regular on-demand capacity.
 	if providerSpec.CapacityReservationTarget != nil {
-		inputConfig.CapacityReservationSpecification = &ec2.CapacityReservationSpecification{
-			CapacityReservationPreference: providerSpec.CapacityReservationTarget.CapacityReservationPreference,
-			CapacityReservationTarget: &ec2.CapacityReservationTarget{
+		inputConfig.CapacityReservationSpecification = &ec2types.CapacityReservationSpecification{
+			CapacityReservationPreference: ec2types.CapacityReservationPreference(providerSpec.CapacityReservationTarget.CapacityReservationPreference),
+			CapacityReservationTarget: &ec2types.CapacityReservationTarget{
 				CapacityReservationId:               providerSpec.CapacityReservationTarget.CapacityReservationID,
 				CapacityReservationResourceGroupArn: providerSpec.CapacityReservationTarget.CapacityReservationResourceGroupArn,
 			},
@@ -216,10 +218,10 @@ func (d *Driver) CreateMachine(_ context.Context, req *driver.CreateMachineReque
 	}
 	// Set spot price if it has been set
 	if providerSpec.SpotPrice != nil {
-		inputConfig.InstanceMarketOptions = &ec2.InstanceMarketOptionsRequest{
-			MarketType: aws.String(ec2.MarketTypeSpot),
-			SpotOptions: &ec2.SpotMarketOptions{
-				SpotInstanceType: aws.String(ec2.SpotInstanceTypeOneTime),
+		inputConfig.InstanceMarketOptions = &ec2types.InstanceMarketOptionsRequest{
+			MarketType: ec2types.MarketTypeSpot,
+			SpotOptions: &ec2types.SpotMarketOptions{
+				SpotInstanceType: ec2types.SpotInstanceTypeOneTime,
 			},
 		}
 
@@ -228,14 +230,14 @@ func (d *Driver) CreateMachine(_ context.Context, req *driver.CreateMachineReque
 		}
 	}
 
-	runResult, err := svc.RunInstances(&inputConfig)
+	runResult, err := client.RunInstances(ctx, inputConfig)
 	if err != nil {
 		return nil, status.Error(awserror.GetMCMErrorCodeForCreateMachine(err), err.Error())
 	}
 	var instanceID, providerID, nodeName string
 
 	for _, instance := range runResult.Instances {
-		if instance != nil && instance.InstanceId != nil {
+		if instance.InstanceId != nil {
 			instanceID = *instance.InstanceId
 			providerID = encodeInstanceID(providerSpec.Region, instanceID)
 			if instance.PrivateDnsName != nil {
@@ -254,16 +256,14 @@ func (d *Driver) CreateMachine(_ context.Context, req *driver.CreateMachineReque
 		klog.Warningf("VM with Provider-ID %q, for machine %q does not yet have a nodeName (instance.PrivateDnsName)", providerID, machine.Name)
 	}
 
-	operation := func() (*ec2.Instance, error) {
-		instancesOutput, err := getInstanceByID(svc, instanceID)
+	operation := func() (*ec2types.Instance, error) {
+		instancesOutput, err := getInstanceByID(ctx, client, instanceID)
 		if err != nil {
 			return nil, err
 		}
 		for _, reservation := range instancesOutput.Reservations {
 			for _, instance := range reservation.Instances {
-				if instance != nil {
-					return instance, nil
-				}
+				return &instance, nil
 			}
 		}
 		return nil, status.Error(codes.NotFound, fmt.Sprintf("instance with instanceID %s not found", instanceID))
@@ -297,18 +297,18 @@ func (d *Driver) CreateMachine(_ context.Context, req *driver.CreateMachineReque
 // InitializeMachine should handle post-creation, one-time VM instance initialization operations. (Ex: Like setting up special network config, etc)
 // The AWS Provider leverages this method to perform disabling of source destination checks for NAT instances.
 // See [driver.Driver.InitializeMachine] for further information
-func (d *Driver) InitializeMachine(_ context.Context, request *driver.InitializeMachineRequest) (resp *driver.InitializeMachineResponse, err error) {
+func (d *Driver) InitializeMachine(ctx context.Context, request *driver.InitializeMachineRequest) (resp *driver.InitializeMachineResponse, err error) {
 	defer instrument.DriverAPIMetricRecorderFn(initializeMachineOperationLabel, &err)()
 
 	providerSpec, err := decodeProviderSpecAndSecret(request.MachineClass, request.Secret)
 	if err != nil {
 		return nil, err
 	}
-	svc, err := d.createSVC(request.Secret, providerSpec.Region)
+	client, err := d.createClient(ctx, request.Secret, providerSpec.Region)
 	if err != nil {
 		return nil, status.Error(codes.Uninitialized, err.Error())
 	}
-	instances, err := d.getMatchingInstancesForMachine(request.Machine, svc, providerSpec.Tags)
+	instances, err := d.getMatchingInstancesForMachine(ctx, request.Machine, client, providerSpec.Tags)
 	if err != nil {
 		if isNotFoundError(err) {
 			klog.Errorf("Could not get matching instance for uninitialized machine %q from provider: %s", request.Machine.Name, err)
@@ -321,21 +321,22 @@ func (d *Driver) InitializeMachine(_ context.Context, request *driver.Initialize
 	// if SrcAnDstCheckEnabled is false then disable the SrcAndDestCheck on running NAT instance
 	if providerSpec.SrcAndDstChecksEnabled != nil && !*providerSpec.SrcAndDstChecksEnabled && ptr.Deref(targetInstance.SourceDestCheck, true) {
 		klog.V(3).Infof("Disabling SourceDestCheck on VM %q associated with machine %s", providerID, request.Machine.Name)
-		err = disableSrcAndDestCheck(svc, targetInstance.InstanceId)
+		err = disableSrcAndDestCheck(ctx, client, targetInstance.InstanceId)
 		if err != nil {
 			return nil, status.Error(codes.Uninitialized, err.Error())
 		}
 	}
 	for i, netIf := range providerSpec.NetworkInterfaces {
 		for _, instanceNetIf := range targetInstance.NetworkInterfaces {
-			if netIf.Ipv6PrefixCount != nil && *instanceNetIf.Attachment.DeviceIndex == int64(i) {
+			// #nosec: G115 -- index will not exceed int32 limits
+			if netIf.Ipv6PrefixCount != nil && *instanceNetIf.Attachment.DeviceIndex == int32(i) {
 				input := &ec2.AssignIpv6AddressesInput{
 					NetworkInterfaceId: instanceNetIf.NetworkInterfaceId,
 					Ipv6PrefixCount:    netIf.Ipv6PrefixCount,
 				}
 				klog.V(3).Infof("On VM %q associated with machine %s, assigning ipv6PrefixCount: %d to networkInterface %q",
 					providerID, request.Machine.Name, *netIf.Ipv6PrefixCount, *instanceNetIf.NetworkInterfaceId)
-				_, err = svc.AssignIpv6Addresses(input)
+				_, err = client.AssignIpv6Addresses(ctx, input)
 				if err != nil {
 					return nil, status.Error(codes.Uninitialized, err.Error())
 				}
@@ -349,8 +350,8 @@ func (d *Driver) InitializeMachine(_ context.Context, request *driver.Initialize
 }
 
 // returns Placement Object required in ec2.RunInstancesInput
-func getPlacementObj(req *driver.CreateMachineRequest) (placementobj *ec2.Placement, err error) {
-	placementobj = &ec2.Placement{}
+func getPlacementObj(req *driver.CreateMachineRequest) (placementobj *ec2types.Placement, err error) {
+	placementobj = &ec2types.Placement{}
 
 	requestAnnotations := req.Machine.Spec.NodeTemplateSpec.ObjectMeta.Annotations
 
@@ -361,18 +362,18 @@ func getPlacementObj(req *driver.CreateMachineRequest) (placementobj *ec2.Placem
 		}
 	}
 
-	if *placementobj == (ec2.Placement{}) {
+	if *placementobj == (ec2types.Placement{}) {
 		return nil, nil
 	}
 	return placementobj, nil
 }
 
 // DeleteMachine handles a machine deletion request
-func (d *Driver) DeleteMachine(_ context.Context, req *driver.DeleteMachineRequest) (resp *driver.DeleteMachineResponse, err error) {
+func (d *Driver) DeleteMachine(ctx context.Context, req *driver.DeleteMachineRequest) (resp *driver.DeleteMachineResponse, err error) {
 	defer instrument.DriverAPIMetricRecorderFn(deleteMachineOperationLabel, &err)()
 
 	var (
-		instances  []*ec2.Instance
+		instances  []ec2types.Instance
 		instanceID string
 		secret     = req.Secret
 	)
@@ -393,7 +394,7 @@ func (d *Driver) DeleteMachine(_ context.Context, req *driver.DeleteMachineReque
 		return nil, err
 	}
 
-	svc, err := d.createSVC(req.Secret, providerSpec.Region)
+	client, err := d.createClient(ctx, req.Secret, providerSpec.Region)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -406,7 +407,7 @@ func (d *Driver) DeleteMachine(_ context.Context, req *driver.DeleteMachineReque
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
 
-		err = terminateInstance(req, svc, instanceID)
+		err = terminateInstance(ctx, req, client, instanceID)
 		if err != nil {
 			return nil, err
 		}
@@ -414,7 +415,7 @@ func (d *Driver) DeleteMachine(_ context.Context, req *driver.DeleteMachineReque
 
 	} else {
 		// ProviderID doesn't exist, hence check for any existing machine and then delete if exists
-		instances, err = getMachineInstancesByTagsAndStatus(svc, req.Machine.Name, providerSpec.Tags)
+		instances, err = getMachineInstancesByTagsAndStatus(ctx, client, req.Machine.Name, providerSpec.Tags)
 		if err != nil {
 			if isNotFoundError(err) {
 				klog.V(3).Infof("No matching VM found. Termination successful for machine object %q", req.Machine.Name)
@@ -426,7 +427,7 @@ func (d *Driver) DeleteMachine(_ context.Context, req *driver.DeleteMachineReque
 		// If instance(s) exist, terminate them
 		for _, instance := range instances {
 			// For each instance backing machine, terminate the VMs
-			err = terminateInstance(req, svc, *instance.InstanceId)
+			err = terminateInstance(ctx, req, client, *instance.InstanceId)
 			if err != nil {
 				return nil, err
 			}
@@ -438,7 +439,7 @@ func (d *Driver) DeleteMachine(_ context.Context, req *driver.DeleteMachineReque
 }
 
 // GetMachineStatus handles a machine get status request
-func (d *Driver) GetMachineStatus(_ context.Context, req *driver.GetMachineStatusRequest) (resp *driver.GetMachineStatusResponse, err error) {
+func (d *Driver) GetMachineStatus(ctx context.Context, req *driver.GetMachineStatusRequest) (resp *driver.GetMachineStatusResponse, err error) {
 	defer instrument.DriverAPIMetricRecorderFn(getMachineStatusOperationLabel, &err)()
 
 	var (
@@ -459,12 +460,12 @@ func (d *Driver) GetMachineStatus(_ context.Context, req *driver.GetMachineStatu
 		return nil, err
 	}
 
-	svc, err := d.createSVC(secret, providerSpec.Region)
+	client, err := d.createClient(ctx, secret, providerSpec.Region)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	instances, err := d.getMatchingInstancesForMachine(req.Machine, svc, providerSpec.Tags)
+	instances, err := d.getMatchingInstancesForMachine(ctx, req.Machine, client, providerSpec.Tags)
 	if err != nil {
 		return nil, err
 	} else if len(instances) > 1 {
@@ -498,7 +499,7 @@ func (d *Driver) GetMachineStatus(_ context.Context, req *driver.GetMachineStatu
 }
 
 // ListMachines lists all the machines possibly created by a machineClass
-func (d *Driver) ListMachines(_ context.Context, req *driver.ListMachinesRequest) (resp *driver.ListMachinesResponse, err error) {
+func (d *Driver) ListMachines(ctx context.Context, req *driver.ListMachinesRequest) (resp *driver.ListMachinesResponse, err error) {
 	defer instrument.DriverAPIMetricRecorderFn(listMachinesOperationLabel, &err)()
 
 	var (
@@ -531,38 +532,34 @@ func (d *Driver) ListMachines(_ context.Context, req *driver.ListMachinesRequest
 		}
 	}
 
-	svc, err := d.createSVC(secret, providerSpec.Region)
+	client, err := d.createClient(ctx, secret, providerSpec.Region)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	input := ec2.DescribeInstancesInput{
-		Filters: []*ec2.Filter{
+	input := &ec2.DescribeInstancesInput{
+		Filters: []ec2types.Filter{
 			{
-				Name: aws.String("tag-key"),
-				Values: []*string{
-					&clusterName,
-				},
+				Name:   aws.String("tag-key"),
+				Values: []string{clusterName},
 			},
 			{
-				Name: aws.String("tag-key"),
-				Values: []*string{
-					&nodeRole,
-				},
+				Name:   aws.String("tag-key"),
+				Values: []string{nodeRole},
 			},
 			{
 				Name: aws.String("instance-state-name"),
-				Values: []*string{
-					aws.String("pending"),
-					aws.String("running"),
-					aws.String("stopping"),
-					aws.String("stopped"),
+				Values: []string{
+					string(ec2types.InstanceStateNamePending),
+					string(ec2types.InstanceStateNameRunning),
+					string(ec2types.InstanceStateNameStopping),
+					string(ec2types.InstanceStateNameStopped),
 				},
 			},
 		},
 	}
 
-	runResult, err := svc.DescribeInstances(&input)
+	runResult, err := client.DescribeInstances(ctx, input)
 	if err != nil {
 		klog.Errorf("AWS plugin is returning error while describe instances request is sent: %s", err)
 		return nil, status.Error(codes.Internal, err.Error())

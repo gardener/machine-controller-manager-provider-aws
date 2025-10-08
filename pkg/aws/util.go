@@ -5,18 +5,21 @@
 package aws
 
 import (
+	"context"
 	"fmt"
-	"github.com/aws/aws-sdk-go/service/ec2"
 	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"k8s.io/utils/ptr"
+
+	"github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/interfaces"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/codes"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/status"
 
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	backoff "github.com/cenkalti/backoff/v4"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -39,14 +42,14 @@ func decodeRegionAndInstanceID(id string) (string, string, error) {
 	return splitProviderID[len(splitProviderID)-2], splitProviderID[len(splitProviderID)-1], nil
 }
 
-// Helper function to create SVC
-func (d *Driver) createSVC(secret *corev1.Secret, region string) (ec2iface.EC2API, error) {
-	session, err := d.SPI.NewSession(secret, region)
+// Helper function to create Client
+func (d *Driver) createClient(ctx context.Context, secret *corev1.Secret, region string) (interfaces.Ec2Client, error) {
+	config, err := d.CPI.NewConfig(ctx, secret, region)
 	if err != nil {
 		return nil, err
 	}
-	svc := d.SPI.NewEC2API(session)
-	return svc, nil
+	client := d.CPI.NewEC2Client(config)
+	return client, nil
 }
 
 // Function returns true only if error code equals codes.NotFound
@@ -103,13 +106,12 @@ func kubernetesVolumeIDToEBSVolumeID(kubernetesID string) (string, error) {
 func getStringPtr(s string) *string {
 	return &s
 }
-func getIntPtrForString(s string) *int64 {
-	var num int64
-	num, _ = strconv.ParseInt(s, 10, 64)
-	return &num
+func getInt32PtrForString(s string) *int32 {
+	num, _ := strconv.ParseInt(s, 10, 32)
+	return ptr.To(int32(num))
 }
 
-func retryWithExponentialBackOff(operation backoff.OperationWithData[*ec2.Instance], _ time.Duration) (*ec2.Instance, error) {
+func retryWithExponentialBackOff(operation backoff.OperationWithData[*ec2types.Instance], _ time.Duration) (*ec2types.Instance, error) {
 	expBackOffObj := backoff.NewExponentialBackOff()
 	expBackOffObj.MaxElapsedTime = maxElapsedTimeInBackoff
 	return backoff.RetryWithData(operation, expBackOffObj)
