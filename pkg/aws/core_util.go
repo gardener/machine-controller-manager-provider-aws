@@ -122,17 +122,32 @@ func getMachineInstancesByTagsAndStatus(ctx context.Context, svc interfaces.Ec2C
 			},
 		},
 	}
-	runResult, err := svc.DescribeInstances(ctx, input)
 
-	if err != nil {
-		klog.Errorf("AWS plugin is returning error while describe instances request is sent: %s", err)
-		return nil, status.Error(codes.Internal, err.Error())
-	} else {
+	var nextToken *string
+	pageCount := 0
+	for {
+		input.NextToken = nextToken
+
+		runResult, err := svc.DescribeInstances(ctx, input)
+		if err != nil {
+			klog.Errorf("AWS plugin is returning error while describe instances request is sent: %s", err)
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		pageCount++
+
 		for _, reservation := range runResult.Reservations {
 			instances = append(instances, reservation.Instances...)
 		}
-		return instances, nil
+
+		// Check if there are more results
+		if runResult.NextToken == nil {
+			break
+		}
+		klog.V(4).Infof("Fetching next page (page %d) of ListMachines, with NextToken: %s", pageCount+1, *runResult.NextToken)
+		nextToken = runResult.NextToken
 	}
+	klog.V(3).Infof("Found %d instances for machine %s using tags/status in %d pages", len(instances), machineName, pageCount)
+	return instances, nil
 }
 
 // getMatchingInstancesForMachine extracts AWS Instance object for a given machine

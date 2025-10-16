@@ -559,28 +559,41 @@ func (d *Driver) ListMachines(ctx context.Context, req *driver.ListMachinesReque
 		},
 	}
 
-	runResult, err := client.DescribeInstances(ctx, input)
-	if err != nil {
-		klog.Errorf("AWS plugin is returning error while describe instances request is sent: %s", err)
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
 	listOfVMs := make(map[string]string)
-	for _, reservation := range runResult.Reservations {
-		for _, instance := range reservation.Instances {
+	var nextToken *string
+	pageCount := 0
 
-			machineName := ""
-			for _, tag := range instance.Tags {
-				if *tag.Key == "Name" {
-					machineName = *tag.Value
-					break
-				}
-			}
-			listOfVMs[encodeInstanceID(providerSpec.Region, *instance.InstanceId)] = machineName
+	for {
+		input.NextToken = nextToken
+
+		runResult, err := client.DescribeInstances(ctx, input)
+		if err != nil {
+			klog.Errorf("AWS plugin is returning error while describe instances request is sent: %s (NextToken: %s)", err, ptr.Deref(nextToken, "<nil>"))
+			return nil, status.Error(codes.Internal, err.Error())
 		}
+		pageCount++
+
+		for _, reservation := range runResult.Reservations {
+			for _, instance := range reservation.Instances {
+				machineName := ""
+				for _, tag := range instance.Tags {
+					if *tag.Key == "Name" {
+						machineName = *tag.Value
+						break
+					}
+				}
+				listOfVMs[encodeInstanceID(providerSpec.Region, *instance.InstanceId)] = machineName
+			}
+		}
+
+		if runResult.NextToken == nil {
+			break
+		}
+		nextToken = runResult.NextToken
+		klog.V(4).Infof("Fetching next page (page %d) of ListMachines, with NextToken: %s", pageCount+1, *nextToken)
 	}
 
-	klog.V(3).Infof("List machines request has been processed successfully")
+	klog.V(3).Infof("List machines request has been processed successfully, retrieved %d pages, %d VMs for machineClass %q", pageCount, len(listOfVMs), machineClass.Name)
 	// Core logic ends here.
 	resp = &driver.ListMachinesResponse{
 		MachineList: listOfVMs,
