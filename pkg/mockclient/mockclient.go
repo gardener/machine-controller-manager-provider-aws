@@ -7,6 +7,7 @@ package mockclient
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -210,7 +211,10 @@ func (ms *MockEC2Client) DescribeInstances(_ context.Context, input *ec2.Describ
 		startIndex := 0
 
 		if input.NextToken != nil {
-			fmt.Sscanf(*input.NextToken, "%d", &startIndex)
+			if idx, err := strconv.Atoi(*input.NextToken); err == nil {
+				startIndex = int(idx)
+			}
+			// If parsing fails, startIndex remains 0 (default)
 		}
 
 		endIndex := startIndex + int(ms.PageSize)
