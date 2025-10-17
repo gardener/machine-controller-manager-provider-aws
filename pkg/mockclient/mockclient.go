@@ -7,6 +7,7 @@ package mockclient
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -62,6 +63,7 @@ var (
 // MockClientProvider is the mock implementation of ClientProvider interface that makes dummy calls
 type MockClientProvider struct {
 	FakeInstances []ec2types.Instance
+	PageSize      int32
 }
 
 // NewConfig returns a new AWS Config
@@ -76,6 +78,7 @@ func (ms *MockClientProvider) NewConfig(_ context.Context, _ *corev1.Secret, reg
 func (ms *MockClientProvider) NewEC2Client(_ *aws.Config) interfaces.Ec2Client {
 	return &MockEC2Client{
 		FakeInstances: &ms.FakeInstances,
+		PageSize:      ms.PageSize,
 	}
 }
 
@@ -83,6 +86,7 @@ func (ms *MockClientProvider) NewEC2Client(_ *aws.Config) interfaces.Ec2Client {
 type MockEC2Client struct {
 	interfaces.Ec2Client
 	FakeInstances *[]ec2types.Instance
+	PageSize      int32
 }
 
 // DescribeImages implements a mock describe image method
@@ -200,12 +204,38 @@ func (ms *MockEC2Client) DescribeInstances(_ context.Context, input *ec2.Describ
 		}
 	}
 
+	var nextToken *string
+	var nextInstances []ec2types.Instance
+
+	if ms.PageSize > 0 {
+		startIndex := 0
+
+		if input.NextToken != nil {
+			if idx, err := strconv.Atoi(*input.NextToken); err == nil {
+				startIndex = int(idx)
+			}
+		}
+
+		endIndex := min(startIndex+int(ms.PageSize), len(instanceList))
+
+		nextInstances = instanceList[startIndex:endIndex]
+
+		// Set NextToken if there are more results
+		if endIndex < len(instanceList) {
+			token := fmt.Sprintf("%d", endIndex)
+			nextToken = &token
+		}
+	} else {
+		nextInstances = instanceList
+	}
+
 	return &ec2.DescribeInstancesOutput{
 		Reservations: []ec2types.Reservation{
 			{
-				Instances: instanceList,
+				Instances: nextInstances,
 			},
 		},
+		NextToken: nextToken,
 	}, nil
 }
 

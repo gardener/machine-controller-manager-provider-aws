@@ -1122,6 +1122,7 @@ var _ = Describe("MachineServer", func() {
 	Describe("#ListMachines", func() {
 		type setup struct {
 			createMachineRequest []*driver.CreateMachineRequest
+			pageSize             int32
 		}
 		type action struct {
 			listMachineRequest *driver.ListMachinesRequest
@@ -1138,7 +1139,10 @@ var _ = Describe("MachineServer", func() {
 		}
 		DescribeTable("##table",
 			func(data *data) {
-				mockClientProvider := &mockclient.MockClientProvider{FakeInstances: make([]ec2types.Instance, 0)}
+				mockClientProvider := &mockclient.MockClientProvider{
+					FakeInstances: make([]ec2types.Instance, 0),
+					PageSize:      data.setup.pageSize,
+				}
 				md := NewAWSDriver(mockClientProvider)
 				ctx := context.Background()
 
@@ -1192,6 +1196,76 @@ var _ = Describe("MachineServer", func() {
 							"aws:///eu-west-1/i-0123456789-1": "machine-1",
 							"aws:///eu-west-1/i-0123456789-2": "machine-2",
 						},
+					},
+				},
+			}),
+
+			Entry("Machine List Request with multiple pages", &data{
+				setup: setup{
+					createMachineRequest: []*driver.CreateMachineRequest{
+						{
+							Machine:      newMachine(0, nil),
+							MachineClass: newMachineClass(providerSpec),
+							Secret:       providerSecret,
+						},
+						{
+							Machine:      newMachine(1, nil),
+							MachineClass: newMachineClass(providerSpec),
+							Secret:       providerSecret,
+						},
+						{
+							Machine:      newMachine(2, nil),
+							MachineClass: newMachineClass(providerSpec),
+							Secret:       providerSecret,
+						},
+						{
+							Machine:      newMachine(3, nil),
+							MachineClass: newMachineClass(providerSpec),
+							Secret:       providerSecret,
+						},
+						{
+							Machine:      newMachine(4, nil),
+							MachineClass: newMachineClass(providerSpec),
+							Secret:       providerSecret,
+						},
+					},
+					pageSize: 2,
+				},
+				action: action{
+					listMachineRequest: &driver.ListMachinesRequest{
+						MachineClass: newMachineClass(providerSpec),
+						Secret:       providerSecret,
+					},
+				},
+				expect: expect{
+					errToHaveOccurred: false,
+					listMachineResponse: &driver.ListMachinesResponse{
+						MachineList: map[string]string{
+							"aws:///eu-west-1/i-0123456789-0": "machine-0",
+							"aws:///eu-west-1/i-0123456789-1": "machine-1",
+							"aws:///eu-west-1/i-0123456789-2": "machine-2",
+							"aws:///eu-west-1/i-0123456789-3": "machine-3",
+							"aws:///eu-west-1/i-0123456789-4": "machine-4",
+						},
+					},
+				},
+			}),
+
+			Entry("Machine List Request with empty result", &data{
+				setup: setup{
+					createMachineRequest: []*driver.CreateMachineRequest{},
+					pageSize:             2,
+				},
+				action: action{
+					listMachineRequest: &driver.ListMachinesRequest{
+						MachineClass: newMachineClass(providerSpec),
+						Secret:       providerSecret,
+					},
+				},
+				expect: expect{
+					errToHaveOccurred: false,
+					listMachineResponse: &driver.ListMachinesResponse{
+						MachineList: nil,
 					},
 				},
 			}),
