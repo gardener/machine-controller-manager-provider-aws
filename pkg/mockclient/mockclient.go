@@ -214,13 +214,9 @@ func (ms *MockEC2Client) DescribeInstances(_ context.Context, input *ec2.Describ
 			if idx, err := strconv.Atoi(*input.NextToken); err == nil {
 				startIndex = int(idx)
 			}
-			// If parsing fails, startIndex remains 0 (default)
 		}
 
-		endIndex := startIndex + int(ms.PageSize)
-		if endIndex > len(instanceList) {
-			endIndex = len(instanceList)
-		}
+		endIndex := min(startIndex+int(ms.PageSize), len(instanceList))
 
 		nextInstances = instanceList[startIndex:endIndex]
 

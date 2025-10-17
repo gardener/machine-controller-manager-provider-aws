@@ -586,11 +586,11 @@ func (d *Driver) ListMachines(ctx context.Context, req *driver.ListMachinesReque
 			}
 		}
 
-		if runResult.NextToken == nil {
+		if runResult.NextToken == nil || *runResult.NextToken == "" {
 			break
 		}
 		nextToken = runResult.NextToken
-		klog.V(4).Infof("Fetching next page (page %d) of ListMachines, with NextToken: %s", pageCount+1, *nextToken)
+		klog.V(3).Infof("Fetching next page (page %d) of ListMachines, with NextToken: %s", pageCount+1, *nextToken)
 	}
 
 	klog.V(3).Infof("List machines request has been processed successfully, retrieved %d pages, %d VMs for machineClass %q", pageCount, len(listOfVMs), machineClass.Name)

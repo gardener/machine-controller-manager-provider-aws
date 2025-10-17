@@ -143,7 +143,7 @@ func getMachineInstancesByTagsAndStatus(ctx context.Context, svc interfaces.Ec2C
 		if runResult.NextToken == nil {
 			break
 		}
-		klog.V(4).Infof("Fetching next page (page %d) of ListMachines, with NextToken: %s", pageCount+1, *runResult.NextToken)
+		klog.V(3).Infof("Fetching next page (page %d) of ListMachines, with NextToken: %s", pageCount+1, *runResult.NextToken)
 		nextToken = runResult.NextToken
 	}
 	klog.V(3).Infof("Found %d instances for machine %s using tags/status in %d pages", len(instances), machineName, pageCount)

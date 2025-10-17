@@ -296,18 +296,32 @@ var _ = Describe("CoreUtils", func() {
 			mockClient = mockClientProvider.NewEC2Client(nil)
 		})
 
-		It("should return a single instance with matching tags", func() {
-			instance := ec2types.Instance{
-				InstanceId: aws.String("i-test-instance-1"),
-				State: &ec2types.InstanceState{
-					Name: ec2types.InstanceStateNameRunning,
-				},
-				Tags: []ec2types.Tag{
-					{Key: aws.String("Name"), Value: aws.String(machineName)},
-					{Key: aws.String("kubernetes.io/cluster/shoot--test"), Value: aws.String("1")},
-					{Key: aws.String("kubernetes.io/role/node"), Value: aws.String("1")},
-				},
+		// createTestInstanceWithDefaultTags creates a test instance with default tags (Name + providerSpecTags)
+		createTestInstanceWithDefaultTags := func(instanceID string, state ec2types.InstanceStateName) ec2types.Instance {
+			tags := map[string]string{
+				"Name": machineName,
 			}
+			for k, v := range providerSpecTags {
+				tags[k] = v
+			}
+			var instanceTags []ec2types.Tag
+			for key, value := range tags {
+				instanceTags = append(instanceTags, ec2types.Tag{
+					Key:   aws.String(key),
+					Value: aws.String(value),
+				})
+			}
+			return ec2types.Instance{
+				InstanceId: aws.String(instanceID),
+				State: &ec2types.InstanceState{
+					Name: state,
+				},
+				Tags: instanceTags,
+			}
+		}
+
+		It("should return a single instance with matching tags", func() {
+			instance := createTestInstanceWithDefaultTags("i-test-instance-1", ec2types.InstanceStateNameRunning)
 			mockClientProvider.FakeInstances = append(mockClientProvider.FakeInstances, instance)
 
 			instances, err := getMachineInstancesByTagsAndStatus(ctx, mockClient, machineName, providerSpecTags)
@@ -319,18 +333,8 @@ var _ = Describe("CoreUtils", func() {
 		})
 
 		It("should return multiple instances with matching tags", func() {
-			for i := 0; i < 3; i++ {
-				instance := ec2types.Instance{
-					InstanceId: aws.String(fmt.Sprintf("i-test-instance-%d", i)),
-					State: &ec2types.InstanceState{
-						Name: ec2types.InstanceStateNameRunning,
-					},
-					Tags: []ec2types.Tag{
-						{Key: aws.String("Name"), Value: aws.String(machineName)},
-						{Key: aws.String("kubernetes.io/cluster/shoot--test"), Value: aws.String("1")},
-						{Key: aws.String("kubernetes.io/role/node"), Value: aws.String("1")},
-					},
-				}
+			for i := range 3 {
+				instance := createTestInstanceWithDefaultTags(fmt.Sprintf("i-test-instance-%d", i), ec2types.InstanceStateNameRunning)
 				mockClientProvider.FakeInstances = append(mockClientProvider.FakeInstances, instance)
 			}
 
@@ -343,18 +347,8 @@ var _ = Describe("CoreUtils", func() {
 		It("should return instances across multiple pages", func() {
 			mockClientProvider.PageSize = 2
 
-			for i := 0; i < 5; i++ {
-				instance := ec2types.Instance{
-					InstanceId: aws.String(fmt.Sprintf("i-test-instance-%d", i)),
-					State: &ec2types.InstanceState{
-						Name: ec2types.InstanceStateNameRunning,
-					},
-					Tags: []ec2types.Tag{
-						{Key: aws.String("Name"), Value: aws.String(machineName)},
-						{Key: aws.String("kubernetes.io/cluster/shoot--test"), Value: aws.String("1")},
-						{Key: aws.String("kubernetes.io/role/node"), Value: aws.String("1")},
-					},
-				}
+			for i := range 5 {
+				instance := createTestInstanceWithDefaultTags(fmt.Sprintf("i-test-instance-%d", i), ec2types.InstanceStateNameRunning)
 				mockClientProvider.FakeInstances = append(mockClientProvider.FakeInstances, instance)
 			}
 
