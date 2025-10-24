@@ -1,7 +1,7 @@
 componentReferences:
 - componentName: github.com/gardener/machine-controller-manager
   name: machine-controller-manager
-  version: v0.60.0
+  version: v0.60.2
 labels:
 - name: cloud.gardener.cnudie/responsibles
   value:
