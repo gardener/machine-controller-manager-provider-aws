@@ -139,7 +139,7 @@ func getMachineInstancesByTagsAndStatus(ctx context.Context, svc interfaces.Ec2C
 			instances = append(instances, reservation.Instances...)
 		}
 
-		// Exit if there no are more results
+		// Exit if there are no more results
 		if runResult.NextToken == nil || *runResult.NextToken == "" {
 			break
 		}
