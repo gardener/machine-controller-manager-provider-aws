@@ -130,7 +130,7 @@ func getMachineInstancesByTagsAndStatus(ctx context.Context, svc interfaces.Ec2C
 
 		runResult, err := svc.DescribeInstances(ctx, input)
 		if err != nil {
-			klog.Errorf("AWS plugin is returning error while describe instances request is sent: %s", err)
+			klog.Errorf("AWS plugin encountered an error while sending DescribeInstances request: %s (NextToken: %s)", err, ptr.Deref(nextToken, "<nil>"))
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 		pageCount++
@@ -139,8 +139,8 @@ func getMachineInstancesByTagsAndStatus(ctx context.Context, svc interfaces.Ec2C
 			instances = append(instances, reservation.Instances...)
 		}
 
-		// Check if there are more results
-		if runResult.NextToken == nil {
+		// Exit if there no are more results
+		if runResult.NextToken == nil || *runResult.NextToken == "" {
 			break
 		}
 		klog.V(3).Infof("Fetching next page (page %d) of ListMachines, with NextToken: %s", pageCount+1, *runResult.NextToken)

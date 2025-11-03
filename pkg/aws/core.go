@@ -568,7 +568,7 @@ func (d *Driver) ListMachines(ctx context.Context, req *driver.ListMachinesReque
 
 		runResult, err := client.DescribeInstances(ctx, input)
 		if err != nil {
-			klog.Errorf("AWS plugin is returning error while describe instances request is sent: %s (NextToken: %s)", err, ptr.Deref(nextToken, "<nil>"))
+			klog.Errorf("AWS plugin encountered an error while sending DescribeInstances request: %s (NextToken: %s)", err, ptr.Deref(nextToken, "<nil>"))
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 		pageCount++
