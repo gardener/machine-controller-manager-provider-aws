@@ -94,6 +94,7 @@ func getOrphanedInstances(ctx context.Context, tagName string, tagValue string, 
 		},
 	}
 
+	// If more than 1000 instances match, only the first 1000 will be returned.
 	result, err := svc.DescribeInstances(ctx, input)
 	if err != nil {
 		return instancesID, err
@@ -145,6 +146,7 @@ func getOrphanedDisks(ctx context.Context, tagName string, tagValue string, mach
 		},
 	}
 
+	// If more than 1000 volumes match the filters, only the first 1000 will be returned.
 	result, err := svc.DescribeVolumes(ctx, input)
 	if err != nil {
 		return availVolID, err
@@ -192,6 +194,7 @@ func getOrphanedNICs(ctx context.Context, tagName string, tagValue string, machi
 			},
 		},
 	}
+	// If more than 1000 NICs match the filters, only the first 1000 will be returned.
 	resultNetworkInterface, err := svc.DescribeNetworkInterfaces(ctx, inputNIC)
 	if err != nil {
 		return orphanNICs, err

@@ -5,6 +5,7 @@
 package aws
 
 import (
+	"context"
 	"fmt"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -14,6 +15,8 @@ import (
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 
 	api "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
+	"github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/interfaces"
+	"github.com/gardener/machine-controller-manager-provider-aws/pkg/mockclient"
 )
 
 var (
@@ -268,6 +271,114 @@ var _ = Describe("CoreUtils", func() {
 
 			Expect(disksGenerated).To(Equal(expectedDisks))
 			Expect(err).ToNot(HaveOccurred())
+		})
+	})
+
+	Context("#getMachineInstancesByTagsAndStatus", func() {
+		var (
+			ctx                context.Context
+			machineName        string
+			providerSpecTags   map[string]string
+			mockClientProvider *mockclient.MockClientProvider
+			mockClient         interfaces.Ec2Client
+		)
+
+		BeforeEach(func() {
+			ctx = context.Background()
+			machineName = "test-machine-0"
+			providerSpecTags = map[string]string{
+				"kubernetes.io/cluster/shoot--test": "1",
+				"kubernetes.io/role/node":           "1",
+			}
+			mockClientProvider = &mockclient.MockClientProvider{
+				FakeInstances: make([]ec2types.Instance, 0),
+			}
+			mockClient = mockClientProvider.NewEC2Client(nil)
+		})
+
+		// createTestInstanceWithDefaultTags creates a test instance with default tags (Name + providerSpecTags)
+		createTestInstanceWithDefaultTags := func(instanceID string, state ec2types.InstanceStateName) ec2types.Instance {
+			tags := map[string]string{
+				"Name": machineName,
+			}
+			for k, v := range providerSpecTags {
+				tags[k] = v
+			}
+			var instanceTags []ec2types.Tag
+			for key, value := range tags {
+				instanceTags = append(instanceTags, ec2types.Tag{
+					Key:   aws.String(key),
+					Value: aws.String(value),
+				})
+			}
+			return ec2types.Instance{
+				InstanceId: aws.String(instanceID),
+				State: &ec2types.InstanceState{
+					Name: state,
+				},
+				Tags: instanceTags,
+			}
+		}
+
+		It("should return a single instance with matching tags", func() {
+			instance := createTestInstanceWithDefaultTags("i-test-instance-1", ec2types.InstanceStateNameRunning)
+			mockClientProvider.FakeInstances = append(mockClientProvider.FakeInstances, instance)
+
+			instances, err := getMachineInstancesByTagsAndStatus(ctx, mockClient, machineName, providerSpecTags)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(instances).To(HaveLen(1))
+			Expect(*instances[0].InstanceId).To(Equal("i-test-instance-1"))
+			Expect(instances[0].State.Name).To(Equal(ec2types.InstanceStateNameRunning))
+		})
+
+		It("should return multiple instances with matching tags", func() {
+			for i := range 3 {
+				instance := createTestInstanceWithDefaultTags(fmt.Sprintf("i-test-instance-%d", i), ec2types.InstanceStateNameRunning)
+				mockClientProvider.FakeInstances = append(mockClientProvider.FakeInstances, instance)
+			}
+
+			instances, err := getMachineInstancesByTagsAndStatus(ctx, mockClient, machineName, providerSpecTags)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(instances).To(HaveLen(3))
+		})
+
+		It("should return instances across multiple pages", func() {
+			mockClientProvider.PageSize = 2
+
+			for i := range 5 {
+				instance := createTestInstanceWithDefaultTags(fmt.Sprintf("i-test-instance-%d", i), ec2types.InstanceStateNameRunning)
+				mockClientProvider.FakeInstances = append(mockClientProvider.FakeInstances, instance)
+			}
+
+			mockClient = mockClientProvider.NewEC2Client(nil)
+
+			instances, err := getMachineInstancesByTagsAndStatus(ctx, mockClient, machineName, providerSpecTags)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(instances).To(HaveLen(5))
+		})
+
+		It("should return empty list when no instances exist", func() {
+			// Don't create any instances
+			instances, err := getMachineInstancesByTagsAndStatus(ctx, mockClient, machineName, providerSpecTags)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(instances).To(HaveLen(0))
+		})
+
+		It("should handle error from DescribeInstances API", func() {
+			// trigger error in mock
+			errorTags := map[string]string{
+				"kubernetes.io/cluster/" + mockclient.ReturnErrorAtDescribeInstances: "1",
+				"kubernetes.io/role/node": "1",
+			}
+
+			instances, err := getMachineInstancesByTagsAndStatus(ctx, mockClient, machineName, errorTags)
+
+			Expect(err).To(HaveOccurred())
+			Expect(instances).To(BeNil())
 		})
 	})
 })
