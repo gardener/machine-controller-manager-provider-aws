@@ -55,4 +55,9 @@ const (
 	// InstanceIDNotFound is returned when the specified instance does not exist. This error might occur because the ID of a recently created instance has not propagated through the system.
 	// For more information, see Eventual consistency(https://docs.aws.amazon.com/AWSEC2/latest/APIReference/query-api-troubleshooting.html#eventual-consistency).
 	InstanceIDNotFound = ec2types.UnsuccessfulInstanceCreditSpecificationErrorCodeInstanceNotFound
+
+	// Unsupported is returned when the specified request is unsupported. For example, you might be trying to launch an instance in an
+	// Availability Zone that currently has constraints on that instance type. The returned message provides details of the unsupported request.
+	Unsupported = "Unsupported"
+	
 )
