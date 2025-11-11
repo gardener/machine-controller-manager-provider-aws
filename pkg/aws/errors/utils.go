@@ -16,7 +16,16 @@ func GetMCMErrorCodeForCreateMachine(err error) codes.Code {
 	var awsErr smithy.APIError
 	if errors.As(err, &awsErr) {
 		switch awsErr.ErrorCode() {
-		case InsufficientCapacity, InsufficientAddressCapacity, InsufficientInstanceCapacity, InsufficientVolumeCapacity, InstanceLimitExceeded, VcpuLimitExceeded, VolumeLimitExceeded, MaxIOPSLimitExceeded, RouteLimitExceeded:
+		case InsufficientCapacity,
+			InsufficientAddressCapacity,
+			InsufficientInstanceCapacity,
+			InsufficientVolumeCapacity,
+			InstanceLimitExceeded,
+			VcpuLimitExceeded,
+			VolumeLimitExceeded,
+			MaxIOPSLimitExceeded,
+			RouteLimitExceeded,
+			Unsupported:
 			return codes.ResourceExhausted
 		}
 	}
