@@ -286,5 +286,5 @@ type CPUOptions struct {
 	// Currently, this option is only supported on M6a, R6a, and C6a instance types.
 	// Valid options are "enabled" and "disabled".
 	// For more information, see https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/amd-sev-snp.html
-	AmdSevSnp *string `json:"amdSevSnp"`
+	AmdSevSnp *string `json:"amdSevSnp,omitempty"`
 }
