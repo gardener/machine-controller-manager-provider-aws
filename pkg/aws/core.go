@@ -192,10 +192,15 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 	}
 
 	if cpuOptions := providerSpec.CPUOptions; cpuOptions != nil {
-		inputConfig.CpuOptions = &ec2types.CpuOptionsRequest{
-			CoreCount:      cpuOptions.CoreCount,
-			ThreadsPerCore: cpuOptions.ThreadsPerCore,
+		cpuOpts := &ec2types.CpuOptionsRequest{}
+		if cpuOptions.AmdSevSnp != nil {
+			cpuOpts.AmdSevSnp = ec2types.AmdSevSnpSpecification(*cpuOptions.AmdSevSnp)
 		}
+		if cpuOptions.CoreCount != nil && cpuOptions.ThreadsPerCore != nil {
+			cpuOpts.CoreCount = cpuOptions.CoreCount
+			cpuOpts.ThreadsPerCore = cpuOptions.ThreadsPerCore
+		}
+		inputConfig.CpuOptions = cpuOpts
 	}
 
 	// Set the AWS Capacity Reservation target. Using an 'open' preference means that if the reservation is not found, then
