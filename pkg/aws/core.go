@@ -316,20 +316,14 @@ func (d *Driver) InitializeMachine(ctx context.Context, request *driver.Initiali
 		}
 		return nil, err
 	}
+
 	targetInstance := instances[0]
 	providerID := encodeInstanceID(providerSpec.Region, *targetInstance.InstanceId)
-	// if SrcAnDstCheckEnabled is false then disable the SrcAndDestCheck on running NAT instance
-	if providerSpec.SrcAndDstChecksEnabled != nil && !*providerSpec.SrcAndDstChecksEnabled && ptr.Deref(targetInstance.SourceDestCheck, true) {
-		klog.V(3).Infof("Disabling SourceDestCheck on VM %q associated with machine %s", providerID, request.Machine.Name)
-		err = disableSrcAndDestCheck(ctx, client, targetInstance.InstanceId)
-		if err != nil {
-			return nil, status.Error(codes.Uninitialized, err.Error())
-		}
-	}
+
 	for i, netIf := range providerSpec.NetworkInterfaces {
 		for _, instanceNetIf := range targetInstance.NetworkInterfaces {
 			// #nosec: G115 -- index will not exceed int32 limits
-			if netIf.Ipv6PrefixCount != nil && *instanceNetIf.Attachment.DeviceIndex == int32(i) {
+			if netIf.Ipv6PrefixCount != nil && *instanceNetIf.Attachment.DeviceIndex == int32(i) && (instanceNetIf.Ipv6Prefixes == nil || len(instanceNetIf.Ipv6Prefixes) == 0) {
 				input := &ec2.AssignIpv6AddressesInput{
 					NetworkInterfaceId: instanceNetIf.NetworkInterfaceId,
 					Ipv6PrefixCount:    netIf.Ipv6PrefixCount,
@@ -343,6 +337,16 @@ func (d *Driver) InitializeMachine(ctx context.Context, request *driver.Initiali
 			}
 		}
 	}
+
+	// if SrcAnDstCheckEnabled is false then disable the SrcAndDestCheck on running NAT instance
+	if providerSpec.SrcAndDstChecksEnabled != nil && !*providerSpec.SrcAndDstChecksEnabled && ptr.Deref(targetInstance.SourceDestCheck, true) {
+		klog.V(3).Infof("Disabling SourceDestCheck on VM %q associated with machine %s", providerID, request.Machine.Name)
+		err = disableSrcAndDestCheck(ctx, client, targetInstance.InstanceId)
+		if err != nil {
+			return nil, status.Error(codes.Uninitialized, err.Error())
+		}
+	}
+
 	return &driver.InitializeMachineResponse{
 		ProviderID: providerID,
 		NodeName:   *targetInstance.PrivateDnsName,
