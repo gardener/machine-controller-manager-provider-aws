@@ -323,7 +323,7 @@ func (d *Driver) InitializeMachine(ctx context.Context, request *driver.Initiali
 	for i, netIf := range providerSpec.NetworkInterfaces {
 		for _, instanceNetIf := range targetInstance.NetworkInterfaces {
 			// #nosec: G115 -- index will not exceed int32 limits
-			if netIf.Ipv6PrefixCount != nil && *instanceNetIf.Attachment.DeviceIndex == int32(i) && (instanceNetIf.Ipv6Prefixes == nil || len(instanceNetIf.Ipv6Prefixes) == 0) {
+			if netIf.Ipv6PrefixCount != nil && *instanceNetIf.Attachment.DeviceIndex == int32(i) && len(instanceNetIf.Ipv6Prefixes) == 0 {
 				input := &ec2.AssignIpv6AddressesInput{
 					NetworkInterfaceId: instanceNetIf.NetworkInterfaceId,
 					Ipv6PrefixCount:    netIf.Ipv6PrefixCount,
