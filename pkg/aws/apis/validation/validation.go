@@ -214,7 +214,7 @@ func validateCPUOptions(cpuOptions *awsapi.CPUOptions, fldPath *field.Path) fiel
 	coreSet := cpuOptions.CoreCount != nil
 	threadsSet := cpuOptions.ThreadsPerCore != nil
 
-	// Either both must be set or neither (neither already handled above).
+	// Either both must be set or neither
 	if coreSet != threadsSet {
 		if !coreSet {
 			allErrs = append(allErrs, field.Required(fldPath.Child("coreCount"),
