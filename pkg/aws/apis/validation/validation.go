@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"golang.org/x/exp/slices"
 	corev1 "k8s.io/api/core/v1"
 	utilvalidation "k8s.io/apimachinery/pkg/util/validation"
@@ -202,16 +203,36 @@ func validateCPUOptions(cpuOptions *awsapi.CPUOptions, fldPath *field.Path) fiel
 		return allErrs
 	}
 
-	if cpuOptions.CoreCount == nil {
-		allErrs = append(allErrs, field.Required(fldPath.Child("coreCount"), "CoreCount is required"))
+	if cpuOptions.AmdSevSnp != nil {
+		amdSevSnp := ec2types.AmdSevSnpSpecification(*cpuOptions.AmdSevSnp)
+		if !slices.Contains(amdSevSnp.Values(), amdSevSnp) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("amdSevSnp"), amdSevSnp,
+				fmt.Sprintf("AmdSevSnp must be one of %v", amdSevSnp.Values())))
+		}
 	}
 
-	if cpuOptions.ThreadsPerCore == nil {
-		allErrs = append(allErrs, field.Required(fldPath.Child("threadsPerCore"), "ThreadsPerCore is required"))
+	coreSet := cpuOptions.CoreCount != nil
+	threadsSet := cpuOptions.ThreadsPerCore != nil
+
+	// Either both must be set or neither
+	if coreSet != threadsSet {
+		if !coreSet {
+			allErrs = append(allErrs, field.Required(fldPath.Child("coreCount"),
+				"CoreCount is required when ThreadsPerCore is set"))
+		}
+		if !threadsSet {
+			allErrs = append(allErrs, field.Required(fldPath.Child("threadsPerCore"),
+				"ThreadsPerCore is required when CoreCount is set"))
+		}
+		return allErrs
 	}
 
-	if threadsPerCore := *cpuOptions.ThreadsPerCore; threadsPerCore > 2 || threadsPerCore < 1 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("threadsPerCore"), threadsPerCore, "ThreadsPerCore must be either '1' or '2'"))
+	if threadsSet {
+		tpc := *cpuOptions.ThreadsPerCore
+		if tpc != 1 && tpc != 2 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("threadsPerCore"), tpc,
+				"ThreadsPerCore must be 1 or 2"))
+		}
 	}
 
 	return allErrs
