@@ -26,6 +26,11 @@ func ValidateAWSProviderSpec(spec *awsapi.AWSProviderSpec, secret *corev1.Secret
 		allErrs = field.ErrorList{}
 	)
 
+	if spec == nil {
+		allErrs = append(allErrs, field.Required(fldPath.Child(""), "ProviderSpec is required"))
+		return allErrs
+	}
+
 	if spec.AMI == "" {
 		allErrs = append(allErrs, field.Required(fldPath.Child("ami"), "AMI is required"))
 	}
