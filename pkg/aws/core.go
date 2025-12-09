@@ -67,6 +67,11 @@ func NewAWSDriver(cpi cpi.ClientProviderInterface) driver.Driver {
 func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineRequest) (resp *driver.CreateMachineResponse, err error) {
 	defer instrument.DriverAPIMetricRecorderFn(createMachineOperationLabel, &err)()
 
+	if req == nil {
+		err = fmt.Errorf("CreateMachineRequest cannot be nil")
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
 	var (
 		exists       bool
 		userData     []byte
@@ -76,8 +81,14 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 	)
 
 	// Check if the MachineClass is for the supported cloud provider
-	if req.MachineClass.Provider != ProviderAWS {
-		err = fmt.Errorf("requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderAWS)
+	if machineClass == nil || machine == nil || machineClass.Provider != ProviderAWS {
+		if machineClass == nil {
+			err = fmt.Errorf("CreateMachineRequest.MachineClass cannot be nil")
+		} else if machine == nil {
+			err = fmt.Errorf("CreateMachineRequest.Machine cannot be nil")
+		} else {
+			err = fmt.Errorf("requested for Provider '%s', we only support '%s'", machineClass.Provider, ProviderAWS)
+		}
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
@@ -118,17 +129,17 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	tagInstance, err := d.generateTags(providerSpec.Tags, resourceTypeInstance, req.Machine.Name)
+	tagInstance, err := d.generateTags(providerSpec.Tags, resourceTypeInstance, machine.Name)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	tagVolume, err := d.generateTags(providerSpec.Tags, resourceTypeVolume, req.Machine.Name)
+	tagVolume, err := d.generateTags(providerSpec.Tags, resourceTypeVolume, machine.Name)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	tagNetworkInterface, err := d.generateTags(providerSpec.Tags, resourceTypeNetworkInterface, req.Machine.Name)
+	tagNetworkInterface, err := d.generateTags(providerSpec.Tags, resourceTypeNetworkInterface, machine.Name)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -187,7 +198,7 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 		MetadataOptions:     metadataOptions,
 	}
 
-	if providerSpec.KeyName != nil && len(*providerSpec.KeyName) > 0 {
+	if ptr.Deref(providerSpec.KeyName, "") != "" {
 		inputConfig.KeyName = aws.String(*providerSpec.KeyName)
 	}
 
@@ -239,15 +250,13 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 	if err != nil {
 		return nil, status.Error(awserror.GetMCMErrorCodeForCreateMachine(err), err.Error())
 	}
-	var instanceID, providerID, nodeName string
 
+	var instanceID, providerID, nodeName string
 	for _, instance := range runResult.Instances {
 		if instance.InstanceId != nil {
 			instanceID = *instance.InstanceId
 			providerID = encodeInstanceID(providerSpec.Region, instanceID)
-			if instance.PrivateDnsName != nil {
-				nodeName = *instance.PrivateDnsName
-			}
+			nodeName = ptr.Deref(instance.PrivateDnsName, "")
 			break
 		}
 	}
@@ -279,10 +288,7 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 		return nil, status.Error(codes.Internal, fmt.Sprintf("creation of VM %q failed, timed out waiting for eventual consistency. Multiple VMs backing machine obj might spawn, they will be orphan collected", providerID))
 	}
 
-	if instance.PrivateDnsName != nil {
-		nodeName = *instance.PrivateDnsName
-	}
-
+	nodeName = ptr.Deref(instance.PrivateDnsName, nodeName)
 	if nodeName == "" {
 		msg := fmt.Sprintf("VM with Provider-ID %q, for machine %q does not yet have a nodeName (instance.PrivateDnsName)", providerID, machine.Name)
 		klog.Error(msg)
@@ -305,6 +311,20 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 func (d *Driver) InitializeMachine(ctx context.Context, request *driver.InitializeMachineRequest) (resp *driver.InitializeMachineResponse, err error) {
 	defer instrument.DriverAPIMetricRecorderFn(initializeMachineOperationLabel, &err)()
 
+	if request == nil {
+		err = fmt.Errorf("InitializeMachineRequest cannot be nil")
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	if request.Machine == nil || request.MachineClass == nil {
+		if request.Machine == nil {
+			err = fmt.Errorf("InitializeMachineRequest.Machine cannot be nil")
+		} else {
+			err = fmt.Errorf("InitializeMachineRequest.MachineClass cannot be nil")
+		}
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
 	providerSpec, err := decodeProviderSpecAndSecret(request.MachineClass, request.Secret)
 	if err != nil {
 		return nil, err
@@ -316,50 +336,67 @@ func (d *Driver) InitializeMachine(ctx context.Context, request *driver.Initiali
 	instances, err := d.getMatchingInstancesForMachine(ctx, request.Machine, client, providerSpec.Tags)
 	if err != nil {
 		if isNotFoundError(err) {
-			klog.Errorf("Could not get matching instance for uninitialized machine %q from provider: %s", request.Machine.Name, err)
+			klog.Errorf("could not get matching instance for uninitialized machine %q from provider: %s", request.Machine.Name, err)
 			return nil, status.Error(codes.Uninitialized, err.Error())
 		}
 		return nil, err
 	}
 
 	targetInstance := instances[0]
-	providerID := encodeInstanceID(providerSpec.Region, *targetInstance.InstanceId)
+	providerID := encodeInstanceID(providerSpec.Region, ptr.Deref(targetInstance.InstanceId, ""))
+
+	for _, instanceNetIf := range targetInstance.NetworkInterfaces {
+		if instanceNetIf.Attachment == nil {
+			continue
+		}
+		idx := ptr.Deref(instanceNetIf.Attachment.DeviceIndex, -1)
+		// #nosec: G115 -- index will not exceed int32 limits
+		if idx < 0 || idx >= int32(len(providerSpec.NetworkInterfaces)) {
+			continue
+		}
+		netIf := providerSpec.NetworkInterfaces[idx]
+		// #nosec: G115 -- index will not exceed int32 limits
+		if netIf.Ipv6PrefixCount != nil && int32(len(instanceNetIf.Ipv6Prefixes)) == *netIf.Ipv6PrefixCount {
+			input := &ec2.AssignIpv6AddressesInput{
+				NetworkInterfaceId: instanceNetIf.NetworkInterfaceId,
+				Ipv6PrefixCount:    netIf.Ipv6PrefixCount,
+			}
+			klog.V(3).Infof("on VM %q associated with machine %s, assigning ipv6PrefixCount: %d to networkInterface %q",
+				providerID, request.Machine.Name, *netIf.Ipv6PrefixCount, ptr.Deref(instanceNetIf.NetworkInterfaceId, ""))
+			_, err = client.AssignIpv6Addresses(ctx, input)
+			if err != nil {
+				return nil, status.Error(codes.Uninitialized, err.Error())
+			}
+		}
+	}
 
 	// if SrcAnDstCheckEnabled is false then disable the SrcAndDestCheck on running NAT instance
-	if providerSpec.SrcAndDstChecksEnabled != nil && !*providerSpec.SrcAndDstChecksEnabled && ptr.Deref(targetInstance.SourceDestCheck, true) {
-		klog.V(3).Infof("Disabling SourceDestCheck on VM %q associated with machine %q", providerID, request.Machine.Name)
+	if !ptr.Deref(providerSpec.SrcAndDstChecksEnabled, true) && ptr.Deref(targetInstance.SourceDestCheck, true) {
+		klog.V(3).Infof("disabling SourceDestCheck on VM %q associated with machine %s", providerID, request.Machine.Name)
 		err = disableSrcAndDestCheck(ctx, client, targetInstance.InstanceId)
 		if err != nil {
 			return nil, status.Error(codes.Uninitialized, err.Error())
 		}
 	}
 
-	for i, netIf := range providerSpec.NetworkInterfaces {
-		for _, instanceNetIf := range targetInstance.NetworkInterfaces {
-			// #nosec: G115 -- index will not exceed int32 limits
-			if netIf.Ipv6PrefixCount != nil && *instanceNetIf.Attachment.DeviceIndex == int32(i) && len(instanceNetIf.Ipv6Prefixes) != int(*netIf.Ipv6PrefixCount) {
-				input := &ec2.AssignIpv6AddressesInput{
-					NetworkInterfaceId: instanceNetIf.NetworkInterfaceId,
-					Ipv6PrefixCount:    ptr.To(*netIf.Ipv6PrefixCount - int32(len(instanceNetIf.Ipv6Prefixes))),
-				}
-				klog.V(3).Infof("On VM %q associated with machine %s, assigning ipv6PrefixCount: %d to networkInterface %q",
-					providerID, request.Machine.Name, *netIf.Ipv6PrefixCount, *instanceNetIf.NetworkInterfaceId)
-				_, err = client.AssignIpv6Addresses(ctx, input)
-				if err != nil {
-					return nil, status.Error(codes.Uninitialized, err.Error())
-				}
-			}
-		}
-	}
-
 	return &driver.InitializeMachineResponse{
 		ProviderID: providerID,
-		NodeName:   *targetInstance.PrivateDnsName,
+		NodeName:   ptr.Deref(targetInstance.PrivateDnsName, ""),
 	}, nil
 }
 
 // returns Placement Object required in ec2.RunInstancesInput
 func getPlacementObj(req *driver.CreateMachineRequest) (placementobj *ec2types.Placement, err error) {
+	if req == nil {
+		err = fmt.Errorf("CreateMachineRequest cannot be nil")
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	if req.Machine == nil {
+		err = fmt.Errorf("CreateMachineRequest.Machine cannot be nil")
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
 	placementobj = &ec2types.Placement{}
 
 	requestAnnotations := req.Machine.Spec.NodeTemplateSpec.ObjectMeta.Annotations
@@ -381,6 +418,11 @@ func getPlacementObj(req *driver.CreateMachineRequest) (placementobj *ec2types.P
 func (d *Driver) DeleteMachine(ctx context.Context, req *driver.DeleteMachineRequest) (resp *driver.DeleteMachineResponse, err error) {
 	defer instrument.DriverAPIMetricRecorderFn(deleteMachineOperationLabel, &err)()
 
+	if req == nil {
+		err = fmt.Errorf("DeleteMachineRequest cannot be nil")
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
 	var (
 		instances  []ec2types.Instance
 		instanceID string
@@ -388,8 +430,14 @@ func (d *Driver) DeleteMachine(ctx context.Context, req *driver.DeleteMachineReq
 	)
 
 	// Check if the MachineClass is for the supported cloud provider
-	if req.MachineClass.Provider != ProviderAWS {
-		err = fmt.Errorf("requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderAWS)
+	if req.MachineClass == nil || req.Machine == nil || req.MachineClass.Provider != ProviderAWS {
+		if req.MachineClass == nil {
+			err = fmt.Errorf("DeleteMachineRequest.MachineClass cannot be nil")
+		} else if req.Machine == nil {
+			err = fmt.Errorf("DeleteMachineRequest.Machine cannot be nil")
+		} else {
+			err = fmt.Errorf("requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderAWS)
+		}
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
@@ -410,7 +458,6 @@ func (d *Driver) DeleteMachine(ctx context.Context, req *driver.DeleteMachineReq
 
 	if req.Machine.Spec.ProviderID != "" {
 		// ProviderID exists for machine object, hence terminate the correponding VM
-
 		_, instanceID, err = decodeRegionAndInstanceID(req.Machine.Spec.ProviderID)
 		if err != nil {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
@@ -427,7 +474,7 @@ func (d *Driver) DeleteMachine(ctx context.Context, req *driver.DeleteMachineReq
 		instances, err = getMachineInstancesByTagsAndStatus(ctx, client, req.Machine.Name, providerSpec.Tags)
 		if err != nil {
 			if isNotFoundError(err) {
-				klog.V(3).Infof("No matching VM found. Termination successful for machine object %q", req.Machine.Name)
+				klog.V(3).Infof("no matching VM found. Termination successful for machine object %q", req.Machine.Name)
 				return &driver.DeleteMachineResponse{}, nil
 			}
 			return nil, err
@@ -436,11 +483,11 @@ func (d *Driver) DeleteMachine(ctx context.Context, req *driver.DeleteMachineReq
 		// If instance(s) exist, terminate them
 		for _, instance := range instances {
 			// For each instance backing machine, terminate the VMs
-			err = terminateInstance(ctx, req, client, *instance.InstanceId)
+			err = terminateInstance(ctx, req, client, ptr.Deref(instance.InstanceId, ""))
 			if err != nil {
 				return nil, err
 			}
-			klog.V(3).Infof("VM %q for Machine %q was terminated succesfully", *instance.InstanceId, req.Machine.Name)
+			klog.V(3).Infof("VM %q for Machine %q was terminated succesfully", ptr.Deref(instance.InstanceId, ""), req.Machine.Name)
 		}
 	}
 
@@ -451,19 +498,30 @@ func (d *Driver) DeleteMachine(ctx context.Context, req *driver.DeleteMachineReq
 func (d *Driver) GetMachineStatus(ctx context.Context, req *driver.GetMachineStatusRequest) (resp *driver.GetMachineStatusResponse, err error) {
 	defer instrument.DriverAPIMetricRecorderFn(getMachineStatusOperationLabel, &err)()
 
+	if req == nil {
+		err = fmt.Errorf("GetMachineStatusRequest cannot be nil")
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
 	var (
 		secret       = req.Secret
 		machineClass = req.MachineClass
 	)
 
 	// Check if the MachineClass is for the supported cloud provider
-	if req.MachineClass.Provider != ProviderAWS {
-		err = fmt.Errorf("requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderAWS)
+	if machineClass == nil || req.Machine == nil || machineClass.Provider != ProviderAWS {
+		if machineClass == nil {
+			err = fmt.Errorf("GetMachineStatusRequest.MachineClass cannot be nil")
+		} else if req.Machine == nil {
+			err = fmt.Errorf("GetMachineRequest.Machine cannot be nil")
+		} else {
+			err = fmt.Errorf("requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderAWS)
+		}
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	// Log messages to track start and end of request
-	klog.V(3).Infof("Get request has been recieved for %q", req.Machine.Name)
+	klog.V(3).Infof("get request has been recieved for %q", req.Machine.Name)
 	providerSpec, err := decodeProviderSpecAndSecret(machineClass, secret)
 	if err != nil {
 		return nil, err
@@ -480,7 +538,7 @@ func (d *Driver) GetMachineStatus(ctx context.Context, req *driver.GetMachineSta
 	} else if len(instances) > 1 {
 		instanceIDs := make([]string, 0, len(instances))
 		for _, instance := range instances {
-			instanceIDs = append(instanceIDs, *instance.InstanceId)
+			instanceIDs = append(instanceIDs, ptr.Deref(instance.InstanceId, ""))
 		}
 
 		errMessage := fmt.Sprintf("AWS plugin is returning multiple VM instances backing this machine object. IDs for all backing VMs - %v ", instanceIDs)
@@ -489,30 +547,36 @@ func (d *Driver) GetMachineStatus(ctx context.Context, req *driver.GetMachineSta
 
 	requiredInstance := instances[0]
 	response := &driver.GetMachineStatusResponse{
-		NodeName:   *requiredInstance.PrivateDnsName,
-		ProviderID: encodeInstanceID(providerSpec.Region, *requiredInstance.InstanceId),
+		NodeName:   ptr.Deref(requiredInstance.PrivateDnsName, ""),
+		ProviderID: encodeInstanceID(providerSpec.Region, ptr.Deref(requiredInstance.InstanceId, "")),
 	}
 
 	// if SrcAnDstCheckEnabled is false then check attribute on instance and return Uninitialized error if not matching.
-	if providerSpec.SrcAndDstChecksEnabled != nil && !*providerSpec.SrcAndDstChecksEnabled {
+	if !ptr.Deref(providerSpec.SrcAndDstChecksEnabled, true) {
 		if ptr.Deref(requiredInstance.SourceDestCheck, true) {
 			msg := fmt.Sprintf("VM %q associated with machine %q has SourceDestCheck=%t despite providerSpec.SrcAndDstChecksEnabled=%t",
-				*requiredInstance.InstanceId, req.Machine.Name, *requiredInstance.SourceDestCheck, *providerSpec.SrcAndDstChecksEnabled)
+				ptr.Deref(requiredInstance.InstanceId, ""), req.Machine.Name, ptr.Deref(requiredInstance.SourceDestCheck, true), *providerSpec.SrcAndDstChecksEnabled)
 			klog.Warning(msg)
 			return response, status.Error(codes.Uninitialized, msg)
 		}
 	}
 
 	// if ipv6PrefixCount is set in providerSpec but Ipv6Prefixes are not assigned to instance, return Uninitialized error
-	for i, netIf := range providerSpec.NetworkInterfaces {
-		for _, instanceNetIf := range requiredInstance.NetworkInterfaces {
-			// #nosec: G115 -- index will not exceed int32 limits
-			if netIf.Ipv6PrefixCount != nil && *instanceNetIf.Attachment.DeviceIndex == int32(i) && len(instanceNetIf.Ipv6Prefixes) != int(*netIf.Ipv6PrefixCount) {
-				msg := fmt.Sprintf("VM %q associated with machine %q has no ipv6 prefixes assigned on network interface %q despite providerSpec.NetworkInterfaces[%d].Ipv6PrefixCount=%d",
-					*requiredInstance.InstanceId, req.Machine.Name, *instanceNetIf.NetworkInterfaceId, i, *netIf.Ipv6PrefixCount)
-				return response, status.Error(codes.Uninitialized, msg)
-
-			}
+	for _, instanceNetIf := range requiredInstance.NetworkInterfaces {
+		if instanceNetIf.Attachment == nil {
+			continue
+		}
+		idx := ptr.Deref(instanceNetIf.Attachment.DeviceIndex, -1)
+		// #nosec: G115 -- index will not exceed int32 limits
+		if idx < 0 || idx >= int32(len(providerSpec.NetworkInterfaces)) {
+			continue
+		}
+		netIf := providerSpec.NetworkInterfaces[idx]
+		// #nosec: G115 -- index will not exceed int32 limits
+		if netIf.Ipv6PrefixCount != nil && int32(len(instanceNetIf.Ipv6Prefixes)) == *netIf.Ipv6PrefixCount {
+			msg := fmt.Sprintf("VM %q associated with machine %q has no ipv6 prefixes assigned on network interface %q despite providerSpec.NetworkInterfaces[%d].Ipv6PrefixCount=%d",
+				ptr.Deref(requiredInstance.InstanceId, ""), req.Machine.Name, ptr.Deref(instanceNetIf.NetworkInterfaceId, ""), idx, *netIf.Ipv6PrefixCount)
+			return response, status.Error(codes.Uninitialized, msg)
 		}
 	}
 
@@ -524,19 +588,28 @@ func (d *Driver) GetMachineStatus(ctx context.Context, req *driver.GetMachineSta
 func (d *Driver) ListMachines(ctx context.Context, req *driver.ListMachinesRequest) (resp *driver.ListMachinesResponse, err error) {
 	defer instrument.DriverAPIMetricRecorderFn(listMachinesOperationLabel, &err)()
 
+	if req == nil {
+		err = fmt.Errorf("ListMachinesRequest cannot be nil")
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
 	var (
 		machineClass = req.MachineClass
 		secret       = req.Secret
 	)
 
 	// Check if the MachineClass is for the supported cloud provider
-	if req.MachineClass.Provider != ProviderAWS {
-		err = fmt.Errorf("requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderAWS)
+	if machineClass == nil || req.MachineClass.Provider != ProviderAWS {
+		if machineClass == nil {
+			err = fmt.Errorf("ListMachinesRequest.MachineClass cannot be nil")
+		} else {
+			err = fmt.Errorf("requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderAWS)
+		}
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	// Log messages to track start and end of request
-	klog.V(3).Infof("List machines request has been recieved for %q", machineClass.Name)
+	klog.V(3).Infof("list machines request has been recieved for %q", machineClass.Name)
 
 	providerSpec, err := decodeProviderSpecAndSecret(machineClass, secret)
 	if err != nil {
@@ -579,6 +652,7 @@ func (d *Driver) ListMachines(ctx context.Context, req *driver.ListMachinesReque
 				},
 			},
 		},
+		NextToken: nil,
 	}
 
 	listOfVMs := make(map[string]string)
@@ -613,7 +687,7 @@ func (d *Driver) ListMachines(ctx context.Context, req *driver.ListMachinesReque
 		}
 	}
 
-	klog.V(3).Infof("List machines request has been processed successfully, retrieved %d pages, %d VMs for machineClass %q", pageCount, len(listOfVMs), machineClass.Name)
+	klog.V(3).Infof("list machines request has been processed successfully, retrieved %d pages, %d VMs for machineClass %q", pageCount, len(listOfVMs), machineClass.Name)
 	// Core logic ends here.
 	resp = &driver.ListMachinesResponse{
 		MachineList: listOfVMs,
@@ -625,6 +699,11 @@ func (d *Driver) ListMachines(ctx context.Context, req *driver.ListMachinesReque
 func (d *Driver) GetVolumeIDs(_ context.Context, req *driver.GetVolumeIDsRequest) (resp *driver.GetVolumeIDsResponse, err error) {
 	defer instrument.DriverAPIMetricRecorderFn(getVolumeIDsOperationLabel, &err)()
 
+	if req == nil {
+		err = fmt.Errorf("GetVolumeIDsRequest cannot be nil")
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
 	var (
 		volumeID  string
 		volumeIDs []string
@@ -634,18 +713,17 @@ func (d *Driver) GetVolumeIDs(_ context.Context, req *driver.GetVolumeIDsRequest
 	klog.V(3).Infof("GetVolumeIDs request has been received for %q", req.PVSpecs)
 
 	for _, spec := range req.PVSpecs {
-
-		if spec.AWSElasticBlockStore != nil {
-			volumeID, err = kubernetesVolumeIDToEBSVolumeID(spec.AWSElasticBlockStore.VolumeID)
-			if err != nil {
-				klog.Errorf("Failed to translate Kubernetes volume ID '%s' to EBS volume ID: %v", spec.AWSElasticBlockStore.VolumeID, err)
-				continue
+		if spec != nil {
+			if spec.AWSElasticBlockStore != nil {
+				volumeID, err = kubernetesVolumeIDToEBSVolumeID(spec.AWSElasticBlockStore.VolumeID)
+				if err != nil {
+					klog.Errorf("failed to translate Kubernetes volume ID '%s' to EBS volume ID: %v", spec.AWSElasticBlockStore.VolumeID, err)
+					continue
+				}
+				volumeIDs = append(volumeIDs, volumeID)
+			} else if spec.CSI != nil && spec.CSI.Driver == awsEBSDriverName && spec.CSI.VolumeHandle != "" {
+				volumeIDs = append(volumeIDs, spec.CSI.VolumeHandle)
 			}
-
-			volumeIDs = append(volumeIDs, volumeID)
-		} else if spec.CSI != nil && spec.CSI.Driver == awsEBSDriverName && spec.CSI.VolumeHandle != "" {
-			volumeID = spec.CSI.VolumeHandle
-			volumeIDs = append(volumeIDs, volumeID)
 		}
 	}
 

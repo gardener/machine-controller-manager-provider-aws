@@ -80,7 +80,7 @@ func disableSrcAndDestCheck(ctx context.Context, svc interfaces.Ec2Client, insta
 	if err != nil {
 		return err
 	}
-	klog.V(2).Infof("Successfully disabled Source/Destination check on instance %s.", *instanceID)
+	klog.V(2).Infof("Successfully disabled Source/Destination check on instance %s.", ptr.Deref(instanceID, ""))
 	return nil
 }
 
@@ -121,6 +121,7 @@ func getMachineInstancesByTagsAndStatus(ctx context.Context, svc interfaces.Ec2C
 				},
 			},
 		},
+		NextToken: nil,
 	}
 
 	paginator := ec2.NewDescribeInstancesPaginator(svc, input, func(opt *ec2.DescribeInstancesPaginatorOptions) {
@@ -140,13 +141,19 @@ func getMachineInstancesByTagsAndStatus(ctx context.Context, svc interfaces.Ec2C
 			instances = append(instances, reservation.Instances...)
 		}
 	}
-	klog.V(3).Infof("Found %d instances for machine %s using tags/status in %d pages", len(instances), machineName, pageCount)
+	klog.V(3).Infof("found %d instances for machine %s using tags/status in %d pages", len(instances), machineName, pageCount)
 	return instances, nil
 }
 
 // getMatchingInstancesForMachine extracts AWS Instance object for a given machine
 func (d *Driver) getMatchingInstancesForMachine(ctx context.Context, machine *v1alpha1.Machine, svc interfaces.Ec2Client, providerSpecTags map[string]string) (instances []ec2types.Instance, err error) {
 	defer instrument.AwsAPIMetricRecorderFn(instanceGetByMachineServiceLabel, &err)()
+
+	if machine == nil {
+		err = fmt.Errorf("Machine cannot be nil")
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
 	instances, err = getMachineInstancesByTagsAndStatus(ctx, svc, machine.Name, providerSpecTags)
 	if err != nil {
 		return nil, err
@@ -194,7 +201,7 @@ func getInstanceByID(ctx context.Context, svc interfaces.Ec2Client, instanceID s
 }
 
 func (d *Driver) generateBlockDevices(blockDevices []api.AWSBlockDeviceMappingSpec, rootDeviceName *string) ([]ec2types.BlockDeviceMapping, error) {
-	// If not blockDevices are passed, return an error.
+	// If no blockDevices are passed, return an error.
 	if len(blockDevices) == 0 {
 		return nil, fmt.Errorf("no block devices passed")
 	}
@@ -202,45 +209,39 @@ func (d *Driver) generateBlockDevices(blockDevices []api.AWSBlockDeviceMappingSp
 	var blkDeviceMappings []ec2types.BlockDeviceMapping
 	// if blockDevices is empty, AWS will automatically create a root partition
 	for _, disk := range blockDevices {
-
 		deviceName := disk.DeviceName
 		if disk.DeviceName == "/root" || len(blockDevices) == 1 {
+			if rootDeviceName == nil {
+				return nil, fmt.Errorf("rootDeviceName cannot be nil")
+			}
 			deviceName = *rootDeviceName
 		}
+
 		deleteOnTermination := disk.Ebs.DeleteOnTermination
 		volumeSize := disk.Ebs.VolumeSize
 		volumeType := disk.Ebs.VolumeType
 		encrypted := disk.Ebs.Encrypted
-		snapshotID := disk.Ebs.SnapshotID
 
 		blkDeviceMapping := ec2types.BlockDeviceMapping{
 			DeviceName: aws.String(deviceName),
 			Ebs: &ec2types.EbsBlockDevice{
-				Encrypted:  aws.Bool(encrypted),
-				VolumeSize: aws.Int32(volumeSize),
-				VolumeType: ec2types.VolumeType(volumeType),
+				Encrypted:           aws.Bool(encrypted),
+				VolumeSize:          aws.Int32(volumeSize),
+				VolumeType:          ec2types.VolumeType(volumeType),
+				DeleteOnTermination: aws.Bool(true),
+				Throughput:          disk.Ebs.Throughput,
+				SnapshotId:          disk.Ebs.SnapshotID,
 			},
 		}
 
-		if deleteOnTermination != nil {
+		if !ptr.Deref(deleteOnTermination, true) {
 			blkDeviceMapping.Ebs.DeleteOnTermination = deleteOnTermination
-		} else {
-			// If deletionOnTermination is not set, default it to true
-			blkDeviceMapping.Ebs.DeleteOnTermination = aws.Bool(true)
 		}
 
 		if disk.Ebs.Iops > 0 {
 			blkDeviceMapping.Ebs.Iops = aws.Int32(disk.Ebs.Iops)
 		}
 
-		// adding throughput
-		if disk.Ebs.Throughput != nil {
-			blkDeviceMapping.Ebs.Throughput = disk.Ebs.Throughput
-		}
-
-		if snapshotID != nil {
-			blkDeviceMapping.Ebs.SnapshotId = snapshotID
-		}
 		blkDeviceMappings = append(blkDeviceMappings, blkDeviceMapping)
 	}
 
@@ -277,6 +278,17 @@ func (d *Driver) generateTags(tags map[string]string, resourceType string, machi
 
 func terminateInstance(ctx context.Context, req *driver.DeleteMachineRequest, svc interfaces.Ec2Client, machineID string) (err error) {
 	defer instrument.AwsAPIMetricRecorderFn(instanceTerminateServiceLabel, &err)()
+
+	if req == nil {
+		err = fmt.Errorf("DeleteMachineRequest cannot be nil")
+		return status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	if req.Machine == nil {
+		err = fmt.Errorf("DeleteMachineRequest.Machine cannot be nil")
+		return status.Error(codes.InvalidArgument, err.Error())
+	}
+
 	input := &ec2.TerminateInstancesInput{
 		InstanceIds: []string{machineID},
 		DryRun:      aws.Bool(false),
