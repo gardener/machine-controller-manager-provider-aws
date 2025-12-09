@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -1825,6 +1826,94 @@ var _ = Describe("Validation", func() {
 					),
 				),
 			)
+		})
+	})
+
+	var _ = Describe("ValidateCPUOptions", func() {
+		Entry("nil cpuOptions should be valid", func() {
+			spec := validAWSProviderSpec()
+			spec.CPUOptions = nil
+
+			errs := ValidateAWSProviderSpec(spec, providerSecret, field.NewPath("providerSpec"))
+			Expect(errs).To(BeEmpty())
+		})
+
+		Entry("only ThreadsPerCore set should require CoreCount", func() {
+			spec := validAWSProviderSpec()
+			spec.CPUOptions = &awsapi.CPUOptions{
+				ThreadsPerCore: ptr.To[int32](2),
+			}
+
+			errs := ValidateAWSProviderSpec(spec, providerSecret, field.NewPath("providerSpec"))
+			Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("providerSpec.cpuOptions.coreCount"),
+			}))))
+		})
+
+		Entry("only CoreCount set should require ThreadsPerCore", func() {
+			spec := validAWSProviderSpec()
+			spec.CPUOptions = &awsapi.CPUOptions{
+				CoreCount: ptr.To[int32](4),
+			}
+
+			errs := ValidateAWSProviderSpec(spec, providerSecret, field.NewPath("providerSpec"))
+			Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("providerSpec.cpuOptions.threadsPerCore"),
+			}))))
+		})
+
+		Entry("invalid ThreadsPerCore value should be rejected", func() {
+			spec := validAWSProviderSpec()
+			spec.CPUOptions = &awsapi.CPUOptions{
+				CoreCount:      ptr.To[int32](4),
+				ThreadsPerCore: ptr.To[int32](3),
+			}
+
+			errs := ValidateAWSProviderSpec(spec, providerSecret, field.NewPath("providerSpec"))
+			Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("providerSpec.cpuOptions.threadsPerCore"),
+			}))))
+		})
+
+		Entry("valid ThreadsPerCore and CoreCount should pass", func() {
+			spec := validAWSProviderSpec()
+			spec.CPUOptions = &awsapi.CPUOptions{
+				CoreCount:      ptr.To[int32](8),
+				ThreadsPerCore: ptr.To[int32](2),
+			}
+
+			errs := ValidateAWSProviderSpec(spec, providerSecret, field.NewPath("providerSpec"))
+			Expect(errs).To(BeEmpty())
+		})
+
+		Entry("invalid amdSevSnp should be rejected", func() {
+			spec := validAWSProviderSpec()
+			spec.CPUOptions = &awsapi.CPUOptions{
+				AmdSevSnp:      ptr.To("invalid"),
+				CoreCount:      ptr.To[int32](4),
+				ThreadsPerCore: ptr.To[int32](2),
+			}
+
+			errs := ValidateAWSProviderSpec(spec, providerSecret, field.NewPath("providerSpec"))
+			Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("providerSpec.cpuOptions.amdSevSnp"),
+			}))))
+		})
+
+		Entry("valid amdSevSnp should pass", func() {
+			spec := validAWSProviderSpec()
+			spec.CPUOptions = &awsapi.CPUOptions{
+				AmdSevSnp:      ptr.To(string(ec2types.AmdSevSnpSpecificationEnabled)),
+				CoreCount:      ptr.To[int32](4),
+				ThreadsPerCore: ptr.To[int32](2),
+			}
+
+			errs := ValidateAWSProviderSpec(spec, providerSecret, field.NewPath("providerSpec"))
+			Expect(errs).To(BeEmpty())
 		})
 	})
 })
