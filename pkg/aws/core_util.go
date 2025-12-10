@@ -123,28 +123,19 @@ func getMachineInstancesByTagsAndStatus(ctx context.Context, svc interfaces.Ec2C
 		},
 	}
 
-	var nextToken *string
+	paginator := ec2.NewDescribeInstancesPaginator(svc, input)
 	pageCount := 0
-	for {
-		input.NextToken = nextToken
-
-		runResult, err := svc.DescribeInstances(ctx, input)
+	for paginator.HasMorePages() {
+		pageCount++
+		page, err := paginator.NextPage(ctx)
 		if err != nil {
-			klog.Errorf("AWS plugin encountered an error while sending DescribeInstances request: %s (NextToken: %s)", err, ptr.Deref(nextToken, "<nil>"))
+			klog.Errorf("AWS plugin encountered an error while sending DescribeInstances request: %s", err)
 			return nil, status.Error(codes.Internal, err.Error())
 		}
-		pageCount++
 
-		for _, reservation := range runResult.Reservations {
+		for _, reservation := range page.Reservations {
 			instances = append(instances, reservation.Instances...)
 		}
-
-		// Exit if there are no more results
-		if runResult.NextToken == nil || *runResult.NextToken == "" {
-			break
-		}
-		klog.V(3).Infof("Fetching next page (page %d) of ListMachines, with NextToken: %s", pageCount+1, *runResult.NextToken)
-		nextToken = runResult.NextToken
 	}
 	klog.V(3).Infof("Found %d instances for machine %s using tags/status in %d pages", len(instances), machineName, pageCount)
 	return instances, nil
