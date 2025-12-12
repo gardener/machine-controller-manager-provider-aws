@@ -43,8 +43,6 @@ const (
 	InconsistencyInAPIs string = "apis-are-inconsistent"
 	// InsufficientCapacity string makes RunInstances return an InsufficientCapacity error code
 	InsufficientCapacity = "insufficient-capacity"
-	// DuplicatePageToken string returns duplicate token at DescribeInstances call
-	DuplicatePageToken string = "duplicate-page-token"
 )
 
 var (
@@ -164,14 +162,10 @@ func (ms *MockEC2Client) RunInstances(_ context.Context, input *ec2.RunInstances
 func (ms *MockEC2Client) DescribeInstances(_ context.Context, input *ec2.DescribeInstancesInput, _ ...func(*ec2.Options)) (*ec2.DescribeInstancesOutput, error) {
 	found := false
 	instanceList := make([]ec2types.Instance, 0)
-	returnDuplicateToken := false
 
 	for _, filter := range input.Filters {
 		if filter.Values[0] == "kubernetes.io/cluster/"+ReturnErrorAtDescribeInstances {
 			return nil, AWSInternalErrorForDescribeInstances
-		}
-		if filter.Values[0] == "kubernetes.io/cluster/"+DuplicatePageToken {
-			returnDuplicateToken = true
 		}
 	}
 
@@ -233,11 +227,6 @@ func (ms *MockEC2Client) DescribeInstances(_ context.Context, input *ec2.Describ
 		}
 	} else {
 		nextInstances = instanceList
-	}
-
-	if returnDuplicateToken {
-		token := "duplicate-token"
-		nextToken = &token
 	}
 
 	return &ec2.DescribeInstancesOutput{
