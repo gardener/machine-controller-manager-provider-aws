@@ -380,5 +380,22 @@ var _ = Describe("CoreUtils", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(instances).To(BeNil())
 		})
+
+		It("should stop pagination on duplicate token", func() {
+			duplicateTokenTags := map[string]string{
+				"kubernetes.io/cluster/" + mockclient.DuplicatePageToken: "1",
+				"kubernetes.io/role/node":                                "1",
+			}
+
+			instance := createTestInstanceWithDefaultTags("i-test-instance-1", ec2types.InstanceStateNameRunning)
+			mockClientProvider.FakeInstances = append(mockClientProvider.FakeInstances, instance)
+
+			instances, err := getMachineInstancesByTagsAndStatus(ctx, mockClient, machineName, duplicateTokenTags)
+
+			Expect(err).ToNot(HaveOccurred())
+			// The paginator stops when it detects a duplicate token.
+			Expect(instances).To(HaveLen(1))
+			Expect(*instances[0].InstanceId).To(Equal("i-test-instance-1"))
+		})
 	})
 })
