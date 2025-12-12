@@ -565,37 +565,35 @@ func (d *Driver) ListMachines(ctx context.Context, req *driver.ListMachinesReque
 	}
 
 	listOfVMs := make(map[string]string)
-	var nextToken *string
+	paginator := ec2.NewDescribeInstancesPaginator(client, input, func(opt *ec2.DescribeInstancesPaginatorOptions) {
+		opt.StopOnDuplicateToken = true
+	})
 	pageCount := 0
 
-	for {
-		input.NextToken = nextToken
-
-		runResult, err := client.DescribeInstances(ctx, input)
+	for paginator.HasMorePages() {
+		pageCount++
+		klog.V(3).Infof("Fetching page %d of ListMachines for machineClass %q", pageCount, machineClass.Name)
+		page, err := paginator.NextPage(ctx)
 		if err != nil {
-			klog.Errorf("AWS plugin encountered an error while sending DescribeInstances request: %s (NextToken: %s)", err, ptr.Deref(nextToken, "<nil>"))
+			klog.Errorf("AWS plugin encountered an error while sending NextPage request: %s", err)
 			return nil, status.Error(codes.Internal, err.Error())
 		}
-		pageCount++
 
-		for _, reservation := range runResult.Reservations {
+		for _, reservation := range page.Reservations {
 			for _, instance := range reservation.Instances {
+				if instance.InstanceId == nil {
+					continue
+				}
 				machineName := ""
 				for _, tag := range instance.Tags {
-					if *tag.Key == "Name" {
-						machineName = *tag.Value
+					if ptr.Deref(tag.Key, "") == "Name" {
+						machineName = ptr.Deref(tag.Value, "")
 						break
 					}
 				}
 				listOfVMs[encodeInstanceID(providerSpec.Region, *instance.InstanceId)] = machineName
 			}
 		}
-
-		if runResult.NextToken == nil || *runResult.NextToken == "" {
-			break
-		}
-		nextToken = runResult.NextToken
-		klog.V(3).Infof("Fetching next page (page %d) of ListMachines, with NextToken: %s", pageCount+1, *nextToken)
 	}
 
 	klog.V(3).Infof("List machines request has been processed successfully, retrieved %d pages, %d VMs for machineClass %q", pageCount, len(listOfVMs), machineClass.Name)
