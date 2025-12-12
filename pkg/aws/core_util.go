@@ -123,13 +123,16 @@ func getMachineInstancesByTagsAndStatus(ctx context.Context, svc interfaces.Ec2C
 		},
 	}
 
-	paginator := ec2.NewDescribeInstancesPaginator(svc, input)
+	paginator := ec2.NewDescribeInstancesPaginator(svc, input, func(opt *ec2.DescribeInstancesPaginatorOptions) {
+		opt.StopOnDuplicateToken = true
+	})
 	pageCount := 0
 	for paginator.HasMorePages() {
 		pageCount++
+		klog.V(3).Infof("Fetching page %d of instances for machine %q", pageCount, machineName)
 		page, err := paginator.NextPage(ctx)
 		if err != nil {
-			klog.Errorf("AWS plugin encountered an error while sending DescribeInstances request: %s", err)
+			klog.Errorf("AWS plugin encountered an error while sending NextPage request: %s", err)
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
