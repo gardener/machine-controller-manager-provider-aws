@@ -380,5 +380,25 @@ var _ = Describe("CoreUtils", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(instances).To(BeNil())
 		})
+
+		It("should stop pagination on duplicate token", func() {
+			// Render the mock to return duplicate token to the 3rd page
+			mockClientProvider.TriggerDuplicateToken = 2
+			mockClientProvider.PageSize = 1
+			mockClient = mockClientProvider.NewEC2Client(nil)
+
+			instance := createTestInstanceWithDefaultTags("i-test-instance-1", ec2types.InstanceStateNameRunning)
+			instance2 := createTestInstanceWithDefaultTags("i-test-instance-2", ec2types.InstanceStateNameRunning)
+			instance3 := createTestInstanceWithDefaultTags("i-test-instance-3", ec2types.InstanceStateNameRunning)
+			instance4 := createTestInstanceWithDefaultTags("i-test-instance-4", ec2types.InstanceStateNameRunning)
+			mockClientProvider.FakeInstances = append(mockClientProvider.FakeInstances, instance, instance2, instance3, instance4)
+
+			instances, err := getMachineInstancesByTagsAndStatus(ctx, mockClient, machineName, providerSpecTags)
+
+			Expect(err).ToNot(HaveOccurred())
+			// The paginator stops when it detects a duplicate token at the third page, so only two instances are returned
+			Expect(instances).To(HaveLen(2))
+			Expect(*instances[0].InstanceId).To(Equal("i-test-instance-1"))
+		})
 	})
 })
