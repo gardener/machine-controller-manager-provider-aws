@@ -327,7 +327,7 @@ var _ = Describe("CoreUtils", func() {
 			instances, err := getMachineInstancesByTagsAndStatus(ctx, mockClient, machineName, providerSpecTags)
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(instances).To(HaveLen(1))
+			Expect(len(instances)).To(Equal(1))
 			Expect(*instances[0].InstanceId).To(Equal("i-test-instance-1"))
 			Expect(instances[0].State.Name).To(Equal(ec2types.InstanceStateNameRunning))
 		})
@@ -341,7 +341,7 @@ var _ = Describe("CoreUtils", func() {
 			instances, err := getMachineInstancesByTagsAndStatus(ctx, mockClient, machineName, providerSpecTags)
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(instances).To(HaveLen(3))
+			Expect(len(instances)).To(Equal(3))
 		})
 
 		It("should return instances across multiple pages", func() {
@@ -357,7 +357,7 @@ var _ = Describe("CoreUtils", func() {
 			instances, err := getMachineInstancesByTagsAndStatus(ctx, mockClient, machineName, providerSpecTags)
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(instances).To(HaveLen(5))
+			Expect(len(instances)).To(Equal(5))
 		})
 
 		It("should return empty list when no instances exist", func() {
@@ -365,7 +365,7 @@ var _ = Describe("CoreUtils", func() {
 			instances, err := getMachineInstancesByTagsAndStatus(ctx, mockClient, machineName, providerSpecTags)
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(instances).To(HaveLen(0))
+			Expect(len(instances)).To(Equal(0))
 		})
 
 		It("should handle error from DescribeInstances API", func() {
