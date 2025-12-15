@@ -67,11 +67,6 @@ func NewAWSDriver(cpi cpi.ClientProviderInterface) driver.Driver {
 func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineRequest) (resp *driver.CreateMachineResponse, err error) {
 	defer instrument.DriverAPIMetricRecorderFn(createMachineOperationLabel, &err)()
 
-	if req == nil {
-		err = fmt.Errorf("CreateMachineRequest cannot be nil")
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-
 	var (
 		exists       bool
 		userData     []byte
@@ -81,14 +76,8 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 	)
 
 	// Check if the MachineClass is for the supported cloud provider
-	if machineClass == nil || machine == nil || machineClass.Provider != ProviderAWS {
-		if machineClass == nil {
-			err = fmt.Errorf("CreateMachineRequest.MachineClass cannot be nil")
-		} else if machine == nil {
-			err = fmt.Errorf("CreateMachineRequest.Machine cannot be nil")
-		} else {
-			err = fmt.Errorf("requested for Provider '%s', we only support '%s'", machineClass.Provider, ProviderAWS)
-		}
+	if machineClass.Provider != ProviderAWS {
+		err = fmt.Errorf("requested for Provider '%s', we only support '%s'", machineClass.Provider, ProviderAWS)
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
@@ -311,20 +300,6 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 func (d *Driver) InitializeMachine(ctx context.Context, request *driver.InitializeMachineRequest) (resp *driver.InitializeMachineResponse, err error) {
 	defer instrument.DriverAPIMetricRecorderFn(initializeMachineOperationLabel, &err)()
 
-	if request == nil {
-		err = fmt.Errorf("InitializeMachineRequest cannot be nil")
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-
-	if request.Machine == nil || request.MachineClass == nil {
-		if request.Machine == nil {
-			err = fmt.Errorf("InitializeMachineRequest.Machine cannot be nil")
-		} else {
-			err = fmt.Errorf("InitializeMachineRequest.MachineClass cannot be nil")
-		}
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-
 	providerSpec, err := decodeProviderSpecAndSecret(request.MachineClass, request.Secret)
 	if err != nil {
 		return nil, err
@@ -361,7 +336,7 @@ func (d *Driver) InitializeMachine(ctx context.Context, request *driver.Initiali
 				NetworkInterfaceId: instanceNetIf.NetworkInterfaceId,
 				Ipv6PrefixCount:    netIf.Ipv6PrefixCount,
 			}
-			klog.V(3).Infof("on VM %q associated with machine %s, assigning ipv6PrefixCount: %d to networkInterface %q",
+			klog.V(3).Infof("On VM %q associated with machine %s, assigning ipv6PrefixCount: %d to networkInterface %q",
 				providerID, request.Machine.Name, *netIf.Ipv6PrefixCount, ptr.Deref(instanceNetIf.NetworkInterfaceId, ""))
 			_, err = client.AssignIpv6Addresses(ctx, input)
 			if err != nil {
@@ -387,16 +362,6 @@ func (d *Driver) InitializeMachine(ctx context.Context, request *driver.Initiali
 
 // returns Placement Object required in ec2.RunInstancesInput
 func getPlacementObj(req *driver.CreateMachineRequest) (placementobj *ec2types.Placement, err error) {
-	if req == nil {
-		err = fmt.Errorf("CreateMachineRequest cannot be nil")
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-
-	if req.Machine == nil {
-		err = fmt.Errorf("CreateMachineRequest.Machine cannot be nil")
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-
 	placementobj = &ec2types.Placement{}
 
 	requestAnnotations := req.Machine.Spec.NodeTemplateSpec.ObjectMeta.Annotations
@@ -418,11 +383,6 @@ func getPlacementObj(req *driver.CreateMachineRequest) (placementobj *ec2types.P
 func (d *Driver) DeleteMachine(ctx context.Context, req *driver.DeleteMachineRequest) (resp *driver.DeleteMachineResponse, err error) {
 	defer instrument.DriverAPIMetricRecorderFn(deleteMachineOperationLabel, &err)()
 
-	if req == nil {
-		err = fmt.Errorf("DeleteMachineRequest cannot be nil")
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-
 	var (
 		instances  []ec2types.Instance
 		instanceID string
@@ -430,14 +390,8 @@ func (d *Driver) DeleteMachine(ctx context.Context, req *driver.DeleteMachineReq
 	)
 
 	// Check if the MachineClass is for the supported cloud provider
-	if req.MachineClass == nil || req.Machine == nil || req.MachineClass.Provider != ProviderAWS {
-		if req.MachineClass == nil {
-			err = fmt.Errorf("DeleteMachineRequest.MachineClass cannot be nil")
-		} else if req.Machine == nil {
-			err = fmt.Errorf("DeleteMachineRequest.Machine cannot be nil")
-		} else {
-			err = fmt.Errorf("requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderAWS)
-		}
+	if req.MachineClass.Provider != ProviderAWS {
+		err = fmt.Errorf("requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderAWS)
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
@@ -474,7 +428,7 @@ func (d *Driver) DeleteMachine(ctx context.Context, req *driver.DeleteMachineReq
 		instances, err = getMachineInstancesByTagsAndStatus(ctx, client, req.Machine.Name, providerSpec.Tags)
 		if err != nil {
 			if isNotFoundError(err) {
-				klog.V(3).Infof("no matching VM found. Termination successful for machine object %q", req.Machine.Name)
+				klog.V(3).Infof("No matching VM found. Termination successful for machine object %q", req.Machine.Name)
 				return &driver.DeleteMachineResponse{}, nil
 			}
 			return nil, err
@@ -498,30 +452,19 @@ func (d *Driver) DeleteMachine(ctx context.Context, req *driver.DeleteMachineReq
 func (d *Driver) GetMachineStatus(ctx context.Context, req *driver.GetMachineStatusRequest) (resp *driver.GetMachineStatusResponse, err error) {
 	defer instrument.DriverAPIMetricRecorderFn(getMachineStatusOperationLabel, &err)()
 
-	if req == nil {
-		err = fmt.Errorf("GetMachineStatusRequest cannot be nil")
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-
 	var (
 		secret       = req.Secret
 		machineClass = req.MachineClass
 	)
 
 	// Check if the MachineClass is for the supported cloud provider
-	if machineClass == nil || req.Machine == nil || machineClass.Provider != ProviderAWS {
-		if machineClass == nil {
-			err = fmt.Errorf("GetMachineStatusRequest.MachineClass cannot be nil")
-		} else if req.Machine == nil {
-			err = fmt.Errorf("GetMachineRequest.Machine cannot be nil")
-		} else {
-			err = fmt.Errorf("requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderAWS)
-		}
+	if machineClass.Provider != ProviderAWS {
+		err = fmt.Errorf("requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderAWS)
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	// Log messages to track start and end of request
-	klog.V(3).Infof("get request has been recieved for %q", req.Machine.Name)
+	klog.V(3).Infof("Get request has been recieved for %q", req.Machine.Name)
 	providerSpec, err := decodeProviderSpecAndSecret(machineClass, secret)
 	if err != nil {
 		return nil, err
@@ -552,7 +495,7 @@ func (d *Driver) GetMachineStatus(ctx context.Context, req *driver.GetMachineSta
 	}
 
 	// if SrcAnDstCheckEnabled is false then check attribute on instance and return Uninitialized error if not matching.
-	if !ptr.Deref(providerSpec.SrcAndDstChecksEnabled, true) {
+	if providerSpec.SrcAndDstChecksEnabled != nil && !*providerSpec.SrcAndDstChecksEnabled {
 		if ptr.Deref(requiredInstance.SourceDestCheck, true) {
 			msg := fmt.Sprintf("VM %q associated with machine %q has SourceDestCheck=%t despite providerSpec.SrcAndDstChecksEnabled=%t",
 				ptr.Deref(requiredInstance.InstanceId, ""), req.Machine.Name, ptr.Deref(requiredInstance.SourceDestCheck, true), *providerSpec.SrcAndDstChecksEnabled)
@@ -588,28 +531,19 @@ func (d *Driver) GetMachineStatus(ctx context.Context, req *driver.GetMachineSta
 func (d *Driver) ListMachines(ctx context.Context, req *driver.ListMachinesRequest) (resp *driver.ListMachinesResponse, err error) {
 	defer instrument.DriverAPIMetricRecorderFn(listMachinesOperationLabel, &err)()
 
-	if req == nil {
-		err = fmt.Errorf("ListMachinesRequest cannot be nil")
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-
 	var (
 		machineClass = req.MachineClass
 		secret       = req.Secret
 	)
 
 	// Check if the MachineClass is for the supported cloud provider
-	if machineClass == nil || req.MachineClass.Provider != ProviderAWS {
-		if machineClass == nil {
-			err = fmt.Errorf("ListMachinesRequest.MachineClass cannot be nil")
-		} else {
-			err = fmt.Errorf("requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderAWS)
-		}
+	if req.MachineClass.Provider != ProviderAWS {
+		err = fmt.Errorf("requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderAWS)
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	// Log messages to track start and end of request
-	klog.V(3).Infof("list machines request has been recieved for %q", machineClass.Name)
+	klog.V(3).Infof("List machines request has been recieved for %q", machineClass.Name)
 
 	providerSpec, err := decodeProviderSpecAndSecret(machineClass, secret)
 	if err != nil {
@@ -687,7 +621,7 @@ func (d *Driver) ListMachines(ctx context.Context, req *driver.ListMachinesReque
 		}
 	}
 
-	klog.V(3).Infof("list machines request has been processed successfully, retrieved %d pages, %d VMs for machineClass %q", pageCount, len(listOfVMs), machineClass.Name)
+	klog.V(3).Infof("List machines request has been processed successfully, retrieved %d pages, %d VMs for machineClass %q", pageCount, len(listOfVMs), machineClass.Name)
 	// Core logic ends here.
 	resp = &driver.ListMachinesResponse{
 		MachineList: listOfVMs,
@@ -698,11 +632,6 @@ func (d *Driver) ListMachines(ctx context.Context, req *driver.ListMachinesReque
 // GetVolumeIDs returns a list of Volume IDs for all PV Specs for whom a provider volume was found
 func (d *Driver) GetVolumeIDs(_ context.Context, req *driver.GetVolumeIDsRequest) (resp *driver.GetVolumeIDsResponse, err error) {
 	defer instrument.DriverAPIMetricRecorderFn(getVolumeIDsOperationLabel, &err)()
-
-	if req == nil {
-		err = fmt.Errorf("GetVolumeIDsRequest cannot be nil")
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
 
 	var (
 		volumeID  string

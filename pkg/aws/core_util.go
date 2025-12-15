@@ -44,11 +44,6 @@ func decodeProviderSpecAndSecret(machineClass *v1alpha1.MachineClass, secret *co
 		providerSpec *api.AWSProviderSpec
 	)
 
-	// Extract providerSpec
-	if machineClass == nil {
-		return nil, status.Error(codes.InvalidArgument, "MachineClass ProviderSpec is nil")
-	}
-
 	err := json.Unmarshal(machineClass.ProviderSpec.Raw, &providerSpec)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -141,18 +136,13 @@ func getMachineInstancesByTagsAndStatus(ctx context.Context, svc interfaces.Ec2C
 			instances = append(instances, reservation.Instances...)
 		}
 	}
-	klog.V(3).Infof("found %d instances for machine %s using tags/status in %d pages", len(instances), machineName, pageCount)
+	klog.V(3).Infof("Found %d instances for machine %s using tags/status in %d pages", len(instances), machineName, pageCount)
 	return instances, nil
 }
 
 // getMatchingInstancesForMachine extracts AWS Instance object for a given machine
 func (d *Driver) getMatchingInstancesForMachine(ctx context.Context, machine *v1alpha1.Machine, svc interfaces.Ec2Client, providerSpecTags map[string]string) (instances []ec2types.Instance, err error) {
 	defer instrument.AwsAPIMetricRecorderFn(instanceGetByMachineServiceLabel, &err)()
-
-	if machine == nil {
-		err = fmt.Errorf("Machine cannot be nil")
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
 
 	instances, err = getMachineInstancesByTagsAndStatus(ctx, svc, machine.Name, providerSpecTags)
 	if err != nil {
@@ -279,16 +269,6 @@ func (d *Driver) generateTags(tags map[string]string, resourceType string, machi
 func terminateInstance(ctx context.Context, req *driver.DeleteMachineRequest, svc interfaces.Ec2Client, machineID string) (err error) {
 	defer instrument.AwsAPIMetricRecorderFn(instanceTerminateServiceLabel, &err)()
 
-	if req == nil {
-		err = fmt.Errorf("DeleteMachineRequest cannot be nil")
-		return status.Error(codes.InvalidArgument, err.Error())
-	}
-
-	if req.Machine == nil {
-		err = fmt.Errorf("DeleteMachineRequest.Machine cannot be nil")
-		return status.Error(codes.InvalidArgument, err.Error())
-	}
-
 	input := &ec2.TerminateInstancesInput{
 		InstanceIds: []string{machineID},
 		DryRun:      aws.Bool(false),
@@ -301,7 +281,7 @@ func terminateInstance(ctx context.Context, req *driver.DeleteMachineRequest, sv
 		// Such cases will be handled by the orphan collection logic.
 		errcode := awserror.GetMCMErrorCodeForTerminateInstances(err)
 		if errcode == codes.NotFound {
-			klog.V(2).Infof("no backing VM for %s machine found while trying to terminate instance. Orphan collection will remove the VM if it is due to eventual consistency", req.Machine.Name)
+			klog.V(2).Infof("No backing VM for %s machine found while trying to terminate instance. Orphan collection will remove the VM if it is due to eventual consistency", req.Machine.Name)
 			return nil
 		}
 		klog.Errorf("VM %q for Machine %q couldn't be terminated: %s",
