@@ -129,7 +129,7 @@ func getMachineInstancesByTagsAndStatus(ctx context.Context, svc interfaces.Ec2C
 	pageCount := 0
 	for paginator.HasMorePages() {
 		pageCount++
-		klog.V(3).Infof("Fetching page %d of instances for machine %q", pageCount, machineName)
+		klog.V(3).Infof("Fetching page %d of instances for machine %s", pageCount, machineName)
 		page, err := paginator.NextPage(ctx)
 		if err != nil {
 			klog.Errorf("AWS plugin encountered an error while sending NextPage request: %s", err)

@@ -572,7 +572,7 @@ func (d *Driver) ListMachines(ctx context.Context, req *driver.ListMachinesReque
 
 	for paginator.HasMorePages() {
 		pageCount++
-		klog.V(3).Infof("Fetching page %d of ListMachines for machineClass %q", pageCount, machineClass.Name)
+		klog.V(3).Infof("Fetching page %d of ListMachines for machineClass %s", pageCount, machineClass.Name)
 		page, err := paginator.NextPage(ctx)
 		if err != nil {
 			klog.Errorf("AWS plugin encountered an error while sending NextPage request: %s", err)
