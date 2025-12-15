@@ -397,8 +397,9 @@ var _ = Describe("CoreUtils", func() {
 
 			Expect(err).ToNot(HaveOccurred())
 			// The paginator stops when it detects a duplicate token at the third page, so only two instances are returned
-			Expect(instances).To(HaveLen(2))
+			Expect(len(instances)).To(Equal(2))
 			Expect(*instances[0].InstanceId).To(Equal("i-test-instance-1"))
+			Expect(*instances[1].InstanceId).To(Equal("i-test-instance-2"))
 		})
 	})
 })
