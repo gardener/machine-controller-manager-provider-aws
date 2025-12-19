@@ -327,7 +327,7 @@ var _ = Describe("CoreUtils", func() {
 			instances, err := getMachineInstancesByTagsAndStatus(ctx, mockClient, machineName, providerSpecTags)
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(instances).To(HaveLen(1))
+			Expect(len(instances)).To(Equal(1))
 			Expect(*instances[0].InstanceId).To(Equal("i-test-instance-1"))
 			Expect(instances[0].State.Name).To(Equal(ec2types.InstanceStateNameRunning))
 		})
@@ -341,7 +341,7 @@ var _ = Describe("CoreUtils", func() {
 			instances, err := getMachineInstancesByTagsAndStatus(ctx, mockClient, machineName, providerSpecTags)
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(instances).To(HaveLen(3))
+			Expect(len(instances)).To(Equal(3))
 		})
 
 		It("should return instances across multiple pages", func() {
@@ -357,7 +357,7 @@ var _ = Describe("CoreUtils", func() {
 			instances, err := getMachineInstancesByTagsAndStatus(ctx, mockClient, machineName, providerSpecTags)
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(instances).To(HaveLen(5))
+			Expect(len(instances)).To(Equal(5))
 		})
 
 		It("should return empty list when no instances exist", func() {
@@ -365,7 +365,7 @@ var _ = Describe("CoreUtils", func() {
 			instances, err := getMachineInstancesByTagsAndStatus(ctx, mockClient, machineName, providerSpecTags)
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(instances).To(HaveLen(0))
+			Expect(len(instances)).To(Equal(0))
 		})
 
 		It("should handle error from DescribeInstances API", func() {
@@ -379,6 +379,27 @@ var _ = Describe("CoreUtils", func() {
 
 			Expect(err).To(HaveOccurred())
 			Expect(instances).To(BeNil())
+		})
+
+		It("should stop pagination on duplicate token", func() {
+			// Render the mock to return duplicate token to the 3rd page
+			mockClientProvider.TriggerDuplicateToken = 2
+			mockClientProvider.PageSize = 1
+			mockClient = mockClientProvider.NewEC2Client(nil)
+
+			instance := createTestInstanceWithDefaultTags("i-test-instance-1", ec2types.InstanceStateNameRunning)
+			instance2 := createTestInstanceWithDefaultTags("i-test-instance-2", ec2types.InstanceStateNameRunning)
+			instance3 := createTestInstanceWithDefaultTags("i-test-instance-3", ec2types.InstanceStateNameRunning)
+			instance4 := createTestInstanceWithDefaultTags("i-test-instance-4", ec2types.InstanceStateNameRunning)
+			mockClientProvider.FakeInstances = append(mockClientProvider.FakeInstances, instance, instance2, instance3, instance4)
+
+			instances, err := getMachineInstancesByTagsAndStatus(ctx, mockClient, machineName, providerSpecTags)
+
+			Expect(err).ToNot(HaveOccurred())
+			// The paginator stops when it detects a duplicate token at the third page, so only two instances are returned
+			Expect(len(instances)).To(Equal(2))
+			Expect(*instances[0].InstanceId).To(Equal("i-test-instance-1"))
+			Expect(*instances[1].InstanceId).To(Equal("i-test-instance-2"))
 		})
 	})
 })

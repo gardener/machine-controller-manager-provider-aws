@@ -62,8 +62,9 @@ var (
 
 // MockClientProvider is the mock implementation of ClientProvider interface that makes dummy calls
 type MockClientProvider struct {
-	FakeInstances []ec2types.Instance
-	PageSize      int32
+	FakeInstances         []ec2types.Instance
+	PageSize              int32
+	TriggerDuplicateToken int
 }
 
 // NewConfig returns a new AWS Config
@@ -77,16 +78,18 @@ func (ms *MockClientProvider) NewConfig(_ context.Context, _ *corev1.Secret, reg
 // NewEC2Client Returns a new mock for the EC2 Client
 func (ms *MockClientProvider) NewEC2Client(_ *aws.Config) interfaces.Ec2Client {
 	return &MockEC2Client{
-		FakeInstances: &ms.FakeInstances,
-		PageSize:      ms.PageSize,
+		FakeInstances:         &ms.FakeInstances,
+		PageSize:              ms.PageSize,
+		TriggerDuplicateToken: ms.TriggerDuplicateToken,
 	}
 }
 
 // MockEC2Client is the mock implementation of an EC2Client
 type MockEC2Client struct {
 	interfaces.Ec2Client
-	FakeInstances *[]ec2types.Instance
-	PageSize      int32
+	FakeInstances         *[]ec2types.Instance
+	PageSize              int32
+	TriggerDuplicateToken int
 }
 
 // DescribeImages implements a mock describe image method
@@ -162,6 +165,7 @@ func (ms *MockEC2Client) RunInstances(_ context.Context, input *ec2.RunInstances
 func (ms *MockEC2Client) DescribeInstances(_ context.Context, input *ec2.DescribeInstancesInput, _ ...func(*ec2.Options)) (*ec2.DescribeInstancesOutput, error) {
 	found := false
 	instanceList := make([]ec2types.Instance, 0)
+	returnDuplicateToken := false
 
 	for _, filter := range input.Filters {
 		if filter.Values[0] == "kubernetes.io/cluster/"+ReturnErrorAtDescribeInstances {
@@ -170,7 +174,8 @@ func (ms *MockEC2Client) DescribeInstances(_ context.Context, input *ec2.Describ
 	}
 
 	if len(input.InstanceIds) > 0 {
-		if input.InstanceIds[0] == ReturnEmptyListAtDescribeInstances {
+		switch input.InstanceIds[0] {
+		case ReturnEmptyListAtDescribeInstances:
 			return &ec2.DescribeInstancesOutput{
 				Reservations: []ec2types.Reservation{
 					{
@@ -178,7 +183,7 @@ func (ms *MockEC2Client) DescribeInstances(_ context.Context, input *ec2.Describ
 					},
 				},
 			}, nil
-		} else if input.InstanceIds[0] == InstanceDoesntExistError {
+		case InstanceDoesntExistError:
 			return nil, &smithy.GenericAPIError{Code: string(ec2types.UnsuccessfulInstanceCreditSpecificationErrorCodeInstanceNotFound)}
 		}
 
@@ -216,6 +221,13 @@ func (ms *MockEC2Client) DescribeInstances(_ context.Context, input *ec2.Describ
 			}
 		}
 
+		if ms.TriggerDuplicateToken > 0 {
+			currentPage := (startIndex / int(ms.PageSize)) + 1
+			if currentPage == ms.TriggerDuplicateToken {
+				returnDuplicateToken = true
+			}
+		}
+
 		endIndex := min(startIndex+int(ms.PageSize), len(instanceList))
 
 		nextInstances = instanceList[startIndex:endIndex]
@@ -227,6 +239,10 @@ func (ms *MockEC2Client) DescribeInstances(_ context.Context, input *ec2.Describ
 		}
 	} else {
 		nextInstances = instanceList
+	}
+
+	if returnDuplicateToken {
+		nextToken = input.NextToken
 	}
 
 	return &ec2.DescribeInstancesOutput{
