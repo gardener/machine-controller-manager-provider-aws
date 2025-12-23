@@ -321,23 +321,26 @@ func (d *Driver) InitializeMachine(ctx context.Context, request *driver.Initiali
 		}
 		return nil, err
 	}
+
 	targetInstance := instances[0]
 	providerID := encodeInstanceID(providerSpec.Region, *targetInstance.InstanceId)
+
 	// if SrcAnDstCheckEnabled is false then disable the SrcAndDestCheck on running NAT instance
 	if providerSpec.SrcAndDstChecksEnabled != nil && !*providerSpec.SrcAndDstChecksEnabled && ptr.Deref(targetInstance.SourceDestCheck, true) {
-		klog.V(3).Infof("Disabling SourceDestCheck on VM %q associated with machine %s", providerID, request.Machine.Name)
+		klog.V(3).Infof("Disabling SourceDestCheck on VM %q associated with machine %q", providerID, request.Machine.Name)
 		err = disableSrcAndDestCheck(ctx, client, targetInstance.InstanceId)
 		if err != nil {
 			return nil, status.Error(codes.Uninitialized, err.Error())
 		}
 	}
+
 	for i, netIf := range providerSpec.NetworkInterfaces {
 		for _, instanceNetIf := range targetInstance.NetworkInterfaces {
 			// #nosec: G115 -- index will not exceed int32 limits
-			if netIf.Ipv6PrefixCount != nil && *instanceNetIf.Attachment.DeviceIndex == int32(i) {
+			if netIf.Ipv6PrefixCount != nil && *instanceNetIf.Attachment.DeviceIndex == int32(i) && len(instanceNetIf.Ipv6Prefixes) != int(*netIf.Ipv6PrefixCount) {
 				input := &ec2.AssignIpv6AddressesInput{
 					NetworkInterfaceId: instanceNetIf.NetworkInterfaceId,
-					Ipv6PrefixCount:    netIf.Ipv6PrefixCount,
+					Ipv6PrefixCount:    ptr.To(*netIf.Ipv6PrefixCount - int32(len(instanceNetIf.Ipv6Prefixes))),
 				}
 				klog.V(3).Infof("On VM %q associated with machine %s, assigning ipv6PrefixCount: %d to networkInterface %q",
 					providerID, request.Machine.Name, *netIf.Ipv6PrefixCount, *instanceNetIf.NetworkInterfaceId)
@@ -348,6 +351,7 @@ func (d *Driver) InitializeMachine(ctx context.Context, request *driver.Initiali
 			}
 		}
 	}
+
 	return &driver.InitializeMachineResponse{
 		ProviderID: providerID,
 		NodeName:   *targetInstance.PrivateDnsName,
@@ -496,6 +500,19 @@ func (d *Driver) GetMachineStatus(ctx context.Context, req *driver.GetMachineSta
 				*requiredInstance.InstanceId, req.Machine.Name, *requiredInstance.SourceDestCheck, *providerSpec.SrcAndDstChecksEnabled)
 			klog.Warning(msg)
 			return response, status.Error(codes.Uninitialized, msg)
+		}
+	}
+
+	// if ipv6PrefixCount is set in providerSpec but Ipv6Prefixes are not assigned to instance, return Uninitialized error
+	for i, netIf := range providerSpec.NetworkInterfaces {
+		for _, instanceNetIf := range requiredInstance.NetworkInterfaces {
+			// #nosec: G115 -- index will not exceed int32 limits
+			if netIf.Ipv6PrefixCount != nil && *instanceNetIf.Attachment.DeviceIndex == int32(i) && len(instanceNetIf.Ipv6Prefixes) != int(*netIf.Ipv6PrefixCount) {
+				msg := fmt.Sprintf("VM %q associated with machine %q has no ipv6 prefixes assigned on network interface %q despite providerSpec.NetworkInterfaces[%d].Ipv6PrefixCount=%d",
+					*requiredInstance.InstanceId, req.Machine.Name, *instanceNetIf.NetworkInterfaceId, i, *netIf.Ipv6PrefixCount)
+				return response, status.Error(codes.Uninitialized, msg)
+
+			}
 		}
 	}
 
