@@ -334,7 +334,7 @@ func (d *Driver) InitializeMachine(ctx context.Context, request *driver.Initiali
 		if netIf.Ipv6PrefixCount != nil && int32(len(instanceNetIf.Ipv6Prefixes)) == *netIf.Ipv6PrefixCount {
 			input := &ec2.AssignIpv6AddressesInput{
 				NetworkInterfaceId: instanceNetIf.NetworkInterfaceId,
-				Ipv6PrefixCount:    netIf.Ipv6PrefixCount,
+				Ipv6PrefixCount:    ptr.To(*netIf.Ipv6PrefixCount - int32(len(instanceNetIf.Ipv6Prefixes))),
 			}
 			klog.V(3).Infof("On VM %q associated with machine %s, assigning ipv6PrefixCount: %d to networkInterface %q",
 				providerID, request.Machine.Name, *netIf.Ipv6PrefixCount, ptr.Deref(instanceNetIf.NetworkInterfaceId, ""))
@@ -347,7 +347,7 @@ func (d *Driver) InitializeMachine(ctx context.Context, request *driver.Initiali
 
 	// if SrcAnDstCheckEnabled is false then disable the SrcAndDestCheck on running NAT instance
 	if !ptr.Deref(providerSpec.SrcAndDstChecksEnabled, true) && ptr.Deref(targetInstance.SourceDestCheck, true) {
-		klog.V(3).Infof("disabling SourceDestCheck on VM %q associated with machine %s", providerID, request.Machine.Name)
+		klog.V(3).Infof("Disabling SourceDestCheck on VM %q associated with machine %s", providerID, request.Machine.Name)
 		err = disableSrcAndDestCheck(ctx, client, targetInstance.InstanceId)
 		if err != nil {
 			return nil, status.Error(codes.Uninitialized, err.Error())
@@ -586,7 +586,6 @@ func (d *Driver) ListMachines(ctx context.Context, req *driver.ListMachinesReque
 				},
 			},
 		},
-		NextToken: nil,
 	}
 
 	listOfVMs := make(map[string]string)

@@ -116,7 +116,6 @@ func getMachineInstancesByTagsAndStatus(ctx context.Context, svc interfaces.Ec2C
 				},
 			},
 		},
-		NextToken: nil,
 	}
 
 	paginator := ec2.NewDescribeInstancesPaginator(svc, input, func(opt *ec2.DescribeInstancesPaginatorOptions) {
