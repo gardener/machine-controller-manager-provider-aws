@@ -346,8 +346,8 @@ func (d *Driver) InitializeMachine(ctx context.Context, request *driver.Initiali
 	}
 
 	// if SrcAnDstCheckEnabled is false then disable the SrcAndDestCheck on running NAT instance
-	if !ptr.Deref(providerSpec.SrcAndDstChecksEnabled, true) && ptr.Deref(targetInstance.SourceDestCheck, true) {
-		klog.V(3).Infof("Disabling SourceDestCheck on VM %q associated with machine %s", providerID, request.Machine.Name)
+	if providerSpec.SrcAndDstChecksEnabled != nil && !*providerSpec.SrcAndDstChecksEnabled && ptr.Deref(targetInstance.SourceDestCheck, true) {
+		klog.V(3).Infof("Disabling SourceDestCheck on VM %q associated with machine %q", providerID, request.Machine.Name)
 		err = disableSrcAndDestCheck(ctx, client, targetInstance.InstanceId)
 		if err != nil {
 			return nil, status.Error(codes.Uninitialized, err.Error())
