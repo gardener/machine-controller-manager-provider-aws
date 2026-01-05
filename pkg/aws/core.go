@@ -331,7 +331,7 @@ func (d *Driver) InitializeMachine(ctx context.Context, request *driver.Initiali
 		}
 		netIf := providerSpec.NetworkInterfaces[idx]
 		// #nosec: G115 -- index will not exceed int32 limits
-		if netIf.Ipv6PrefixCount != nil && int32(len(instanceNetIf.Ipv6Prefixes)) == *netIf.Ipv6PrefixCount {
+		if netIf.Ipv6PrefixCount != nil && int32(len(instanceNetIf.Ipv6Prefixes)) != *netIf.Ipv6PrefixCount {
 			input := &ec2.AssignIpv6AddressesInput{
 				NetworkInterfaceId: instanceNetIf.NetworkInterfaceId,
 				Ipv6PrefixCount:    ptr.To(*netIf.Ipv6PrefixCount - int32(len(instanceNetIf.Ipv6Prefixes))),
@@ -516,7 +516,7 @@ func (d *Driver) GetMachineStatus(ctx context.Context, req *driver.GetMachineSta
 		}
 		netIf := providerSpec.NetworkInterfaces[idx]
 		// #nosec: G115 -- index will not exceed int32 limits
-		if netIf.Ipv6PrefixCount != nil && int32(len(instanceNetIf.Ipv6Prefixes)) == *netIf.Ipv6PrefixCount {
+		if netIf.Ipv6PrefixCount != nil && int32(len(instanceNetIf.Ipv6Prefixes)) != *netIf.Ipv6PrefixCount {
 			msg := fmt.Sprintf("VM %q associated with machine %q has no ipv6 prefixes assigned on network interface %q despite providerSpec.NetworkInterfaces[%d].Ipv6PrefixCount=%d",
 				ptr.Deref(requiredInstance.InstanceId, ""), req.Machine.Name, ptr.Deref(instanceNetIf.NetworkInterfaceId, ""), idx, *netIf.Ipv6PrefixCount)
 			return response, status.Error(codes.Uninitialized, msg)
