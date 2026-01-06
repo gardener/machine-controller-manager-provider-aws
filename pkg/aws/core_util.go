@@ -44,11 +44,6 @@ func decodeProviderSpecAndSecret(machineClass *v1alpha1.MachineClass, secret *co
 		providerSpec *api.AWSProviderSpec
 	)
 
-	// Extract providerSpec
-	if machineClass == nil {
-		return nil, status.Error(codes.InvalidArgument, "MachineClass ProviderSpec is nil")
-	}
-
 	err := json.Unmarshal(machineClass.ProviderSpec.Raw, &providerSpec)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -80,7 +75,7 @@ func disableSrcAndDestCheck(ctx context.Context, svc interfaces.Ec2Client, insta
 	if err != nil {
 		return err
 	}
-	klog.V(2).Infof("Successfully disabled Source/Destination check on instance %s.", *instanceID)
+	klog.V(2).Infof("Successfully disabled Source/Destination check on instance %s.", ptr.Deref(instanceID, ""))
 	return nil
 }
 
@@ -147,6 +142,7 @@ func getMachineInstancesByTagsAndStatus(ctx context.Context, svc interfaces.Ec2C
 // getMatchingInstancesForMachine extracts AWS Instance object for a given machine
 func (d *Driver) getMatchingInstancesForMachine(ctx context.Context, machine *v1alpha1.Machine, svc interfaces.Ec2Client, providerSpecTags map[string]string) (instances []ec2types.Instance, err error) {
 	defer instrument.AwsAPIMetricRecorderFn(instanceGetByMachineServiceLabel, &err)()
+
 	instances, err = getMachineInstancesByTagsAndStatus(ctx, svc, machine.Name, providerSpecTags)
 	if err != nil {
 		return nil, err
@@ -194,7 +190,7 @@ func getInstanceByID(ctx context.Context, svc interfaces.Ec2Client, instanceID s
 }
 
 func (d *Driver) generateBlockDevices(blockDevices []api.AWSBlockDeviceMappingSpec, rootDeviceName *string) ([]ec2types.BlockDeviceMapping, error) {
-	// If not blockDevices are passed, return an error.
+	// If no blockDevices are passed, return an error.
 	if len(blockDevices) == 0 {
 		return nil, fmt.Errorf("no block devices passed")
 	}
@@ -202,45 +198,39 @@ func (d *Driver) generateBlockDevices(blockDevices []api.AWSBlockDeviceMappingSp
 	var blkDeviceMappings []ec2types.BlockDeviceMapping
 	// if blockDevices is empty, AWS will automatically create a root partition
 	for _, disk := range blockDevices {
-
 		deviceName := disk.DeviceName
 		if disk.DeviceName == "/root" || len(blockDevices) == 1 {
+			if rootDeviceName == nil {
+				return nil, fmt.Errorf("rootDeviceName cannot be nil")
+			}
 			deviceName = *rootDeviceName
 		}
+
 		deleteOnTermination := disk.Ebs.DeleteOnTermination
 		volumeSize := disk.Ebs.VolumeSize
 		volumeType := disk.Ebs.VolumeType
 		encrypted := disk.Ebs.Encrypted
-		snapshotID := disk.Ebs.SnapshotID
 
 		blkDeviceMapping := ec2types.BlockDeviceMapping{
 			DeviceName: aws.String(deviceName),
 			Ebs: &ec2types.EbsBlockDevice{
-				Encrypted:  aws.Bool(encrypted),
-				VolumeSize: aws.Int32(volumeSize),
-				VolumeType: ec2types.VolumeType(volumeType),
+				Encrypted:           aws.Bool(encrypted),
+				VolumeSize:          aws.Int32(volumeSize),
+				VolumeType:          ec2types.VolumeType(volumeType),
+				DeleteOnTermination: aws.Bool(true),
+				Throughput:          disk.Ebs.Throughput,
+				SnapshotId:          disk.Ebs.SnapshotID,
 			},
 		}
 
-		if deleteOnTermination != nil {
+		if !ptr.Deref(deleteOnTermination, true) {
 			blkDeviceMapping.Ebs.DeleteOnTermination = deleteOnTermination
-		} else {
-			// If deletionOnTermination is not set, default it to true
-			blkDeviceMapping.Ebs.DeleteOnTermination = aws.Bool(true)
 		}
 
 		if disk.Ebs.Iops > 0 {
 			blkDeviceMapping.Ebs.Iops = aws.Int32(disk.Ebs.Iops)
 		}
 
-		// adding throughput
-		if disk.Ebs.Throughput != nil {
-			blkDeviceMapping.Ebs.Throughput = disk.Ebs.Throughput
-		}
-
-		if snapshotID != nil {
-			blkDeviceMapping.Ebs.SnapshotId = snapshotID
-		}
 		blkDeviceMappings = append(blkDeviceMappings, blkDeviceMapping)
 	}
 
@@ -277,6 +267,7 @@ func (d *Driver) generateTags(tags map[string]string, resourceType string, machi
 
 func terminateInstance(ctx context.Context, req *driver.DeleteMachineRequest, svc interfaces.Ec2Client, machineID string) (err error) {
 	defer instrument.AwsAPIMetricRecorderFn(instanceTerminateServiceLabel, &err)()
+
 	input := &ec2.TerminateInstancesInput{
 		InstanceIds: []string{machineID},
 		DryRun:      aws.Bool(false),
@@ -289,7 +280,7 @@ func terminateInstance(ctx context.Context, req *driver.DeleteMachineRequest, sv
 		// Such cases will be handled by the orphan collection logic.
 		errcode := awserror.GetMCMErrorCodeForTerminateInstances(err)
 		if errcode == codes.NotFound {
-			klog.V(2).Infof("no backing VM for %s machine found while trying to terminate instance. Orphan collection will remove the VM if it is due to eventual consistency", req.Machine.Name)
+			klog.V(2).Infof("No backing VM for %s machine found while trying to terminate instance. Orphan collection will remove the VM if it is due to eventual consistency", req.Machine.Name)
 			return nil
 		}
 		klog.Errorf("VM %q for Machine %q couldn't be terminated: %s",
