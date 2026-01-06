@@ -320,6 +320,15 @@ func (d *Driver) InitializeMachine(ctx context.Context, request *driver.Initiali
 	targetInstance := instances[0]
 	providerID := encodeInstanceID(providerSpec.Region, ptr.Deref(targetInstance.InstanceId, ""))
 
+	// if SrcAnDstCheckEnabled is false then disable the SrcAndDestCheck on running NAT instance
+	if providerSpec.SrcAndDstChecksEnabled != nil && !*providerSpec.SrcAndDstChecksEnabled && ptr.Deref(targetInstance.SourceDestCheck, true) {
+		klog.V(3).Infof("Disabling SourceDestCheck on VM %q associated with machine %q", providerID, request.Machine.Name)
+		err = disableSrcAndDestCheck(ctx, client, targetInstance.InstanceId)
+		if err != nil {
+			return nil, status.Error(codes.Uninitialized, err.Error())
+		}
+	}
+
 	for _, instanceNetIf := range targetInstance.NetworkInterfaces {
 		if instanceNetIf.Attachment == nil {
 			continue
@@ -342,15 +351,6 @@ func (d *Driver) InitializeMachine(ctx context.Context, request *driver.Initiali
 			if err != nil {
 				return nil, status.Error(codes.Uninitialized, err.Error())
 			}
-		}
-	}
-
-	// if SrcAnDstCheckEnabled is false then disable the SrcAndDestCheck on running NAT instance
-	if providerSpec.SrcAndDstChecksEnabled != nil && !*providerSpec.SrcAndDstChecksEnabled && ptr.Deref(targetInstance.SourceDestCheck, true) {
-		klog.V(3).Infof("Disabling SourceDestCheck on VM %q associated with machine %q", providerID, request.Machine.Name)
-		err = disableSrcAndDestCheck(ctx, client, targetInstance.InstanceId)
-		if err != nil {
-			return nil, status.Error(codes.Uninitialized, err.Error())
 		}
 	}
 
