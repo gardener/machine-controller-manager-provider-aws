@@ -47,8 +47,9 @@ providerSpec:
     tag2: tag2-value # A set of additional tags attached to a machine (optional)
   instanceMetadataOptions: # Optional - configures access to instance metadata service for VMs.
     httpEndpoint: "enabled" # Optional - enable or disable access to IMDS.
+    httpPutResponseHopLimit: 1 # Optional - When set to >=2 access to IMDSv2 is enabled from inside virtualized environments like the containers inside a kubernetes cluster.
     httpTokens: "optional" # Optional - when set to "required" only access to IMDSv2 is allowed.
-    HTTPPutResponseHopLimit: 1 # Optional - When set to >=2 access to IMDSv2 is enabled from inside virtualized environments like the containers inside a kubernetes cluster.
+    httpProtocolIpv6: "enabled" # Optional - When set to "enabled" IMDS is accessible over IPv6.
 secretRef: # Secret pointing to a secret which contains the provider secret and cloudconfig
   namespace: default  # Namespace
   name: test-secret # Name of the secret

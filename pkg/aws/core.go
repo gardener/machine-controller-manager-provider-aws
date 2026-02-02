@@ -82,7 +82,7 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 	}
 
 	// Log messages to track request
-	klog.V(3).Infof("Machine creation request has been recieved for %q", req.Machine.Name)
+	klog.V(3).Infof("Machine creation request has been received for %q", req.Machine.Name)
 
 	providerSpec, err := decodeProviderSpecAndSecret(machineClass, secret)
 	if err != nil {
@@ -97,7 +97,7 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 	if userData, exists = secret.Data["userData"]; !exists {
 		return nil, status.Error(codes.Internal, "userData doesn't exist")
 	}
-	UserDataEnc := base64.StdEncoding.EncodeToString([]byte(userData))
+	UserDataEnc := base64.StdEncoding.EncodeToString(userData)
 
 	var imageIds []string
 	imageID := providerSpec.AMI
@@ -171,6 +171,7 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 			HttpEndpoint:            ec2types.InstanceMetadataEndpointState(providerSpec.InstanceMetadataOptions.HTTPEndpoint),
 			HttpPutResponseHopLimit: providerSpec.InstanceMetadataOptions.HTTPPutResponseHopLimit,
 			HttpTokens:              ec2types.HttpTokensState(providerSpec.InstanceMetadataOptions.HTTPTokens),
+			HttpProtocolIpv6:        ec2types.InstanceMetadataProtocolState(providerSpec.InstanceMetadataOptions.HTTPProtocolIPv6),
 		}
 	}
 
