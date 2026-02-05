@@ -266,6 +266,9 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 		}
 		for _, reservation := range instancesOutput.Reservations {
 			for _, instance := range reservation.Instances {
+				if instance.PrivateDnsName == nil {
+					continue
+				}
 				return &instance, nil
 			}
 		}
