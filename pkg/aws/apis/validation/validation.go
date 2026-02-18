@@ -194,6 +194,10 @@ func validateInstanceMetadata(metadata *awsapi.InstanceMetadataOptions, fldPath 
 		allErrs = append(allErrs, validateStringValues(fldPath.Child("httpTokens"), metadata.HTTPTokens, []string{awsapi.HTTPTokensRequired, awsapi.HTTPTokensOptional})...)
 	}
 
+	if metadata.HTTPProtocolIPv6 != "" {
+		allErrs = append(allErrs, validateStringValues(fldPath.Child("httpProtocolIpv6"), metadata.HTTPProtocolIPv6, []string{awsapi.HTTPProtocolIPv6Enabled, awsapi.HTTPProtocolIPv6Disabled})...)
+	}
+
 	return allErrs
 }
 
