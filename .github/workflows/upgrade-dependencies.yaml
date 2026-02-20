@@ -7,9 +7,8 @@ on:
 jobs:
   upgrade-pullrequests:
     uses: gardener/cc-utils/.github/workflows/upgrade-dependencies.yaml@master
-    secrets: inherit
     permissions:
-      contents: write
+      contents: read
       id-token: write
     with:
       prepare-action-path: ./.github/actions/setup-go
