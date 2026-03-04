@@ -14,6 +14,7 @@ aliases:
   - thiyyakat
   - unmarshall
   - wpross
+  - r4mek
   machine-controller-manager-provider-aws-approvers:
   - aaronfern
   - AndreasBurger
@@ -27,3 +28,4 @@ aliases:
   - thiyyakat
   - unmarshall
   - wpross
+  - r4mek
