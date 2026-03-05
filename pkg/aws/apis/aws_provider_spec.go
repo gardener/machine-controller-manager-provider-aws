@@ -250,6 +250,13 @@ type AWSNetworkInterfaceSpec struct {
 }
 
 const (
+	// HTTPProtocolIPv6Enabled enforces enabling the IPv6 endpoint for the instance metadata service.
+	HTTPProtocolIPv6Enabled string = "enabled"
+	// HTTPProtocolIPv6Disabled enforces disabling the IPv6 endpoint for the instance metadata service.
+	HTTPProtocolIPv6Disabled string = "disabled"
+)
+
+const (
 	// HTTPTokensRequired enforces the use of tokens to access the metadata service. Effectively it enforces IMDSv2.
 	HTTPTokensRequired string = "required"
 	// HTTPTokensOptional allows the use of both IMDSv1 and IMDSv2.
@@ -272,6 +279,8 @@ type InstanceMetadataOptions struct {
 	HTTPPutResponseHopLimit *int32 `json:"httpPutResponseHopLimit,omitempty"`
 	// HTTPTokens enforces the use of metadata v2 API.
 	HTTPTokens string `json:"httpTokens,omitempty"`
+	// HTTPProtocolIPv6 enables or disables the IPv6 endpoint for the instance metadata service.
+	HTTPProtocolIPv6 string `json:"httpProtocolIpv6,omitempty"`
 }
 
 // CPUOptions contains detailed configuration for the number of cores and threads for the instance.

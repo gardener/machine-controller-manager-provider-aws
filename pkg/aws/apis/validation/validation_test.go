@@ -1463,6 +1463,47 @@ var _ = Describe("Validation", func() {
 					},
 				},
 			}),
+			Entry("AWS machine class with instanceMetadata with valid instanceMetadata.httpProtocolIpv6", &data{
+				setup: setup{
+					apply: func(spec *awsapi.AWSProviderSpec) {
+						spec.InstanceMetadataOptions = &awsapi.InstanceMetadataOptions{
+							HTTPProtocolIPv6: awsapi.HTTPProtocolIPv6Enabled,
+						}
+					},
+				},
+				action: action{
+					spec:   validAWSProviderSpec(),
+					secret: providerSecret,
+				},
+				expect: expect{
+					errToHaveOccurred: false,
+				},
+			}),
+			Entry("AWS machine class with invalid instanceMetadata.httpProtocolIpv6", &data{
+				setup: setup{
+					apply: func(spec *awsapi.AWSProviderSpec) {
+						spec.InstanceMetadataOptions = &awsapi.InstanceMetadataOptions{
+							HTTPProtocolIPv6: "foobar",
+						}
+					},
+				},
+				action: action{
+					spec:   validAWSProviderSpec(),
+					secret: providerSecret,
+				},
+				expect: expect{
+					errToHaveOccurred: true,
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueInvalid",
+							Field:    "providerSpec.instanceMetadata.httpProtocolIpv6",
+							BadValue: "foobar",
+							Detail: fmt.Sprintf("Accepted values: [%s %s]",
+								awsapi.HTTPProtocolIPv6Enabled, awsapi.HTTPProtocolIPv6Disabled),
+						},
+					},
+				},
+			}),
 			Entry("CapacityReservationTargetSpec invalid spec configuring both preference, target id and arn", &data{
 				setup: setup{},
 				action: action{
