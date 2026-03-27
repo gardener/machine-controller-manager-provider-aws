@@ -49,7 +49,7 @@ providerSpec:
     httpEndpoint: "enabled" # Optional - enable or disable access to IMDS.
     httpPutResponseHopLimit: 1 # Optional - When set to >=2 access to IMDSv2 is enabled from inside virtualized environments like the containers inside a kubernetes cluster.
     httpTokens: "optional" # Optional - when set to "required" only access to IMDSv2 is allowed.
-    httpProtocolIpv6: "enabled" # Optional - When set to "enabled" IMDS is accessible over IPv6.
+    httpProtocolIpv6: "disabled" # Optional - When set to "enabled" IMDS is accessible over IPv6.
 secretRef: # Secret pointing to a secret which contains the provider secret and cloudconfig
   namespace: default  # Namespace
   name: test-secret # Name of the secret
