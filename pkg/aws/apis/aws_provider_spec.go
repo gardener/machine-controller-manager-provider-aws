@@ -250,13 +250,6 @@ type AWSNetworkInterfaceSpec struct {
 }
 
 const (
-	// HTTPProtocolIPv6Enabled enforces enabling the IPv6 endpoint for the instance metadata service.
-	HTTPProtocolIPv6Enabled string = "enabled"
-	// HTTPProtocolIPv6Disabled enforces disabling the IPv6 endpoint for the instance metadata service.
-	HTTPProtocolIPv6Disabled string = "disabled"
-)
-
-const (
 	// HTTPTokensRequired enforces the use of tokens to access the metadata service. Effectively it enforces IMDSv2.
 	HTTPTokensRequired string = "required"
 	// HTTPTokensOptional allows the use of both IMDSv1 and IMDSv2.

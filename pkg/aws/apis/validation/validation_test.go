@@ -1467,7 +1467,7 @@ var _ = Describe("Validation", func() {
 				setup: setup{
 					apply: func(spec *awsapi.AWSProviderSpec) {
 						spec.InstanceMetadataOptions = &awsapi.InstanceMetadataOptions{
-							HTTPProtocolIPv6: awsapi.HTTPProtocolIPv6Enabled,
+							HTTPProtocolIPv6: string(ec2types.InstanceMetadataProtocolStateEnabled),
 						}
 					},
 				},
@@ -1499,7 +1499,8 @@ var _ = Describe("Validation", func() {
 							Field:    "providerSpec.instanceMetadata.httpProtocolIpv6",
 							BadValue: "foobar",
 							Detail: fmt.Sprintf("Accepted values: [%s %s]",
-								awsapi.HTTPProtocolIPv6Enabled, awsapi.HTTPProtocolIPv6Disabled),
+								string(ec2types.InstanceMetadataProtocolStateEnabled),
+								string(ec2types.InstanceMetadataProtocolStateDisabled)),
 						},
 					},
 				},
