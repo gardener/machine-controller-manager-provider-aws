@@ -59,5 +59,4 @@ const (
 	// Unsupported is returned when the specified request is unsupported. For example, you might be trying to launch an instance in an
 	// Availability Zone that currently has constraints on that instance type. The returned message provides details of the unsupported request.
 	Unsupported = "Unsupported"
-	
 )
