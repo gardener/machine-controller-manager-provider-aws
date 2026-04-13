@@ -556,7 +556,7 @@ var _ = Describe("MachineServer", func() {
 		}
 		DescribeTable("##table",
 			func(data *data) {
-				data.action.createMachineRequest.Machine.Spec.NodeTemplateSpec.ObjectMeta.Annotations = data.setup.objectmeta.Annotations
+				data.action.createMachineRequest.Machine.Spec.NodeTemplateSpec.Annotations = data.setup.objectmeta.Annotations
 
 				obj, err := getPlacementObj(data.action.createMachineRequest)
 

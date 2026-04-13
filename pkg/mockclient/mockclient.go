@@ -301,10 +301,10 @@ func (ms *MockEC2Client) TerminateInstances(_ context.Context, input *ec2.Termin
 func (ms *MockEC2Client) StopInstances(_ context.Context, input *ec2.StopInstancesInput, _ ...func(*ec2.Options)) (*ec2.StopInstancesOutput, error) {
 
 	if input.InstanceIds[0] == InstanceStopError {
-		return nil, fmt.Errorf("Stopping of instance errored out")
+		return nil, fmt.Errorf("stopping of instance errored out")
 	} else if *input.DryRun {
 		// If it is a dry run
-		return nil, fmt.Errorf("This is a dry run call")
+		return nil, fmt.Errorf("this is a dry run call")
 	}
 
 	var desiredInstance ec2types.Instance

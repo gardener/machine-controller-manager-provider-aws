@@ -53,10 +53,10 @@ func newMachine(
 		}
 	}
 
-	machine.Spec.NodeTemplateSpec.ObjectMeta.Annotations = make(map[string]string)
+	machine.Spec.NodeTemplateSpec.Annotations = make(map[string]string)
 
 	//appending to already existing annotations
-	maps.Copy(machine.Spec.NodeTemplateSpec.ObjectMeta.Annotations, annotations)
+	maps.Copy(machine.Spec.NodeTemplateSpec.Annotations, annotations)
 	return machine
 }
 
