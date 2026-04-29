@@ -58,7 +58,7 @@ jobs:
     steps:
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: '1.26'
       - uses: gardener/cc-utils/.github/actions/trusted-checkout@v1
       - name: run-check
         run: |
@@ -94,6 +94,8 @@ jobs:
     steps:
       - uses: gardener/cc-utils/.github/actions/trusted-checkout@v1
       - uses: ./.github/actions/setup-go
+        with:
+          go-version: '1.26'
       - name: run-tests
         run: |
           set -euo pipefail

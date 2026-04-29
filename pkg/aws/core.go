@@ -365,7 +365,7 @@ func (d *Driver) InitializeMachine(ctx context.Context, request *driver.Initiali
 func getPlacementObj(req *driver.CreateMachineRequest) (placementobj *ec2types.Placement, err error) {
 	placementobj = &ec2types.Placement{}
 
-	requestAnnotations := req.Machine.Spec.NodeTemplateSpec.ObjectMeta.Annotations
+	requestAnnotations := req.Machine.Spec.NodeTemplateSpec.Annotations
 
 	if placementAnnotation, ok := requestAnnotations[awsPlacement]; ok && placementAnnotation != "" {
 		placementAnnotationsRaw := []byte(placementAnnotation)

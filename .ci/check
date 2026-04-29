@@ -25,11 +25,9 @@ export GOBIN="${SOURCE_PATH}/tmp/bin"
 export PATH="${GOBIN}:${PATH}"
 
 # Install golangci-lint (linting tool).
-if [[ -z "${GOLANGCI_LINT_VERSION}" ]]; then
-  export GOLANGCI_LINT_VERSION=v1.60.3
-fi
+export GOLANGCI_LINT_VERSION=v2.11.4
 echo "Fetching golangci-lint tool"
-go install github.com/golangci/golangci-lint/cmd/golangci-lint@"${GOLANGCI_LINT_VERSION}"
+go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@"${GOLANGCI_LINT_VERSION}"
 echo "Successfully fetched golangci-lint"
 golangci-lint version
 
