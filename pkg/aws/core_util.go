@@ -61,22 +61,46 @@ func decodeProviderSpecAndSecret(machineClass *v1alpha1.MachineClass, secret *co
 	return providerSpec, nil
 }
 
-// disableSrcAndDestCheck disbales the SrcAndDestCheck for NAT instances
 func disableSrcAndDestCheck(ctx context.Context, svc interfaces.Ec2Client, instanceID *string) (err error) {
 	defer instrument.AwsAPIMetricRecorderFn(instanceDisableSourceDestCheckServiceLabel, &err)()
-	srcAndDstCheckEnabled := &ec2.ModifyInstanceAttributeInput{
-		InstanceId: instanceID,
-		SourceDestCheck: &ec2types.AttributeBooleanValue{
-			Value: ptr.To(false),
-		},
+
+	descInput := &ec2.DescribeInstancesInput{
+		InstanceIds: []string{ptr.Deref(instanceID, "")},
+	}
+	descOutput, descErr := svc.DescribeInstances(ctx, descInput)
+	if descErr != nil {
+		return descErr
+	}
+	if len(descOutput.Reservations) == 0 || len(descOutput.Reservations[0].Instances) == 0 {
+		return fmt.Errorf("no instance found for instanceID %s", ptr.Deref(instanceID, ""))
+	}
+	instance := descOutput.Reservations[0].Instances[0]
+	if len(instance.NetworkInterfaces) == 0 {
+		return fmt.Errorf("no network interfaces found for instanceID %s", ptr.Deref(instanceID, ""))
 	}
 
-	_, err = svc.ModifyInstanceAttribute(ctx, srcAndDstCheckEnabled)
-	if err != nil {
-		return err
+	var lastErr error
+	for _, ni := range instance.NetworkInterfaces {
+		// Skip EFA and EFA-only interfaces as they don't support source/dest check modification
+		if ptr.Deref(ni.InterfaceType, "") == string(ec2types.NetworkInterfaceTypeEfa) || ptr.Deref(ni.InterfaceType, "") == string(ec2types.NetworkInterfaceTypeEfaOnly) {
+			continue
+		}
+
+		input := &ec2.ModifyNetworkInterfaceAttributeInput{
+			NetworkInterfaceId: ni.NetworkInterfaceId,
+			SourceDestCheck: &ec2types.AttributeBooleanValue{
+				Value: ptr.To(false),
+			},
+		}
+		_, modErr := svc.ModifyNetworkInterfaceAttribute(ctx, input)
+		if modErr != nil {
+			klog.Errorf("Failed to disable Source/Destination check on interface %s for instance %s: %v", ptr.Deref(ni.NetworkInterfaceId, ""), ptr.Deref(instanceID, ""), modErr)
+			lastErr = modErr
+		} else {
+			klog.V(2).Infof("Successfully disabled Source/Destination check on interface %s for instance %s.", ptr.Deref(ni.NetworkInterfaceId, ""), ptr.Deref(instanceID, ""))
+		}
 	}
-	klog.V(2).Infof("Successfully disabled Source/Destination check on instance %s.", ptr.Deref(instanceID, ""))
-	return nil
+	return lastErr
 }
 
 func getMachineInstancesByTagsAndStatus(ctx context.Context, svc interfaces.Ec2Client, machineName string, providerSpecTags map[string]string) (instances []ec2types.Instance, err error) {

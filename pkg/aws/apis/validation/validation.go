@@ -42,6 +42,7 @@ func ValidateAWSProviderSpec(spec *awsapi.AWSProviderSpec, secret *corev1.Secret
 	allErrs = append(allErrs, validateBlockDevices(spec.BlockDevices, fldPath.Child("blockDevices"))...)
 	allErrs = append(allErrs, validateCapacityReservations(spec.CapacityReservationTarget, fldPath.Child("capacityReservation"))...)
 	allErrs = append(allErrs, validateNetworkInterfaces(spec.NetworkInterfaces, fldPath.Child("networkInterfaces"))...)
+	allErrs = append(allErrs, validatePlacement(spec.Placement, fldPath.Child("placement"))...)
 	allErrs = append(allErrs, ValidateSecret(secret, field.NewPath("secretRef"))...)
 	allErrs = append(allErrs, validateSpecTags(spec.Tags, fldPath.Child("tags"))...)
 	allErrs = append(allErrs, validateInstanceMetadata(spec.InstanceMetadataOptions, fldPath.Child("instanceMetadata"))...)
@@ -143,9 +144,20 @@ func validateCapacityReservations(capacityReservation *awsapi.AWSCapacityReserva
 		} else if capacityReservation.CapacityReservationID != nil && capacityReservation.CapacityReservationResourceGroupArn != nil {
 			allErrs = append(allErrs, field.Required(fldPath, "CapacityReservationResourceGroupArn or CapacityReservationId are optional but only one should be used"))
 		}
+
+		if capacityReservation.IsMLCapacityBlock != nil && *capacityReservation.IsMLCapacityBlock && capacityReservation.CapacityReservationID == nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("isMLCapacityBlock"), "isMLCapacityBlock can only be set when capacityReservationId is specified"))
+		}
 	}
 
 	return allErrs
+}
+
+var validNetworkInterfaceTypes = []string{
+	"",
+	string(ec2types.NetworkInterfaceTypeInterface),
+	string(ec2types.NetworkInterfaceTypeEfa),
+	string(ec2types.NetworkInterfaceTypeEfaOnly),
 }
 
 func validateNetworkInterfaces(networkInterfaces []awsapi.AWSNetworkInterfaceSpec, fldPath *field.Path) field.ErrorList {
@@ -157,19 +169,33 @@ func validateNetworkInterfaces(networkInterfaces []awsapi.AWSNetworkInterfaceSpe
 		allErrs = append(allErrs, field.Required(fldPath.Child(""), "Mention at least one NetworkInterface"))
 	} else {
 		for i := range networkInterfaces {
+			idxPath := fldPath.Index(i)
+
 			if networkInterfaces[i].SubnetID == "" {
-				allErrs = append(allErrs, field.Required(fldPath.Child("subnetID"), "SubnetID is required"))
+				allErrs = append(allErrs, field.Required(idxPath.Child("subnetID"), "SubnetID is required"))
 			}
 
 			if len(networkInterfaces[i].SecurityGroupIDs) == 0 {
-				allErrs = append(allErrs, field.Required(fldPath.Child("securityGroupIDs"), "Mention at least one securityGroupID"))
+				allErrs = append(allErrs, field.Required(idxPath.Child("securityGroupIDs"), "Mention at least one securityGroupID"))
 			} else {
 				for j := range networkInterfaces[i].SecurityGroupIDs {
 					if networkInterfaces[i].SecurityGroupIDs[j] == "" {
 						output := strings.Join([]string{"securityGroupIDs cannot be blank for networkInterface:", strconv.Itoa(i), " securityGroupID:", strconv.Itoa(j)}, "")
-						allErrs = append(allErrs, field.Required(fldPath.Child("securityGroupIDs"), output))
+						allErrs = append(allErrs, field.Required(idxPath.Child("securityGroupIDs"), output))
 					}
 				}
+			}
+
+			if networkInterfaces[i].InterfaceType != "" && !slices.Contains(validNetworkInterfaceTypes, networkInterfaces[i].InterfaceType) {
+				allErrs = append(allErrs, field.NotSupported(idxPath.Child("interfaceType"), networkInterfaces[i].InterfaceType, validNetworkInterfaceTypes[1:]))
+			}
+
+			if networkInterfaces[i].DeviceIndex != nil && *networkInterfaces[i].DeviceIndex < 0 {
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("deviceIndex"), *networkInterfaces[i].DeviceIndex, "must be >= 0"))
+			}
+
+			if networkInterfaces[i].NetworkCardIndex != nil && *networkInterfaces[i].NetworkCardIndex < 0 {
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("networkCardIndex"), *networkInterfaces[i].NetworkCardIndex, "must be >= 0"))
 			}
 		}
 	}
@@ -286,4 +312,35 @@ func validateStringValues(fld *field.Path, s string, accepted []string) field.Er
 	}
 
 	return field.ErrorList{field.Invalid(fld, s, fmt.Sprintf("Accepted values: %v", accepted))}
+}
+
+func validatePlacement(placement *awsapi.AWSPlacementSpec, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if placement == nil {
+		return allErrs
+	}
+
+	if placement.Tenancy != nil {
+		validTenancies := []string{"default", "dedicated", "host"}
+		if !slices.Contains(validTenancies, *placement.Tenancy) {
+			allErrs = append(allErrs, field.NotSupported(fldPath.Child("tenancy"), *placement.Tenancy, validTenancies))
+		}
+	}
+
+	if placement.Affinity != nil {
+		validAffinities := []string{"default", "host"}
+		if !slices.Contains(validAffinities, *placement.Affinity) {
+			allErrs = append(allErrs, field.NotSupported(fldPath.Child("affinity"), *placement.Affinity, validAffinities))
+		}
+	}
+
+	if placement.HostID != nil && (placement.Tenancy == nil || *placement.Tenancy != "host") {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("hostId"), "hostId can only be set when tenancy is \"host\""))
+	}
+
+	if placement.PartitionNumber != nil && *placement.PartitionNumber < 1 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("partitionNumber"), *placement.PartitionNumber, "must be >= 1"))
+	}
+
+	return allErrs
 }
