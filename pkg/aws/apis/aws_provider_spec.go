@@ -100,6 +100,9 @@ type AWSProviderSpec struct {
 
 	// CPUOptions contains detailed configuration for the number of cores and threads for the instance.
 	CPUOptions *CPUOptions `json:"cpuOptions,omitempty"`
+
+	// Placement contains placement configuration for the instance (placement groups, tenancy, dedicated hosts).
+	Placement *AWSPlacementSpec `json:"placement,omitempty"`
 }
 
 // AWSBlockDeviceMappingSpec stores info about AWS block device mappings
@@ -140,6 +143,10 @@ type AWSCapacityReservationTargetSpec struct {
 
 	// CapacityReservationResourceGroupArn The ARN of the Capacity Reservation in which to run the instance.
 	CapacityReservationResourceGroupArn *string `json:"capacityReservationResourceGroupArn,omitempty"`
+
+	// IsMLCapacityBlock indicates this reservation is an ML capacity block.
+	// Sets InstanceMarketOptions.MarketType to "capacity-block".
+	IsMLCapacityBlock *bool `json:"isMLCapacityBlock,omitempty"`
 }
 
 // AWSEbsBlockDeviceSpec describes a block device for an EBS volume.
@@ -247,6 +254,33 @@ type AWSNetworkInterfaceSpec struct {
 	// The ID of the subnet associated with the network string. Applies only if
 	// creating a network interface when launching an machine.
 	SubnetID string `json:"subnetID,omitempty"`
+
+	// InterfaceType is the type of network interface.
+	// Valid values: "interface" (default), "efa", "efa-only".
+	InterfaceType string `json:"interfaceType,omitempty"`
+
+	// NetworkCardIndex is the index of the network card for this interface.
+	NetworkCardIndex *int32 `json:"networkCardIndex,omitempty"`
+
+	// DeviceIndex is the device index for this network interface.
+	DeviceIndex *int32 `json:"deviceIndex,omitempty"`
+
+	// PrimaryIpv6 indicates whether the first IPv6 address is the primary IPv6 address.
+	PrimaryIpv6 *bool `json:"primaryIpv6,omitempty"`
+}
+
+// AWSPlacementSpec contains placement configuration for an EC2 instance.
+type AWSPlacementSpec struct {
+	// GroupID is the ID of the placement group.
+	GroupID *string `json:"groupId,omitempty"`
+	// Tenancy is the tenancy of the instance. Valid values: "default", "dedicated", "host".
+	Tenancy *string `json:"tenancy,omitempty"`
+	// HostID is the ID of the Dedicated Host.
+	HostID *string `json:"hostId,omitempty"`
+	// PartitionNumber is the partition number for the instance.
+	PartitionNumber *int64 `json:"partitionNumber,omitempty"`
+	// Affinity is the affinity setting. Valid values: "default", "host".
+	Affinity *string `json:"affinity,omitempty"`
 }
 
 const (
