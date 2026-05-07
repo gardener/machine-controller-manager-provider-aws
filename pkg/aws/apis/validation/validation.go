@@ -186,8 +186,8 @@ func validateNetworkInterfaces(networkInterfaces []awsapi.AWSNetworkInterfaceSpe
 				}
 			}
 
-			if networkInterfaces[i].InterfaceType != "" && !slices.Contains(validNetworkInterfaceTypes, networkInterfaces[i].InterfaceType) {
-				allErrs = append(allErrs, field.NotSupported(idxPath.Child("interfaceType"), networkInterfaces[i].InterfaceType, validNetworkInterfaceTypes[1:]))
+			if networkInterfaces[i].InterfaceType != nil && !slices.Contains(validNetworkInterfaceTypes, *networkInterfaces[i].InterfaceType) {
+				allErrs = append(allErrs, field.NotSupported(idxPath.Child("interfaceType"), *networkInterfaces[i].InterfaceType, validNetworkInterfaceTypes[1:]))
 			}
 
 			if networkInterfaces[i].DeviceIndex != nil && *networkInterfaces[i].DeviceIndex < 0 {

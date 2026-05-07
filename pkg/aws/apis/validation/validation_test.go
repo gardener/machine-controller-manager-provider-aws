@@ -1827,7 +1827,7 @@ var _ = Describe("Validation", func() {
 			Entry("Invalid interfaceType for network interface", &data{
 				setup: setup{
 					apply: func(spec *awsapi.AWSProviderSpec) {
-						spec.NetworkInterfaces[0].InterfaceType = "invalid"
+						spec.NetworkInterfaces[0].InterfaceType = ptr.To("invalid")
 					},
 				},
 				action: action{

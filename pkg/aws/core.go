@@ -150,13 +150,8 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 			spec.DeviceIndex = aws.Int32(int32(i)) // #nosec: G115 -- index will not exceed int32 limits
 		}
 
-		if netIf.NetworkCardIndex != nil {
-			spec.NetworkCardIndex = netIf.NetworkCardIndex
-		}
-
-		if netIf.InterfaceType != "" {
-			spec.InterfaceType = ptr.To(netIf.InterfaceType)
-		}
+		spec.NetworkCardIndex = netIf.NetworkCardIndex
+		spec.InterfaceType = netIf.InterfaceType
 
 		if netIf.DeleteOnTermination == nil {
 			spec.DeleteOnTermination = aws.Bool(true)

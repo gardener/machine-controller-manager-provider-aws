@@ -256,8 +256,10 @@ type AWSNetworkInterfaceSpec struct {
 	SubnetID string `json:"subnetID,omitempty"`
 
 	// InterfaceType is the type of network interface.
-	// Valid values: "interface" (default), "efa", "efa-only".
-	InterfaceType string `json:"interfaceType,omitempty"`
+	// Currently valid values for RunInstances: "interface", "efa", "efa-only".
+	// See https://github.com/aws/aws-sdk-go-v2/blob/service/ec2/v1.279.0/service/ec2/types/types.go#L9181
+	// If not specified, defaults to "interface".
+	InterfaceType *string `json:"interfaceType,omitempty"`
 
 	// NetworkCardIndex is the index of the network card for this interface.
 	NetworkCardIndex *int32 `json:"networkCardIndex,omitempty"`
