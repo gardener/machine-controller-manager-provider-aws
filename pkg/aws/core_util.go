@@ -61,6 +61,8 @@ func decodeProviderSpecAndSecret(machineClass *v1alpha1.MachineClass, secret *co
 	return providerSpec, nil
 }
 
+// disableSrcAndDestCheck disables the Source/Destination check on all non-EFA network interfaces of the instance.
+// EFA and efa-only interfaces are skipped because they do not support Source/Destination check modification.
 func disableSrcAndDestCheck(ctx context.Context, svc interfaces.Ec2Client, instanceID *string) (err error) {
 	defer instrument.AwsAPIMetricRecorderFn(instanceDisableSourceDestCheckServiceLabel, &err)()
 

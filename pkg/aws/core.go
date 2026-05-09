@@ -236,21 +236,13 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 	// Set placement from providerSpec (first-class API), falling back to annotation
 	if providerSpec.Placement != nil {
 		placement := &ec2types.Placement{}
-		if providerSpec.Placement.GroupID != nil {
-			placement.GroupId = providerSpec.Placement.GroupID
-		}
 		if providerSpec.Placement.Tenancy != nil {
 			placement.Tenancy = ec2types.Tenancy(*providerSpec.Placement.Tenancy)
 		}
-		if providerSpec.Placement.HostID != nil {
-			placement.HostId = providerSpec.Placement.HostID
-		}
-		if providerSpec.Placement.PartitionNumber != nil {
-			placement.PartitionNumber = aws.Int32(int32(*providerSpec.Placement.PartitionNumber)) // #nosec: G115 -- partition number will not exceed int32 limits
-		}
-		if providerSpec.Placement.Affinity != nil {
-			placement.Affinity = providerSpec.Placement.Affinity
-		}
+		placement.GroupId = providerSpec.Placement.GroupID
+		placement.HostId = providerSpec.Placement.HostID
+		placement.PartitionNumber = providerSpec.Placement.PartitionNumber
+		placement.Affinity = providerSpec.Placement.Affinity
 		inputConfig.Placement = placement
 	} else {
 		placement, err := getPlacementObj(req)

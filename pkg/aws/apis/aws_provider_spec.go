@@ -280,7 +280,7 @@ type AWSPlacementSpec struct {
 	// HostID is the ID of the Dedicated Host.
 	HostID *string `json:"hostId,omitempty"`
 	// PartitionNumber is the partition number for the instance.
-	PartitionNumber *int64 `json:"partitionNumber,omitempty"`
+	PartitionNumber *int32 `json:"partitionNumber,omitempty"`
 	// Affinity is the affinity setting. Valid values: "default", "host".
 	Affinity *string `json:"affinity,omitempty"`
 }
