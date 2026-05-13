@@ -226,10 +226,23 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 				CapacityReservationResourceGroupArn: providerSpec.CapacityReservationTarget.CapacityReservationResourceGroupArn,
 			},
 		}
-		if ptr.Deref(providerSpec.CapacityReservationTarget.IsMLCapacityBlock, false) {
-			inputConfig.InstanceMarketOptions = &ec2types.InstanceMarketOptionsRequest{
-				MarketType: ec2types.MarketTypeCapacityBlock,
-			}
+	}
+
+	// Set instance market options
+	if providerSpec.InstanceMarketOptions != nil {
+		inputConfig.InstanceMarketOptions = &ec2types.InstanceMarketOptionsRequest{
+			MarketType: ec2types.MarketType(providerSpec.InstanceMarketOptions.MarketType),
+		}
+	} else if providerSpec.SpotPrice != nil {
+		// Backward compatibility for deprecated SpotPrice field
+		inputConfig.InstanceMarketOptions = &ec2types.InstanceMarketOptionsRequest{
+			MarketType: ec2types.MarketTypeSpot,
+			SpotOptions: &ec2types.SpotMarketOptions{
+				SpotInstanceType: ec2types.SpotInstanceTypeOneTime,
+			},
+		}
+		if *providerSpec.SpotPrice != "" {
+			inputConfig.InstanceMarketOptions.SpotOptions.MaxPrice = providerSpec.SpotPrice
 		}
 	}
 
@@ -250,20 +263,6 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 			return nil, status.Error(codes.Internal, err.Error())
 		} else if placement != nil {
 			inputConfig.Placement = placement
-		}
-	}
-
-	// Set spot price if it has been set
-	if providerSpec.SpotPrice != nil {
-		inputConfig.InstanceMarketOptions = &ec2types.InstanceMarketOptionsRequest{
-			MarketType: ec2types.MarketTypeSpot,
-			SpotOptions: &ec2types.SpotMarketOptions{
-				SpotInstanceType: ec2types.SpotInstanceTypeOneTime,
-			},
-		}
-
-		if *providerSpec.SpotPrice != "" {
-			inputConfig.InstanceMarketOptions.SpotOptions.MaxPrice = providerSpec.SpotPrice
 		}
 	}
 

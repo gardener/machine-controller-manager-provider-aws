@@ -85,8 +85,9 @@ type AWSProviderSpec struct {
 	// Region contains the AWS region for the machine
 	Region string `json:"region,omitempty"`
 
-	// SpotPrice is an optional field that if set specifies to use spot instances
-	// When set to "" there is no maxPrice else, specifies the maxPrice
+	// SpotPrice is an optional field that if set specifies to use spot instances.
+	// When set to "" there is no maxPrice, else specifies the maxPrice.
+	// Deprecated: Use InstanceMarketOptions with MarketType "spot" instead.
 	SpotPrice *string `json:"spotPrice,omitempty"`
 
 	// If set to false, source and destination checks are disabled, default is true
@@ -103,6 +104,10 @@ type AWSProviderSpec struct {
 
 	// Placement contains placement configuration for the instance (placement groups, tenancy, dedicated hosts).
 	Placement *AWSPlacementSpec `json:"placement,omitempty"`
+
+	// InstanceMarketOptions configures the instance market type.
+	// If not specified, on-demand instances are launched.
+	InstanceMarketOptions *AWSInstanceMarketOptions `json:"instanceMarketOptions,omitempty"`
 }
 
 // AWSBlockDeviceMappingSpec stores info about AWS block device mappings
@@ -143,10 +148,13 @@ type AWSCapacityReservationTargetSpec struct {
 
 	// CapacityReservationResourceGroupArn The ARN of the Capacity Reservation in which to run the instance.
 	CapacityReservationResourceGroupArn *string `json:"capacityReservationResourceGroupArn,omitempty"`
+}
 
-	// IsMLCapacityBlock indicates this reservation is an ML capacity block.
-	// Sets InstanceMarketOptions.MarketType to "capacity-block".
-	IsMLCapacityBlock *bool `json:"isMLCapacityBlock,omitempty"`
+// AWSInstanceMarketOptions configures the instance market type.
+type AWSInstanceMarketOptions struct {
+	// MarketType is the market type for the instance.
+	// Supported values: "spot", "capacity-block", "interruptible-capacity-reservation".
+	MarketType string `json:"marketType"`
 }
 
 // AWSEbsBlockDeviceSpec describes a block device for an EBS volume.

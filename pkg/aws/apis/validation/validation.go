@@ -43,6 +43,7 @@ func ValidateAWSProviderSpec(spec *awsapi.AWSProviderSpec, secret *corev1.Secret
 	allErrs = append(allErrs, validateCapacityReservations(spec.CapacityReservationTarget, fldPath.Child("capacityReservation"))...)
 	allErrs = append(allErrs, validateNetworkInterfaces(spec.NetworkInterfaces, fldPath.Child("networkInterfaces"))...)
 	allErrs = append(allErrs, validatePlacement(spec.Placement, fldPath.Child("placement"))...)
+	allErrs = append(allErrs, validateInstanceMarketOptions(spec.InstanceMarketOptions, fldPath.Child("instanceMarketOptions"))...)
 	allErrs = append(allErrs, ValidateSecret(secret, field.NewPath("secretRef"))...)
 	allErrs = append(allErrs, validateSpecTags(spec.Tags, fldPath.Child("tags"))...)
 	allErrs = append(allErrs, validateInstanceMetadata(spec.InstanceMetadataOptions, fldPath.Child("instanceMetadata"))...)
@@ -143,10 +144,6 @@ func validateCapacityReservations(capacityReservation *awsapi.AWSCapacityReserva
 			}
 		} else if capacityReservation.CapacityReservationID != nil && capacityReservation.CapacityReservationResourceGroupArn != nil {
 			allErrs = append(allErrs, field.Required(fldPath, "CapacityReservationResourceGroupArn or CapacityReservationId are optional but only one should be used"))
-		}
-
-		if capacityReservation.IsMLCapacityBlock != nil && *capacityReservation.IsMLCapacityBlock && capacityReservation.CapacityReservationID == nil {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("isMLCapacityBlock"), "isMLCapacityBlock can only be set when capacityReservationId is specified"))
 		}
 	}
 
@@ -340,6 +337,25 @@ func validatePlacement(placement *awsapi.AWSPlacementSpec, fldPath *field.Path) 
 
 	if placement.PartitionNumber != nil && *placement.PartitionNumber < 1 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("partitionNumber"), *placement.PartitionNumber, "must be >= 1"))
+	}
+
+	return allErrs
+}
+
+func validateInstanceMarketOptions(opts *awsapi.AWSInstanceMarketOptions, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if opts == nil {
+		return allErrs
+	}
+
+	validMarketTypes := ec2types.MarketType("").Values()
+	validStrings := make([]string, len(validMarketTypes))
+	for i, v := range validMarketTypes {
+		validStrings[i] = string(v)
+	}
+
+	if !slices.Contains(validStrings, opts.MarketType) {
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("marketType"), opts.MarketType, validStrings))
 	}
 
 	return allErrs

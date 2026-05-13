@@ -1890,11 +1890,11 @@ var _ = Describe("Validation", func() {
 					},
 				},
 			}),
-			Entry("isMLCapacityBlock without capacityReservationId", &data{
+			Entry("Invalid instanceMarketOptions marketType", &data{
 				setup: setup{
 					apply: func(spec *awsapi.AWSProviderSpec) {
-						spec.CapacityReservationTarget = &awsapi.AWSCapacityReservationTargetSpec{
-							IsMLCapacityBlock: ptr.To(true),
+						spec.InstanceMarketOptions = &awsapi.AWSInstanceMarketOptions{
+							MarketType: "invalid",
 						}
 					},
 				},
@@ -1906,10 +1906,10 @@ var _ = Describe("Validation", func() {
 					errToHaveOccurred: true,
 					errList: field.ErrorList{
 						{
-							Type:     "FieldValueForbidden",
-							Field:    "providerSpec.capacityReservation.isMLCapacityBlock",
-							BadValue: "",
-							Detail:   "isMLCapacityBlock can only be set when capacityReservationId is specified",
+							Type:     "FieldValueNotSupported",
+							Field:    "providerSpec.instanceMarketOptions.marketType",
+							BadValue: "invalid",
+							Detail:   `supported values: "spot", "capacity-block", "interruptible-capacity-reservation"`,
 						},
 					},
 				},
