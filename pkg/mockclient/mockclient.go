@@ -338,6 +338,12 @@ func (ms *MockEC2Client) StopInstances(_ context.Context, input *ec2.StopInstanc
 	}, nil
 }
 
+// ModifyNetworkInterfaceAttribute implements a mock modify network interface attribute method
+func (ms *MockEC2Client) ModifyNetworkInterfaceAttribute(_ context.Context, _ *ec2.ModifyNetworkInterfaceAttributeInput, _ ...func(*ec2.Options)) (*ec2.ModifyNetworkInterfaceAttributeOutput, error) {
+	// Always succeed for mock
+	return &ec2.ModifyNetworkInterfaceAttributeOutput{}, nil
+}
+
 // deepCopyTagList copies inTags list to outTags
 func deepCopyTagList(inTags []ec2types.Tag) []ec2types.Tag {
 	var outTags []ec2types.Tag

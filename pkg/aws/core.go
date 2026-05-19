@@ -138,12 +138,20 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 	for i, netIf := range providerSpec.NetworkInterfaces {
 		spec := ec2types.InstanceNetworkInterfaceSpecification{
 			Groups:                   netIf.SecurityGroupIDs,
-			DeviceIndex:              aws.Int32(int32(i)), // #nosec: G115 -- index will not exceed int32 limits
 			AssociatePublicIpAddress: netIf.AssociatePublicIPAddress,
 			DeleteOnTermination:      netIf.DeleteOnTermination,
 			Description:              netIf.Description,
 			SubnetId:                 aws.String(netIf.SubnetID),
 		}
+
+		if netIf.DeviceIndex != nil {
+			spec.DeviceIndex = netIf.DeviceIndex
+		} else {
+			spec.DeviceIndex = aws.Int32(int32(i)) // #nosec: G115 -- index will not exceed int32 limits
+		}
+
+		spec.NetworkCardIndex = netIf.NetworkCardIndex
+		spec.InterfaceType = netIf.InterfaceType
 
 		if netIf.DeleteOnTermination == nil {
 			spec.DeleteOnTermination = aws.Bool(true)
@@ -151,7 +159,11 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 
 		if netIf.Ipv6AddressCount != nil {
 			spec.Ipv6AddressCount = netIf.Ipv6AddressCount
-			spec.PrimaryIpv6 = aws.Bool(true)
+			if netIf.PrimaryIpv6 != nil {
+				spec.PrimaryIpv6 = netIf.PrimaryIpv6
+			} else {
+				spec.PrimaryIpv6 = aws.Bool(true)
+			}
 		}
 
 		networkInterfaceSpecs = append(networkInterfaceSpecs, spec)
@@ -216,23 +228,41 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 		}
 	}
 
-	placement, err := getPlacementObj(req)
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	} else if placement != nil {
-		inputConfig.Placement = placement
-	}
-	// Set spot price if it has been set
-	if providerSpec.SpotPrice != nil {
+	// Set instance market options
+	if providerSpec.InstanceMarketOptions != nil {
+		inputConfig.InstanceMarketOptions = &ec2types.InstanceMarketOptionsRequest{
+			MarketType: ec2types.MarketType(providerSpec.InstanceMarketOptions.MarketType),
+		}
+	} else if providerSpec.SpotPrice != nil {
+		// Backward compatibility for deprecated SpotPrice field
 		inputConfig.InstanceMarketOptions = &ec2types.InstanceMarketOptionsRequest{
 			MarketType: ec2types.MarketTypeSpot,
 			SpotOptions: &ec2types.SpotMarketOptions{
 				SpotInstanceType: ec2types.SpotInstanceTypeOneTime,
 			},
 		}
-
 		if *providerSpec.SpotPrice != "" {
 			inputConfig.InstanceMarketOptions.SpotOptions.MaxPrice = providerSpec.SpotPrice
+		}
+	}
+
+	// Set placement from providerSpec (first-class API), falling back to annotation
+	if providerSpec.Placement != nil {
+		placement := &ec2types.Placement{}
+		if providerSpec.Placement.Tenancy != nil {
+			placement.Tenancy = ec2types.Tenancy(*providerSpec.Placement.Tenancy)
+		}
+		placement.GroupId = providerSpec.Placement.GroupID
+		placement.HostId = providerSpec.Placement.HostID
+		placement.PartitionNumber = providerSpec.Placement.PartitionNumber
+		placement.Affinity = providerSpec.Placement.Affinity
+		inputConfig.Placement = placement
+	} else {
+		placement, err := getPlacementObj(req)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		} else if placement != nil {
+			inputConfig.Placement = placement
 		}
 	}
 
@@ -496,10 +526,22 @@ func (d *Driver) GetMachineStatus(ctx context.Context, req *driver.GetMachineSta
 	}
 
 	// if SrcAnDstCheckEnabled is false then check attribute on instance and return Uninitialized error if not matching.
+	// For instances with EFA interfaces, check per-interface since EFA interfaces don't support SourceDestCheck modification.
 	if providerSpec.SrcAndDstChecksEnabled != nil && !*providerSpec.SrcAndDstChecksEnabled {
-		if ptr.Deref(requiredInstance.SourceDestCheck, true) {
-			msg := fmt.Sprintf("VM %q associated with machine %q has SourceDestCheck=%t despite providerSpec.SrcAndDstChecksEnabled=%t",
-				ptr.Deref(requiredInstance.InstanceId, ""), req.Machine.Name, ptr.Deref(requiredInstance.SourceDestCheck, true), *providerSpec.SrcAndDstChecksEnabled)
+		srcDestCheckEnabled := false
+		for _, ni := range requiredInstance.NetworkInterfaces {
+			// Skip EFA and EFA-only interfaces as they don't support SourceDestCheck modification
+			if ptr.Deref(ni.InterfaceType, "") == string(ec2types.NetworkInterfaceTypeEfa) || ptr.Deref(ni.InterfaceType, "") == string(ec2types.NetworkInterfaceTypeEfaOnly) {
+				continue
+			}
+			if ni.SourceDestCheck != nil && *ni.SourceDestCheck {
+				srcDestCheckEnabled = true
+				break
+			}
+		}
+		if srcDestCheckEnabled {
+			msg := fmt.Sprintf("VM %q associated with machine %q has SourceDestCheck=true on a non-EFA interface despite providerSpec.SrcAndDstChecksEnabled=%t",
+				ptr.Deref(requiredInstance.InstanceId, ""), req.Machine.Name, *providerSpec.SrcAndDstChecksEnabled)
 			klog.Warning(msg)
 			return response, status.Error(codes.Uninitialized, msg)
 		}

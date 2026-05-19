@@ -1050,7 +1050,7 @@ var _ = Describe("Validation", func() {
 					errList: field.ErrorList{
 						{
 							Type:     "FieldValueRequired",
-							Field:    "providerSpec.networkInterfaces.subnetID",
+							Field:    "providerSpec.networkInterfaces[0].subnetID",
 							BadValue: "",
 							Detail:   "SubnetID is required",
 						},
@@ -1093,7 +1093,7 @@ var _ = Describe("Validation", func() {
 					errList: field.ErrorList{
 						{
 							Type:     "FieldValueRequired",
-							Field:    "providerSpec.networkInterfaces.securityGroupIDs",
+							Field:    "providerSpec.networkInterfaces[0].securityGroupIDs",
 							BadValue: "",
 							Detail:   "Mention at least one securityGroupID",
 						},
@@ -1336,7 +1336,7 @@ var _ = Describe("Validation", func() {
 					errList: field.ErrorList{
 						{
 							Type:     "FieldValueRequired",
-							Field:    "providerSpec.networkInterfaces.securityGroupIDs",
+							Field:    "providerSpec.networkInterfaces[0].securityGroupIDs",
 							BadValue: "",
 							Detail:   "securityGroupIDs cannot be blank for networkInterface:0 securityGroupID:0",
 						},
@@ -1822,6 +1822,144 @@ var _ = Describe("Validation", func() {
 				},
 				expect: expect{
 					errToHaveOccurred: false,
+				},
+			}),
+			Entry("Invalid interfaceType for network interface", &data{
+				setup: setup{
+					apply: func(spec *awsapi.AWSProviderSpec) {
+						spec.NetworkInterfaces[0].InterfaceType = ptr.To("invalid")
+					},
+				},
+				action: action{
+					spec:   validAWSProviderSpec(),
+					secret: providerSecret,
+				},
+				expect: expect{
+					errToHaveOccurred: true,
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueNotSupported",
+							Field:    "providerSpec.networkInterfaces[0].interfaceType",
+							BadValue: "invalid",
+							Detail:   `supported values: "interface", "efa", "efa-only"`,
+						},
+					},
+				},
+			}),
+			Entry("Negative deviceIndex for network interface", &data{
+				setup: setup{
+					apply: func(spec *awsapi.AWSProviderSpec) {
+						spec.NetworkInterfaces[0].DeviceIndex = ptr.To[int32](-1)
+					},
+				},
+				action: action{
+					spec:   validAWSProviderSpec(),
+					secret: providerSecret,
+				},
+				expect: expect{
+					errToHaveOccurred: true,
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueInvalid",
+							Field:    "providerSpec.networkInterfaces[0].deviceIndex",
+							BadValue: int32(-1),
+							Detail:   "must be >= 0",
+						},
+					},
+				},
+			}),
+			Entry("Negative networkCardIndex for network interface", &data{
+				setup: setup{
+					apply: func(spec *awsapi.AWSProviderSpec) {
+						spec.NetworkInterfaces[0].NetworkCardIndex = ptr.To[int32](-1)
+					},
+				},
+				action: action{
+					spec:   validAWSProviderSpec(),
+					secret: providerSecret,
+				},
+				expect: expect{
+					errToHaveOccurred: true,
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueInvalid",
+							Field:    "providerSpec.networkInterfaces[0].networkCardIndex",
+							BadValue: int32(-1),
+							Detail:   "must be >= 0",
+						},
+					},
+				},
+			}),
+			Entry("Invalid instanceMarketOptions marketType", &data{
+				setup: setup{
+					apply: func(spec *awsapi.AWSProviderSpec) {
+						spec.InstanceMarketOptions = &awsapi.AWSInstanceMarketOptions{
+							MarketType: "invalid",
+						}
+					},
+				},
+				action: action{
+					spec:   validAWSProviderSpec(),
+					secret: providerSecret,
+				},
+				expect: expect{
+					errToHaveOccurred: true,
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueNotSupported",
+							Field:    "providerSpec.instanceMarketOptions.marketType",
+							BadValue: "invalid",
+							Detail:   `supported values: "spot", "capacity-block", "interruptible-capacity-reservation"`,
+						},
+					},
+				},
+			}),
+			Entry("Invalid placement tenancy", &data{
+				setup: setup{
+					apply: func(spec *awsapi.AWSProviderSpec) {
+						spec.Placement = &awsapi.AWSPlacementSpec{
+							Tenancy: ptr.To("invalid"),
+						}
+					},
+				},
+				action: action{
+					spec:   validAWSProviderSpec(),
+					secret: providerSecret,
+				},
+				expect: expect{
+					errToHaveOccurred: true,
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueNotSupported",
+							Field:    "providerSpec.placement.tenancy",
+							BadValue: "invalid",
+							Detail:   `supported values: "default", "dedicated", "host"`,
+						},
+					},
+				},
+			}),
+			Entry("Placement hostId without tenancy host", &data{
+				setup: setup{
+					apply: func(spec *awsapi.AWSProviderSpec) {
+						spec.Placement = &awsapi.AWSPlacementSpec{
+							HostID: ptr.To("h-12345"),
+						}
+					},
+				},
+				action: action{
+					spec:   validAWSProviderSpec(),
+					secret: providerSecret,
+				},
+				expect: expect{
+					errToHaveOccurred: true,
+					errList: field.ErrorList{
+						{
+							Type:     "FieldValueForbidden",
+							Field:    "providerSpec.placement.hostId",
+							BadValue: "",
+							Detail:   `hostId can only be set when tenancy is "host"`,
+						},
+					},
 				},
 			}),
 		)

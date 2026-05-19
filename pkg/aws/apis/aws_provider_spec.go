@@ -85,8 +85,9 @@ type AWSProviderSpec struct {
 	// Region contains the AWS region for the machine
 	Region string `json:"region,omitempty"`
 
-	// SpotPrice is an optional field that if set specifies to use spot instances
-	// When set to "" there is no maxPrice else, specifies the maxPrice
+	// SpotPrice is an optional field that if set specifies to use spot instances.
+	// When set to "" there is no maxPrice, else specifies the maxPrice.
+	// Deprecated: Use InstanceMarketOptions with MarketType "spot" instead.
 	SpotPrice *string `json:"spotPrice,omitempty"`
 
 	// If set to false, source and destination checks are disabled, default is true
@@ -100,6 +101,13 @@ type AWSProviderSpec struct {
 
 	// CPUOptions contains detailed configuration for the number of cores and threads for the instance.
 	CPUOptions *CPUOptions `json:"cpuOptions,omitempty"`
+
+	// Placement contains placement configuration for the instance (placement groups, tenancy, dedicated hosts).
+	Placement *AWSPlacementSpec `json:"placement,omitempty"`
+
+	// InstanceMarketOptions configures the instance market type.
+	// If not specified, on-demand instances are launched.
+	InstanceMarketOptions *AWSInstanceMarketOptions `json:"instanceMarketOptions,omitempty"`
 }
 
 // AWSBlockDeviceMappingSpec stores info about AWS block device mappings
@@ -140,6 +148,13 @@ type AWSCapacityReservationTargetSpec struct {
 
 	// CapacityReservationResourceGroupArn The ARN of the Capacity Reservation in which to run the instance.
 	CapacityReservationResourceGroupArn *string `json:"capacityReservationResourceGroupArn,omitempty"`
+}
+
+// AWSInstanceMarketOptions configures the instance market type.
+type AWSInstanceMarketOptions struct {
+	// MarketType is the market type for the instance.
+	// Supported values: "spot", "capacity-block", "interruptible-capacity-reservation".
+	MarketType string `json:"marketType"`
 }
 
 // AWSEbsBlockDeviceSpec describes a block device for an EBS volume.
@@ -247,6 +262,35 @@ type AWSNetworkInterfaceSpec struct {
 	// The ID of the subnet associated with the network string. Applies only if
 	// creating a network interface when launching an machine.
 	SubnetID string `json:"subnetID,omitempty"`
+
+	// InterfaceType is the type of network interface.
+	// Currently valid values for RunInstances: "interface", "efa", "efa-only".
+	// See https://github.com/aws/aws-sdk-go-v2/blob/service/ec2/v1.279.0/service/ec2/types/types.go#L9181
+	// If not specified, defaults to "interface".
+	InterfaceType *string `json:"interfaceType,omitempty"`
+
+	// NetworkCardIndex is the index of the network card for this interface.
+	NetworkCardIndex *int32 `json:"networkCardIndex,omitempty"`
+
+	// DeviceIndex is the device index for this network interface.
+	DeviceIndex *int32 `json:"deviceIndex,omitempty"`
+
+	// PrimaryIpv6 indicates whether the first IPv6 address is the primary IPv6 address.
+	PrimaryIpv6 *bool `json:"primaryIpv6,omitempty"`
+}
+
+// AWSPlacementSpec contains placement configuration for an EC2 instance.
+type AWSPlacementSpec struct {
+	// GroupID is the ID of the placement group.
+	GroupID *string `json:"groupId,omitempty"`
+	// Tenancy is the tenancy of the instance. Valid values: "default", "dedicated", "host".
+	Tenancy *string `json:"tenancy,omitempty"`
+	// HostID is the ID of the Dedicated Host.
+	HostID *string `json:"hostId,omitempty"`
+	// PartitionNumber is the partition number for the instance.
+	PartitionNumber *int32 `json:"partitionNumber,omitempty"`
+	// Affinity is the affinity setting. Valid values: "default", "host".
+	Affinity *string `json:"affinity,omitempty"`
 }
 
 const (

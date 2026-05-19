@@ -18,4 +18,5 @@ type Ec2Client interface {
 	DescribeImages(context.Context, *ec2.DescribeImagesInput, ...func(*ec2.Options)) (*ec2.DescribeImagesOutput, error)
 	RunInstances(context.Context, *ec2.RunInstancesInput, ...func(*ec2.Options)) (*ec2.RunInstancesOutput, error)
 	AssignIpv6Addresses(context.Context, *ec2.AssignIpv6AddressesInput, ...func(*ec2.Options)) (*ec2.AssignIpv6AddressesOutput, error)
+	ModifyNetworkInterfaceAttribute(context.Context, *ec2.ModifyNetworkInterfaceAttributeInput, ...func(*ec2.Options)) (*ec2.ModifyNetworkInterfaceAttributeOutput, error)
 }
