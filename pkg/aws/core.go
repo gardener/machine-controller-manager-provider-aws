@@ -472,7 +472,7 @@ func (d *Driver) DeleteMachine(ctx context.Context, req *driver.DeleteMachineReq
 			if err != nil {
 				return nil, err
 			}
-			klog.V(3).Infof("VM %q for Machine %q was terminated succesfully", ptr.Deref(instance.InstanceId, ""), req.Machine.Name)
+			klog.V(3).Infof("VM %q for Machine %q was terminated successfully", ptr.Deref(instance.InstanceId, ""), req.Machine.Name)
 		}
 	}
 
@@ -495,7 +495,7 @@ func (d *Driver) GetMachineStatus(ctx context.Context, req *driver.GetMachineSta
 	}
 
 	// Log messages to track start and end of request
-	klog.V(3).Infof("Get request has been recieved for %q", req.Machine.Name)
+	klog.V(3).Infof("Get request has been received for %q", req.Machine.Name)
 	providerSpec, err := decodeProviderSpecAndSecret(machineClass, secret)
 	if err != nil {
 		return nil, err
@@ -586,7 +586,7 @@ func (d *Driver) ListMachines(ctx context.Context, req *driver.ListMachinesReque
 	}
 
 	// Log messages to track start and end of request
-	klog.V(3).Infof("List machines request has been recieved for %q", machineClass.Name)
+	klog.V(3).Infof("List machines request has been received for %q", machineClass.Name)
 
 	providerSpec, err := decodeProviderSpecAndSecret(machineClass, secret)
 	if err != nil {
