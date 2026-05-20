@@ -472,7 +472,7 @@ func (d *Driver) DeleteMachine(ctx context.Context, req *driver.DeleteMachineReq
 			if err != nil {
 				return nil, err
 			}
-			klog.V(3).Infof("VM %q for Machine %q was terminated succesfully", ptr.Deref(instance.InstanceId, ""), req.Machine.Name)
+			klog.V(3).Infof("VM %q for Machine %q was terminated successfully", ptr.Deref(instance.InstanceId, ""), req.Machine.Name)
 		}
 	}
 
