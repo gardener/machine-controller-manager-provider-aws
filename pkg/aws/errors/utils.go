@@ -20,6 +20,7 @@ func GetMCMErrorCodeForCreateMachine(err error) codes.Code {
 			InsufficientAddressCapacity,
 			InsufficientInstanceCapacity,
 			InsufficientVolumeCapacity,
+			InsufficientFreeAddressesInSubnet,
 			InstanceLimitExceeded,
 			VcpuLimitExceeded,
 			VolumeLimitExceeded,
