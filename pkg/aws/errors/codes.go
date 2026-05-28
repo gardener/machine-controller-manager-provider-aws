@@ -49,6 +49,10 @@ const (
 	// You can try to provision a different volume type, EBS volume in a different availability zone, or you can wait for additional capacity to become available.
 	InsufficientVolumeCapacity = "InsufficientVolumeCapacity"
 
+	// InsufficientFreeAddressesInSubnet is returned when the specified subnet does not contain enough free private IP addresses
+	// to fulfill your request.
+	InsufficientFreeAddressesInSubnet = "InsufficientFreeAddressesInSubnet"
+
 	// RouteLimitExceeded is returned when you've reached the limit on the number of routes that you can add to a route table.
 	RouteLimitExceeded = "RouteLimitExceeded"
 
