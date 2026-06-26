@@ -111,8 +111,8 @@ func getInt32PtrForString(s string) *int32 {
 	return ptr.To(int32(num))
 }
 
-func retryWithExponentialBackOff(operation backoff.OperationWithData[*ec2types.Instance], _ time.Duration) (*ec2types.Instance, error) {
+func retryWithExponentialBackOff(operation backoff.OperationWithData[*ec2types.Instance], maxElapsedTime time.Duration) (*ec2types.Instance, error) {
 	expBackOffObj := backoff.NewExponentialBackOff()
-	expBackOffObj.MaxElapsedTime = maxElapsedTimeInBackoff
+	expBackOffObj.MaxElapsedTime = maxElapsedTime
 	return backoff.RetryWithData(operation, expBackOffObj)
 }
