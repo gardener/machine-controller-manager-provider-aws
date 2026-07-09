@@ -23,6 +23,7 @@ func TestGetMCMErrorCodeForCreateMachine(t *testing.T) {
 		{inputError: &smithy.GenericAPIError{Code: "InsufficientAddressCapacity"}, expectedCode: codes.ResourceExhausted},
 		{inputError: &smithy.GenericAPIError{Code: "InsufficientInstanceCapacity"}, expectedCode: codes.ResourceExhausted},
 		{inputError: &smithy.GenericAPIError{Code: "InsufficientVolumeCapacity"}, expectedCode: codes.ResourceExhausted},
+		{inputError: &smithy.GenericAPIError{Code: "InsufficientFreeAddressesInSubnet"}, expectedCode: codes.ResourceExhausted},
 		{inputError: &smithy.GenericAPIError{Code: "InstanceLimitExceeded"}, expectedCode: codes.ResourceExhausted},
 		{inputError: &smithy.GenericAPIError{Code: "VcpuLimitExceeded"}, expectedCode: codes.ResourceExhausted},
 		{inputError: &smithy.GenericAPIError{Code: "VolumeLimitExceeded"}, expectedCode: codes.ResourceExhausted},
