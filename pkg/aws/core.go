@@ -54,7 +54,7 @@ const (
 	awsPlacement     = "machine.sapcloud.io/awsPlacement"
 )
 
-var maxElapsedTimeInBackoff = 5 * time.Minute
+var defaultMaxElapsedTimeInBackoff = 5 * time.Minute
 
 // NewAWSDriver returns an empty AWSDriver object
 func NewAWSDriver(cpi cpi.ClientProviderInterface) driver.Driver {
@@ -303,6 +303,10 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 		return nil, status.Error(codes.NotFound, fmt.Sprintf("instance with instanceID %s not found", instanceID))
 	}
 
+	maxElapsedTimeInBackoff := defaultMaxElapsedTimeInBackoff
+	if machine.Spec.MachineConfiguration != nil && machine.Spec.MachineCreationTimeout != nil {
+		maxElapsedTimeInBackoff = machine.Spec.MachineCreationTimeout.Duration
+	}
 	instance, err := retryWithExponentialBackOff(operation, maxElapsedTimeInBackoff)
 	if err != nil {
 		return nil, status.Error(codes.Internal, fmt.Sprintf("creation of VM %q failed, timed out waiting for eventual consistency. Multiple VMs backing machine obj might spawn, they will be orphan collected", providerID))

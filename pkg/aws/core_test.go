@@ -71,12 +71,12 @@ var _ = Describe("MachineServer", func() {
 				var temp time.Duration
 
 				if data.setup.maxElapsedTimeForRetry != 0 {
-					temp = maxElapsedTimeInBackoff
-					maxElapsedTimeInBackoff = data.setup.maxElapsedTimeForRetry
+					temp = defaultMaxElapsedTimeInBackoff
+					defaultMaxElapsedTimeInBackoff = data.setup.maxElapsedTimeForRetry
 				}
 				response, err := md.CreateMachine(ctx, data.action.machineRequest)
 
-				maxElapsedTimeInBackoff = temp
+				defaultMaxElapsedTimeInBackoff = temp
 
 				if data.expect.errToHaveOccurred {
 					Expect(err).To(HaveOccurred())
