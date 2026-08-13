@@ -48,9 +48,9 @@ fi
 ###############################################################################
 
 # If no LOCAL_BUILD environment variable is set, we configure the `go build` command
-# to build for linux OS, amd64 architectures and without CGO enablement.
+# to build for the local/default OS and ARCH and without CGO enablement.
 if [[ -z "$LOCAL_BUILD" ]]; then
-  CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+  CGO_ENABLED=0 GOOS=$(go env GOOS) GOARCH=$(go env GOARCH) go build \
     -a \
     -v \
     -o ${BINARY_PATH}/rel/machine-controller \
