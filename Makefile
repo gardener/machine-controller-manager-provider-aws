@@ -14,6 +14,7 @@ IMAGE_TAG           := $(shell cat VERSION)
 PROVIDER_NAME       := AWS
 PROJECT_NAME        := gardener
 LEADER_ELECT 	    := "true"
+TARGET_PLATFORMS    ?= linux/$(shell go env GOARCH)
 # If Integration Test Suite is to be run locally against clusters then export the below variable
 # with MCM deployment name in the cluster
 MACHINE_CONTROLLER_MANAGER_DEPLOYMENT_NAME := machine-controller-manager
@@ -101,10 +102,9 @@ build-local:
 build:
 	@.ci/build
 
-PLATFORM ?= linux/amd64
 .PHONY: docker-image
 docker-image:
-	@docker buildx build --platform $(PLATFORM) -t $(IMAGE_REPOSITORY):$(IMAGE_TAG) .
+	@docker buildx build --platform $(TARGET_PLATFORMS) -t $(IMAGE_REPOSITORY):$(IMAGE_TAG) .
 
 .PHONY: docker-login
 docker-login:
