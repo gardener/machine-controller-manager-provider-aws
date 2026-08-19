@@ -76,7 +76,7 @@ update-dependencies:
 
 .PHONY: test-unit
 test-unit:
-	@SKIP_INTEGRATION_TESTS=X .ci/test
+	.ci/test
 
 .PHONY: test-integration
 test-integration:
