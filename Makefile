@@ -82,10 +82,6 @@ test-unit:
 test-integration:
 	.ci/local_integration_test
 
-.PHONY: test
-test:
-	.ci/test
-
 #########################################
 # Rules for build/release
 #########################################
@@ -139,4 +135,4 @@ sast-report: $(GOSEC)
 	@./hack/sast.sh --gosec-report true
 
 .PHONY: verify
-verify: check build test
+verify: check build test-unit
