@@ -100,7 +100,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir /tmp/blobs.d
-          PATHINWS=src SKIP_INTEGRATION_TESTS=true .ci/test |& tee /tmp/blobs.d/test-log.txt
+          PATHINWS=src .ci/test |& tee /tmp/blobs.d/test-log.txt
           tar czf /tmp/blobs.d/test-log.tar.gz -C /tmp/blobs.d test-log.txt
       - name: add-unittest-results-to-component-descriptor
         uses: gardener/cc-utils/.github/actions/export-ocm-fragments@v1
