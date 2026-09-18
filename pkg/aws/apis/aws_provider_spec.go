@@ -333,4 +333,8 @@ type CPUOptions struct {
 	// Valid options are "enabled" and "disabled".
 	// For more information, see https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/sev-snp.html
 	AmdSevSnp *string `json:"amdSevSnp,omitempty"`
+
+	// NestedVirtualization indicates whether nested virtualization is enabled or disabled.
+	// For more information, see https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/amazon-ec2-nested-virtualization.html
+	NestedVirtualization *string `json:"nestedVirtualization,omitempty"`
 }

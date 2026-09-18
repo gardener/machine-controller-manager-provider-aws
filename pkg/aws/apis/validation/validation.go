@@ -242,6 +242,14 @@ func validateCPUOptions(cpuOptions *awsapi.CPUOptions, fldPath *field.Path) fiel
 		}
 	}
 
+	if cpuOptions.NestedVirtualization != nil {
+		nestedVirt := ec2types.NestedVirtualizationSpecification(*cpuOptions.NestedVirtualization)
+		if !slices.Contains(nestedVirt.Values(), nestedVirt) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("nestedVirtualization"), nestedVirt,
+				fmt.Sprintf("NestedVirtualization must be one of %v", nestedVirt.Values())))
+		}
+	}
+
 	coreSet := cpuOptions.CoreCount != nil
 	threadsSet := cpuOptions.ThreadsPerCore != nil
 

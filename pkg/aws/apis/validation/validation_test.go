@@ -2095,6 +2095,29 @@ var _ = Describe("Validation", func() {
 			errs := ValidateAWSProviderSpec(spec, providerSecret, field.NewPath("providerSpec"))
 			Expect(errs).To(BeEmpty())
 		})
+
+		Entry("invalid nestedVirtualization should be rejected", func() {
+			spec := validAWSProviderSpec()
+			spec.CPUOptions = &awsapi.CPUOptions{
+				NestedVirtualization: ptr.To("invalid"),
+			}
+
+			errs := ValidateAWSProviderSpec(spec, providerSecret, field.NewPath("providerSpec"))
+			Expect(errs).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("providerSpec.cpuOptions.nestedVirtualization"),
+			}))))
+		})
+
+		Entry("valid nestedVirtualization should pass", func() {
+			spec := validAWSProviderSpec()
+			spec.CPUOptions = &awsapi.CPUOptions{
+				NestedVirtualization: ptr.To(string(ec2types.NestedVirtualizationSpecificationEnabled)),
+			}
+
+			errs := ValidateAWSProviderSpec(spec, providerSecret, field.NewPath("providerSpec"))
+			Expect(errs).To(BeEmpty())
+		})
 	})
 })
 
