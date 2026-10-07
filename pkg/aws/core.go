@@ -209,6 +209,9 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 		if cpuOptions.AmdSevSnp != nil {
 			cpuOpts.AmdSevSnp = ec2types.AmdSevSnpSpecification(*cpuOptions.AmdSevSnp)
 		}
+		if cpuOptions.NestedVirtualization != nil {
+			cpuOpts.NestedVirtualization = ec2types.NestedVirtualizationSpecification(*cpuOptions.NestedVirtualization)
+		}
 		if cpuOptions.CoreCount != nil && cpuOptions.ThreadsPerCore != nil {
 			cpuOpts.CoreCount = cpuOptions.CoreCount
 			cpuOpts.ThreadsPerCore = cpuOptions.ThreadsPerCore
