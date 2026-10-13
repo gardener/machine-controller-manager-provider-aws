@@ -1,7 +1,7 @@
 name: Create Upgrade-Pull-Requests
 on:
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: '0 0 * * 1' # every Monday at 00:00 UTC
   workflow_dispatch:
 
 jobs:
