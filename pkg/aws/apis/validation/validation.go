@@ -137,14 +137,26 @@ func validateCapacityReservations(capacityReservation *awsapi.AWSCapacityReserva
 		allErrs = field.ErrorList{}
 	)
 
-	if capacityReservation != nil {
-		if capacityReservation.CapacityReservationPreference != "" {
-			if capacityReservation.CapacityReservationID != nil || capacityReservation.CapacityReservationResourceGroupArn != nil {
-				allErrs = append(allErrs, field.Required(fldPath, "CapacityReservationPreference cannot be set when also providing a CapacityReservationID or CapacityReservationResourceGroupArn"))
-			}
-		} else if capacityReservation.CapacityReservationID != nil && capacityReservation.CapacityReservationResourceGroupArn != nil {
-			allErrs = append(allErrs, field.Required(fldPath, "CapacityReservationResourceGroupArn or CapacityReservationId are optional but only one should be used"))
+	if capacityReservation == nil {
+		return allErrs
+	}
+
+	switch ec2types.CapacityReservationPreference(capacityReservation.CapacityReservationPreference) {
+	case "", ec2types.CapacityReservationPreferenceCapacityReservationsOnly:
+	case ec2types.CapacityReservationPreferenceOpen, ec2types.CapacityReservationPreferenceNone:
+		if capacityReservation.CapacityReservationID != nil || capacityReservation.CapacityReservationResourceGroupArn != nil {
+			allErrs = append(allErrs, field.Required(fldPath, "CapacityReservationPreference must be omitted or set to capacity-reservations-only when also providing a CapacityReservationID or CapacityReservationResourceGroupArn"))
 		}
+	default:
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("capacityReservationPreference"), capacityReservation.CapacityReservationPreference, []string{
+			string(ec2types.CapacityReservationPreferenceOpen),
+			string(ec2types.CapacityReservationPreferenceNone),
+			string(ec2types.CapacityReservationPreferenceCapacityReservationsOnly),
+		}))
+	}
+
+	if capacityReservation.CapacityReservationID != nil && capacityReservation.CapacityReservationResourceGroupArn != nil {
+		allErrs = append(allErrs, field.Required(fldPath, "CapacityReservationResourceGroupArn or CapacityReservationId are optional but only one should be used"))
 	}
 
 	return allErrs

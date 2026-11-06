@@ -136,17 +136,19 @@ type AWSBlockDeviceMappingSpec struct {
 	VirtualName string `json:"virtualName,omitempty"`
 }
 
-// AWSCapacityReservationTargetSpec allows to target an AWS Capacity Reservation directly or indirectly using an AWS Capacity Reservation.
-// See https://docs.aws.amazon.com/sdk-for-go/api/service/ec2/#CapacityReservationSpecification for additional information.
+// AWSCapacityReservationTargetSpec allows targeting an AWS Capacity Reservation directly or through a resource group.
+// See https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CapacityReservationSpecification.html for additional information.
 type AWSCapacityReservationTargetSpec struct {
 
-	// CapacityReservationPreference indicates the instance's Capacity Reservation preferences (possible values are 'open' or 'none').
+	// CapacityReservationPreference indicates the instance's Capacity Reservation preference ('open', 'none', or 'capacity-reservations-only').
+	// When specifying a target, the preference must be omitted or set to 'capacity-reservations-only'.
+	// A resource group target with an omitted preference can fall back to On-Demand capacity; 'capacity-reservations-only' prevents this.
 	CapacityReservationPreference string `json:"capacityReservationPreference,omitempty"`
 
 	// CapacityReservationID ID of the Capacity Reservation in which to run the instance.
 	CapacityReservationID *string `json:"capacityReservationId,omitempty"`
 
-	// CapacityReservationResourceGroupArn The ARN of the Capacity Reservation in which to run the instance.
+	// CapacityReservationResourceGroupArn is the ARN of the resource group of Capacity Reservations in which to run the instance.
 	CapacityReservationResourceGroupArn *string `json:"capacityReservationResourceGroupArn,omitempty"`
 }
 

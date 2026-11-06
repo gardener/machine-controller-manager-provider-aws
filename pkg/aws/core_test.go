@@ -6,19 +6,25 @@ package aws
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/driver"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/codes"
 
+	awsapi "github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/apis"
+	"github.com/gardener/machine-controller-manager-provider-aws/pkg/aws/interfaces"
 	"github.com/gardener/machine-controller-manager-provider-aws/pkg/mockclient"
 )
 
@@ -932,6 +938,58 @@ var _ = Describe("MachineServer", func() {
 		)
 	})
 
+	DescribeTable("capacity reservation requests preserve preferences and targets through the machine lifecycle",
+		func(preference ec2types.CapacityReservationPreference, id, arn *string) {
+			var spec awsapi.AWSProviderSpec
+			Expect(json.Unmarshal(providerSpec, &spec)).To(Succeed())
+			spec.CapacityReservationTarget = &awsapi.AWSCapacityReservationTargetSpec{
+				CapacityReservationPreference:       string(preference),
+				CapacityReservationID:               id,
+				CapacityReservationResourceGroupArn: arn,
+			}
+			rawSpec, err := json.Marshal(spec)
+			Expect(err).NotTo(HaveOccurred())
+			machineClass := newMachineClass(rawSpec)
+			machine := newMachine(0, nil)
+			clientProvider := &recordingClientProvider{MockClientProvider: &mockclient.MockClientProvider{}}
+			md := NewAWSDriver(clientProvider)
+			ctx := context.Background()
+
+			created, err := md.CreateMachine(ctx, &driver.CreateMachineRequest{
+				Machine: machine, MachineClass: machineClass, Secret: providerSecret,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(clientProvider.client.runInstancesInput).NotTo(BeNil())
+			Expect(clientProvider.client.runInstancesInput.CapacityReservationSpecification).To(Equal(&ec2types.CapacityReservationSpecification{
+				CapacityReservationPreference: preference,
+				CapacityReservationTarget: &ec2types.CapacityReservationTarget{
+					CapacityReservationId:               id,
+					CapacityReservationResourceGroupArn: arn,
+				},
+			}))
+
+			status, err := md.GetMachineStatus(ctx, &driver.GetMachineStatusRequest{
+				Machine: machine, MachineClass: machineClass, Secret: providerSecret,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(status.ProviderID).To(Equal(created.ProviderID))
+			Expect(status.NodeName).To(Equal(created.NodeName))
+
+			_, err = md.DeleteMachine(ctx, &driver.DeleteMachineRequest{
+				Machine: machine, MachineClass: machineClass, Secret: providerSecret,
+			})
+			Expect(err).NotTo(HaveOccurred())
+		},
+		Entry("empty preference without a target", ec2types.CapacityReservationPreference(""), nil, nil),
+		Entry("empty preference with an ID", ec2types.CapacityReservationPreference(""), ptr.To("cr-05c28b843c05abcde"), nil),
+		Entry("empty preference with an ARN", ec2types.CapacityReservationPreference(""), nil, ptr.To("arn:aws:resource-groups:us-west-1:123456789012:group/my-test-cr-group")),
+		Entry("open without a target", ec2types.CapacityReservationPreferenceOpen, nil, nil),
+		Entry("none without a target", ec2types.CapacityReservationPreferenceNone, nil, nil),
+		Entry("capacity-reservations-only without a target", ec2types.CapacityReservationPreferenceCapacityReservationsOnly, nil, nil),
+		Entry("capacity-reservations-only with an ID", ec2types.CapacityReservationPreferenceCapacityReservationsOnly, ptr.To("cr-05c28b843c05abcde"), nil),
+		Entry("capacity-reservations-only with an ARN", ec2types.CapacityReservationPreferenceCapacityReservationsOnly, nil, ptr.To("arn:aws:resource-groups:us-west-1:123456789012:group/my-test-cr-group")),
+	)
+
 	Describe("#GetMachine", func() {
 		type setup struct {
 			createMachineRequest *driver.CreateMachineRequest
@@ -1578,3 +1636,23 @@ var _ = Describe("MachineServer", func() {
 		)
 	})
 })
+
+type recordingClientProvider struct {
+	*mockclient.MockClientProvider
+	client *recordingEC2Client
+}
+
+func (p *recordingClientProvider) NewEC2Client(config *aws.Config) interfaces.Ec2Client {
+	p.client = &recordingEC2Client{Ec2Client: p.MockClientProvider.NewEC2Client(config)}
+	return p.client
+}
+
+type recordingEC2Client struct {
+	interfaces.Ec2Client
+	runInstancesInput *ec2.RunInstancesInput
+}
+
+func (c *recordingEC2Client) RunInstances(ctx context.Context, input *ec2.RunInstancesInput, options ...func(*ec2.Options)) (*ec2.RunInstancesOutput, error) {
+	c.runInstancesInput = input
+	return c.Ec2Client.RunInstances(ctx, input, options...)
+}

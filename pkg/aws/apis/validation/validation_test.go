@@ -1505,325 +1505,6 @@ var _ = Describe("Validation", func() {
 					},
 				},
 			}),
-			Entry("CapacityReservationTargetSpec invalid spec configuring both preference, target id and arn", &data{
-				setup: setup{},
-				action: action{
-					spec: &awsapi.AWSProviderSpec{
-						AMI: "ami-123456789",
-						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
-							{
-								Ebs: awsapi.AWSEbsBlockDeviceSpec{
-									VolumeSize: 50,
-									VolumeType: "gp2",
-								},
-							},
-						},
-						CapacityReservationTarget: &awsapi.AWSCapacityReservationTargetSpec{
-							CapacityReservationPreference:       "open",
-							CapacityReservationID:               ptr.To("capacity-reservation-id-abcd1234"),
-							CapacityReservationResourceGroupArn: ptr.To("arn:01234:/my-resource-group"),
-						},
-						IAM: awsapi.AWSIAMProfileSpec{
-							Name: "test-iam",
-						},
-						Region:      "eu-west-1",
-						MachineType: "m4.large",
-						KeyName:     ptr.To("test-ssh-publickey"),
-						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
-							{
-								SecurityGroupIDs: []string{
-									"sg-00002132323",
-								},
-								SubnetID: "subnet-123456",
-							},
-						},
-						Tags: map[string]string{
-							"kubernetes.io/cluster/shoot--test": "1",
-							"kubernetes.io/role/test":           "1",
-						},
-					},
-					secret: &corev1.Secret{
-						Data: map[string][]byte{
-							"providerAccessKeyId":     []byte("dummy-id"),
-							"userData":                []byte("dummy-user-data"),
-							"providerSecretAccessKey": []byte("dummy-secret"),
-						},
-					},
-				},
-				expect: expect{
-					errToHaveOccurred: true,
-					errList: field.ErrorList{
-						{
-							Type:     "FieldValueRequired",
-							Field:    "providerSpec.capacityReservation",
-							BadValue: "",
-							Detail:   "CapacityReservationPreference cannot be set when also providing a CapacityReservationID or CapacityReservationResourceGroupArn",
-						},
-					},
-				},
-			}),
-			Entry("CapacityReservationTargetSpec invalid spec configuring both preference and target id", &data{
-				setup: setup{},
-				action: action{
-					spec: &awsapi.AWSProviderSpec{
-						AMI: "ami-123456789",
-						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
-							{
-								Ebs: awsapi.AWSEbsBlockDeviceSpec{
-									VolumeSize: 50,
-									VolumeType: "gp2",
-								},
-							},
-						},
-						CapacityReservationTarget: &awsapi.AWSCapacityReservationTargetSpec{
-							CapacityReservationPreference: "open",
-							CapacityReservationID:         ptr.To("capacity-reservation-id-abcd1234"),
-						},
-						IAM: awsapi.AWSIAMProfileSpec{
-							Name: "test-iam",
-						},
-						Region:      "eu-west-1",
-						MachineType: "m4.large",
-						KeyName:     ptr.To("test-ssh-publickey"),
-						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
-							{
-								SecurityGroupIDs: []string{
-									"sg-00002132323",
-								},
-								SubnetID: "subnet-123456",
-							},
-						},
-						Tags: map[string]string{
-							"kubernetes.io/cluster/shoot--test": "1",
-							"kubernetes.io/role/test":           "1",
-						},
-					},
-					secret: &corev1.Secret{
-						Data: map[string][]byte{
-							"providerAccessKeyId":     []byte("dummy-id"),
-							"userData":                []byte("dummy-user-data"),
-							"providerSecretAccessKey": []byte("dummy-secret"),
-						},
-					},
-				},
-				expect: expect{
-					errToHaveOccurred: true,
-					errList: field.ErrorList{
-						{
-							Type:     "FieldValueRequired",
-							Field:    "providerSpec.capacityReservation",
-							BadValue: "",
-							Detail:   "CapacityReservationPreference cannot be set when also providing a CapacityReservationID or CapacityReservationResourceGroupArn",
-						},
-					},
-				},
-			}),
-			Entry("CapacityReservationTargetSpec invalid spec configuring both preference and arn", &data{
-				setup: setup{},
-				action: action{
-					spec: &awsapi.AWSProviderSpec{
-						AMI: "ami-123456789",
-						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
-							{
-								Ebs: awsapi.AWSEbsBlockDeviceSpec{
-									VolumeSize: 50,
-									VolumeType: "gp2",
-								},
-							},
-						},
-						CapacityReservationTarget: &awsapi.AWSCapacityReservationTargetSpec{
-							CapacityReservationPreference:       "open",
-							CapacityReservationResourceGroupArn: ptr.To("arn:01234:/my-resource-group"),
-						},
-						IAM: awsapi.AWSIAMProfileSpec{
-							Name: "test-iam",
-						},
-						Region:      "eu-west-1",
-						MachineType: "m4.large",
-						KeyName:     ptr.To("test-ssh-publickey"),
-						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
-							{
-								SecurityGroupIDs: []string{
-									"sg-00002132323",
-								},
-								SubnetID: "subnet-123456",
-							},
-						},
-						Tags: map[string]string{
-							"kubernetes.io/cluster/shoot--test": "1",
-							"kubernetes.io/role/test":           "1",
-						},
-					},
-					secret: &corev1.Secret{
-						Data: map[string][]byte{
-							"providerAccessKeyId":     []byte("dummy-id"),
-							"userData":                []byte("dummy-user-data"),
-							"providerSecretAccessKey": []byte("dummy-secret"),
-						},
-					},
-				},
-				expect: expect{
-					errToHaveOccurred: true,
-					errList: field.ErrorList{
-						{
-							Type:     "FieldValueRequired",
-							Field:    "providerSpec.capacityReservation",
-							BadValue: "",
-							Detail:   "CapacityReservationPreference cannot be set when also providing a CapacityReservationID or CapacityReservationResourceGroupArn",
-						},
-					},
-				},
-			}),
-			Entry("CapacityReservationTargetSpec invalid spec configuring both id and arn", &data{
-				setup: setup{},
-				action: action{
-					spec: &awsapi.AWSProviderSpec{
-						AMI: "ami-123456789",
-						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
-							{
-								Ebs: awsapi.AWSEbsBlockDeviceSpec{
-									VolumeSize: 50,
-									VolumeType: "gp2",
-								},
-							},
-						},
-						CapacityReservationTarget: &awsapi.AWSCapacityReservationTargetSpec{
-							CapacityReservationID:               ptr.To("capacity-reservation-id-abcd1234"),
-							CapacityReservationResourceGroupArn: ptr.To("arn:01234:/my-resource-group"),
-						},
-						IAM: awsapi.AWSIAMProfileSpec{
-							Name: "test-iam",
-						},
-						Region:      "eu-west-1",
-						MachineType: "m4.large",
-						KeyName:     ptr.To("test-ssh-publickey"),
-						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
-							{
-								SecurityGroupIDs: []string{
-									"sg-00002132323",
-								},
-								SubnetID: "subnet-123456",
-							},
-						},
-						Tags: map[string]string{
-							"kubernetes.io/cluster/shoot--test": "1",
-							"kubernetes.io/role/test":           "1",
-						},
-					},
-					secret: &corev1.Secret{
-						Data: map[string][]byte{
-							"providerAccessKeyId":     []byte("dummy-id"),
-							"userData":                []byte("dummy-user-data"),
-							"providerSecretAccessKey": []byte("dummy-secret"),
-						},
-					},
-				},
-				expect: expect{
-					errToHaveOccurred: true,
-					errList: field.ErrorList{
-						{
-							Type:     "FieldValueRequired",
-							Field:    "providerSpec.capacityReservation",
-							BadValue: "",
-							Detail:   "CapacityReservationResourceGroupArn or CapacityReservationId are optional but only one should be used",
-						},
-					},
-				},
-			}),
-			Entry("CapacityReservationTargetSpec valid spec configuring only CapacityReservationID", &data{
-				setup: setup{},
-				action: action{
-					spec: &awsapi.AWSProviderSpec{
-						AMI: "ami-123456789",
-						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
-							{
-								Ebs: awsapi.AWSEbsBlockDeviceSpec{
-									VolumeSize: 50,
-									VolumeType: "gp2",
-								},
-							},
-						},
-						CapacityReservationTarget: &awsapi.AWSCapacityReservationTargetSpec{
-							CapacityReservationID: ptr.To("capacity-reservation-id-abcd1234"),
-						},
-						IAM: awsapi.AWSIAMProfileSpec{
-							Name: "test-iam",
-						},
-						Region:      "eu-west-1",
-						MachineType: "m4.large",
-						KeyName:     ptr.To("test-ssh-publickey"),
-						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
-							{
-								SecurityGroupIDs: []string{
-									"sg-00002132323",
-								},
-								SubnetID: "subnet-123456",
-							},
-						},
-						Tags: map[string]string{
-							"kubernetes.io/cluster/shoot--test": "1",
-							"kubernetes.io/role/test":           "1",
-						},
-					},
-					secret: &corev1.Secret{
-						Data: map[string][]byte{
-							"providerAccessKeyId":     []byte("dummy-id"),
-							"userData":                []byte("dummy-user-data"),
-							"providerSecretAccessKey": []byte("dummy-secret"),
-						},
-					},
-				},
-				expect: expect{
-					errToHaveOccurred: false,
-				},
-			}),
-			Entry("CapacityReservationTargetSpec valid spec configuring only CapacityReservationResourceGroupArn", &data{
-				setup: setup{},
-				action: action{
-					spec: &awsapi.AWSProviderSpec{
-						AMI: "ami-123456789",
-						BlockDevices: []awsapi.AWSBlockDeviceMappingSpec{
-							{
-								Ebs: awsapi.AWSEbsBlockDeviceSpec{
-									VolumeSize: 50,
-									VolumeType: "gp2",
-								},
-							},
-						},
-						CapacityReservationTarget: &awsapi.AWSCapacityReservationTargetSpec{
-							CapacityReservationResourceGroupArn: ptr.To("arn:01234:/my-resource-group"),
-						},
-						IAM: awsapi.AWSIAMProfileSpec{
-							Name: "test-iam",
-						},
-						Region:      "eu-west-1",
-						MachineType: "m4.large",
-						KeyName:     ptr.To("test-ssh-publickey"),
-						NetworkInterfaces: []awsapi.AWSNetworkInterfaceSpec{
-							{
-								SecurityGroupIDs: []string{
-									"sg-00002132323",
-								},
-								SubnetID: "subnet-123456",
-							},
-						},
-						Tags: map[string]string{
-							"kubernetes.io/cluster/shoot--test": "1",
-							"kubernetes.io/role/test":           "1",
-						},
-					},
-					secret: &corev1.Secret{
-						Data: map[string][]byte{
-							"providerAccessKeyId":     []byte("dummy-id"),
-							"userData":                []byte("dummy-user-data"),
-							"providerSecretAccessKey": []byte("dummy-secret"),
-						},
-					},
-				},
-				expect: expect{
-					errToHaveOccurred: false,
-				},
-			}),
 			Entry("Invalid interfaceType for network interface", &data{
 				setup: setup{
 					apply: func(spec *awsapi.AWSProviderSpec) {
@@ -1962,6 +1643,59 @@ var _ = Describe("Validation", func() {
 					},
 				},
 			}),
+		)
+	})
+
+	Describe("#validateCapacityReservations", func() {
+		fldPath := field.NewPath("providerSpec", "capacityReservation")
+		id := ptr.To("cr-05c28b843c05abcde")
+		arn := ptr.To("arn:aws:resource-groups:us-west-1:123456789012:group/my-test-cr-group")
+		noErrors := field.ErrorList{}
+		preferenceWithTargetError := field.Required(fldPath, "CapacityReservationPreference must be omitted or set to capacity-reservations-only when also providing a CapacityReservationID or CapacityReservationResourceGroupArn")
+		bothTargetsError := field.Required(fldPath, "CapacityReservationResourceGroupArn or CapacityReservationId are optional but only one should be used")
+		unknownPreferenceError := field.NotSupported(fldPath.Child("capacityReservationPreference"), "unknown", []string{
+			string(ec2types.CapacityReservationPreferenceOpen),
+			string(ec2types.CapacityReservationPreferenceNone),
+			string(ec2types.CapacityReservationPreferenceCapacityReservationsOnly),
+		})
+
+		It("allows omitted capacity reservation configuration", func() {
+			spec := validAWSProviderSpec()
+			spec.CapacityReservationTarget = nil
+			Expect(ValidateAWSProviderSpec(spec, providerSecret, field.NewPath("providerSpec"))).To(BeEmpty())
+		})
+
+		DescribeTable("validates preferences and targets independently",
+			func(preference ec2types.CapacityReservationPreference, id, arn *string, expectedErrors field.ErrorList) {
+				spec := validAWSProviderSpec()
+				spec.CapacityReservationTarget = &awsapi.AWSCapacityReservationTargetSpec{
+					CapacityReservationPreference:       string(preference),
+					CapacityReservationID:               id,
+					CapacityReservationResourceGroupArn: arn,
+				}
+
+				Expect(ValidateAWSProviderSpec(spec, providerSecret, field.NewPath("providerSpec"))).To(Equal(expectedErrors))
+			},
+			Entry("empty preference without a target", ec2types.CapacityReservationPreference(""), nil, nil, noErrors),
+			Entry("empty preference with an ID", ec2types.CapacityReservationPreference(""), id, nil, noErrors),
+			Entry("empty preference with an ARN", ec2types.CapacityReservationPreference(""), nil, arn, noErrors),
+			Entry("empty preference with both targets", ec2types.CapacityReservationPreference(""), id, arn, field.ErrorList{bothTargetsError}),
+			Entry("open without a target", ec2types.CapacityReservationPreferenceOpen, nil, nil, noErrors),
+			Entry("open with an ID", ec2types.CapacityReservationPreferenceOpen, id, nil, field.ErrorList{preferenceWithTargetError}),
+			Entry("open with an ARN", ec2types.CapacityReservationPreferenceOpen, nil, arn, field.ErrorList{preferenceWithTargetError}),
+			Entry("open with both targets", ec2types.CapacityReservationPreferenceOpen, id, arn, field.ErrorList{preferenceWithTargetError, bothTargetsError}),
+			Entry("none without a target", ec2types.CapacityReservationPreferenceNone, nil, nil, noErrors),
+			Entry("none with an ID", ec2types.CapacityReservationPreferenceNone, id, nil, field.ErrorList{preferenceWithTargetError}),
+			Entry("none with an ARN", ec2types.CapacityReservationPreferenceNone, nil, arn, field.ErrorList{preferenceWithTargetError}),
+			Entry("none with both targets", ec2types.CapacityReservationPreferenceNone, id, arn, field.ErrorList{preferenceWithTargetError, bothTargetsError}),
+			Entry("capacity-reservations-only without a target", ec2types.CapacityReservationPreferenceCapacityReservationsOnly, nil, nil, noErrors),
+			Entry("capacity-reservations-only with an ID", ec2types.CapacityReservationPreferenceCapacityReservationsOnly, id, nil, noErrors),
+			Entry("capacity-reservations-only with an ARN", ec2types.CapacityReservationPreferenceCapacityReservationsOnly, nil, arn, noErrors),
+			Entry("capacity-reservations-only with both targets", ec2types.CapacityReservationPreferenceCapacityReservationsOnly, id, arn, field.ErrorList{bothTargetsError}),
+			Entry("unknown preference without a target", ec2types.CapacityReservationPreference("unknown"), nil, nil, field.ErrorList{unknownPreferenceError}),
+			Entry("unknown preference with an ID", ec2types.CapacityReservationPreference("unknown"), id, nil, field.ErrorList{unknownPreferenceError}),
+			Entry("unknown preference with an ARN", ec2types.CapacityReservationPreference("unknown"), nil, arn, field.ErrorList{unknownPreferenceError}),
+			Entry("unknown preference with both targets", ec2types.CapacityReservationPreference("unknown"), id, arn, field.ErrorList{unknownPreferenceError, bothTargetsError}),
 		)
 	})
 
