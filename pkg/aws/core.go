@@ -219,8 +219,8 @@ func (d *Driver) CreateMachine(ctx context.Context, req *driver.CreateMachineReq
 		inputConfig.CpuOptions = cpuOpts
 	}
 
-	// Set the AWS Capacity Reservation target. Using an 'open' preference means that if the reservation is not found, then
-	// instances are launched with regular on-demand capacity.
+	// Preserve the configured Capacity Reservation preference and target. An omitted preference with a resource group
+	// can allow On-Demand fallback, while 'capacity-reservations-only' prevents fallback.
 	if providerSpec.CapacityReservationTarget != nil {
 		inputConfig.CapacityReservationSpecification = &ec2types.CapacityReservationSpecification{
 			CapacityReservationPreference: ec2types.CapacityReservationPreference(providerSpec.CapacityReservationTarget.CapacityReservationPreference),
